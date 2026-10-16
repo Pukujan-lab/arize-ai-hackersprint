@@ -1,0 +1,122 @@
+[
+ {
+  "span_id": "4e5e30330a980faf",
+  "trace_id": "611d449bd9af1bef3fcdeb4f43b6be70",
+  "q": "Is a landlord required to repair a broken heater in Colorado?",
+  "ground": 0.625,
+  "halluc": false,
+  "rel": 0.5,
+  "cpass": true,
+  "fallback": false,
+  "latency": 7.19,
+  "cost": 0.00295
+ },
+ {
+  "span_id": "adaf769ef75206d3",
+  "trace_id": "efa3979ac7c24ab34e7eb8f7e17e3ee7",
+  "q": "Water rights priority dispute between ranchers",
+  "ground": 0.857,
+  "halluc": false,
+  "rel": 0.625,
+  "cpass": true,
+  "fallback": false,
+  "latency": 1.3,
+  "cost": 0.0
+ },
+ {
+  "span_id": "e4ac8d13d6539328",
+  "trace_id": "8f597870d848c27666dedc62cd656b20",
+  "q": "Can a landlord keep a deposit for normal wear and tear in Colorado?",
+  "ground": 0.875,
+  "halluc": false,
+  "rel": 0.375,
+  "cpass": true,
+  "fallback": false,
+  "latency": 12.61,
+  "cost": 0.00295
+ },
+ {
+  "span_id": "6be665d847a9fef8",
+  "trace_id": "9f086f7cef6461dac2da22466976f282",
+  "q": "Suppression of evidence from warrantless vehicle search",
+  "ground": 1.0,
+  "halluc": false,
+  "rel": 0.5,
+  "cpass": true,
+  "fallback": false,
+  "latency": 14.7,
+  "cost": 0.0
+ },
+ {
+  "span_id": "056b41d2e3cb9625",
+  "trace_id": "03e5760fad4efc8563cc672ad079ae4d",
+  "q": "What if they find evidence?",
+  "ground": 1.0,
+  "halluc": false,
+  "rel": 0.375,
+  "cpass": true,
+  "fallback": false,
+  "latency": 19.82,
+  "cost": 0.00295
+ },
+ {
+  "span_id": "24392ef6f22dfd75",
+  "trace_id": "2a750a64e0f12765bf6c6692a84ec81a",
+  "q": "Automobile exception: probable cause standard in Colorado",
+  "ground": 1.0,
+  "halluc": false,
+  "rel": 0.375,
+  "cpass": true,
+  "fallback": false,
+  "latency": 1.73,
+  "cost": 0.0
+ },
+ {
+  "span_id": "caa40b5e41f5939a",
+  "trace_id": "dcb5ec945908d151b39f9dc4cae2977a",
+  "q": "Do I have to stop for police at a traffic stop with no reason?",
+  "ground": 0.875,
+  "halluc": false,
+  "rel": 0.375,
+  "cpass": true,
+  "fallback": false,
+  "latency": 4.95,
+  "cost": 0.00295
+ },
+ {
+  "span_id": "47b5023c0a043dc7",
+  "trace_id": "041f14e32ee5bb443ea33cb138f43687",
+  "q": "Water rights priority: senior appropriator call doctrine",
+  "ground": 0.714,
+  "halluc": false,
+  "rel": 0.375,
+  "cpass": true,
+  "fallback": false,
+  "latency": 1.86,
+  "cost": 0.0
+ },
+ {
+  "span_id": "749c1f18d13aff17",
+  "trace_id": "24d0d570440db6174011a5537b94da1f",
+  "q": "Landlord liability for security deposit withholding under C.R.S. 38-12-103",
+  "ground": 1.0,
+  "halluc": false,
+  "rel": 0.375,
+  "cpass": true,
+  "fallback": false,
+  "latency": 1.47,
+  "cost": 0.0
+ },
+ {
+  "span_id": "5d66ae74e14f097a",
+  "trace_id": "3ce5ad410d221334ade3bc2511efc353",
+  "q": "can they use evidence",
+  "ground": 0.857,
+  "halluc": false,
+  "rel": 0.375,
+  "cpass": true,
+  "fallback": false,
+  "latency": 4.57,
+  "cost": 0.00295
+ }
+]
