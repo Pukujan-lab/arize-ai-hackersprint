@@ -10,7 +10,7 @@
 - Task board: `python3 acs_claim.py list` (claim: `python3 acs_claim.py claim HACK-0X --agent <name>`).
 
 ## Product
-Cited legal research assistant for solo lawyers, paralegals, and legal aid.
+Cited verified research-memo tool for legal professionals (law firms, in-house counsel, litigation support).
 > "Cited legal answers for people who can't afford legal research, built and checked by coordinated agents inside Daytona."
 
 ## Architecture

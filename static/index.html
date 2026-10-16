@@ -9,11 +9,11 @@
 <body class="text-slate-200 min-h-screen font-sans"><nav class="sticky top-0 z-40 backdrop-blur bg-slate-950/60 border-b border-white/5"><div class="max-w-7xl mx-auto px-6 h-11 flex items-center gap-6 text-sm"><span class="font-bold text-indigo-400">⚖ Precedent</span><a href="/" class="text-slate-300 hover:text-white">Demo</a><a href="/map" class="text-slate-300 hover:text-white">Map</a><a href="/dashboard" class="text-slate-300 hover:text-white">Dashboards</a><a href="/slides" class="text-slate-300 hover:text-white">Slides</a></div></nav>
 <div class="max-w-7xl mx-auto px-6 py-8">
 <header class="flex items-center justify-between mb-8">
- <div><h1 class="text-3xl font-bold tracking-tight"><span class="text-indigo-400">⚖ Precedent</span> <span class="text-slate-400 font-light">cited legal answers, checked by agents</span></h1>
- <p class="text-slate-400 text-sm mt-1">Multi-agent retrieval over a 120k-node citation graph · every citation verified</p></div>
+ <div><h1 class="text-3xl font-bold tracking-tight"><span class="text-indigo-400">⚖ Precedent</span> <span class="text-slate-400 font-light">verified research memos for legal teams</span></h1>
+ <p class="text-slate-400 text-sm mt-1">Every authority checked against retrieved sources · auditable agent trail · jurisdiction mapped by county and court</p></div>
  <div id="badges" class="flex gap-2 text-xs"></div></header>
 <div class="glass rounded-2xl p-4 flex gap-3 mb-6">
- <input id="q" class="flex-1 bg-transparent outline-none text-lg placeholder-slate-500" placeholder="Ask a legal research question…" value="When can police search a vehicle without a warrant?">
+ <input id="q" class="flex-1 bg-transparent outline-none text-lg placeholder-slate-500" placeholder="Enter a research query (issue, jurisdiction)…" value="Automobile exception: probable cause standard in Colorado">
  <button id="go" class="bg-indigo-500 hover:bg-indigo-400 px-6 py-2 rounded-xl font-semibold">Ask</button></div>
 <div class="flex gap-2 mb-6 text-xs" id="examples"></div>
 <div class="glass rounded-2xl overflow-hidden relative mb-6" style="height:clamp(300px,42vh,420px)"><div id="docs3d" class="absolute inset-0"></div><div class="absolute bottom-2 left-3 text-[10px] uppercase tracking-widest text-slate-500">United States · Colorado courts &amp; statutes</div><div id="docnav" class="absolute bottom-2 right-3 flex gap-1"></div><a id="fullmap" href="/map" class="absolute top-3 right-4 z-20 text-xs bg-indigo-600/80 hover:bg-indigo-500 px-3 py-1 rounded-full">Open full map ↗</a></div>
@@ -41,7 +41,7 @@ const C={planner:"text-sky-300",retriever:"text-indigo-300",answer:"text-fuchsia
 const $=id=>document.getElementById(id);let lastAnswer="",tts=false;
 function seats(state){$("seats").innerHTML=SEATS.map(([k,i,n])=>`<div class="seat glass rounded-xl p-3 border ${state[k]||''}"><div class="text-2xl">${i}</div><div class="font-semibold text-sm">${n}</div><div class="text-[10px] text-slate-400">${state[k]==='on'?'<span class=live>● working</span>':state[k]==='done'?'✓ handed off':'idle'}</div></div>`).join("")}
 seats({});
-["Can police search a car without a warrant if they have probable cause?","Water rights priority dispute between ranchers","Can a landlord evict a tenant without a court order?","Is marijuana possession a crime after Amendment 64?"].forEach(e=>{const b=document.createElement("button");b.className="glass px-3 py-1 rounded-full hover:bg-white/10";b.textContent=e;b.onclick=()=>{$("q").value=e;ask()};$("examples").appendChild(b)});
+["Automobile exception: probable cause standard in Colorado","Landlord liability for security deposit withholding under C.R.S. 38-12-103","Suppression of evidence from warrantless vehicle search","Water rights priority: senior appropriator call doctrine"].forEach(e=>{const b=document.createElement("button");b.className="glass px-3 py-1 rounded-full hover:bg-white/10";b.textContent=e;b.onclick=()=>{$("q").value=e;ask()};$("examples").appendChild(b)});
 fetch("/api/health").then(r=>r.json()).then(h=>{tts=h.elevenlabs;const b=(t,on)=>`<span class="px-2 py-1 rounded-full ${on?'bg-emerald-500/20 text-emerald-300':'bg-slate-700/50 text-slate-500'}">${t}</span>`;
 $("badges").innerHTML=b("Daytona",!!h.sandbox)+b("SurrealDB",h.backend=="surrealdb")+b("Arize",h.arize)+b("ElevenLabs",h.elevenlabs)});
 function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}

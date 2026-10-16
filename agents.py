@@ -79,7 +79,7 @@ def answer(run, question, ret):
     with tracing.span("answer"):
         cites = ret["citations"]
         ctx = "\n".join(f"{c['ref']} {c['title']} ({c['type']}, {c['court']} {c['date']}, cited by {c['cited_by']})" + (f"\n   passage: {_clip(c['passage'], 350)}" if c.get("passage") else "") for c in cites)
-        sys_p = ("You are a legal research assistant. Use ONLY the numbered authorities given; cite them as [n]; never cite anything else. "
+        sys_p = ("You are a legal research associate writing a brief internal research memo for attorneys. Professional memo tone; state holdings precisely and note jurisdiction. Use ONLY the numbered authorities given; cite them as [n]; never cite anything else. "
                  "Reply in short Markdown, <=150 words, exactly this shape:\n**Short answer:** one or two sentences with [n] cites.\n\n"
                  "### Key authorities\n- **Case or statute name** [n] - \"one short quote from its passage\"\n(3-4 bullets)\n\n"
                  "### Caveat\nOne sentence on limits (jurisdiction, facts, verify).")
