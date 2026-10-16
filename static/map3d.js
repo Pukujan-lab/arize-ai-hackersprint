@@ -105,9 +105,9 @@ if(!webgl){
       const g=new THREE.BufferGeometry(); g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3)); g.setAttribute("uv",new THREE.Float32BufferAttribute(uv,2)); g.setIndex(idx);
       scene.add(new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:clipCO?0.9:0.75,depthWrite:false}))); attr.style.display="block"; };
     for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++){ const im=new Image(); im.crossOrigin="anonymous"; let t=setTimeout(()=>{ im.src=""; if(++done===total) finish(); },3000);
-      im.onload=()=>{ clearTimeout(t); cx.drawImage(im,(x-x0)*256,(y-y0)*256); ok++; if(++done===total) finish(); }; im.onerror=()=>{ clearTimeout(t); if(++done===total) finish(); };
-      im.src=`https://${"abcd"[(x+y)%4]}.basemaps.cartocdn.com/dark_all/${z}/${x}/${y}.png`; } }
-  const attr=document.createElement("div"); attr.className="absolute bottom-1 right-2 text-[10px] text-slate-500 z-10"; attr.style.display="none"; attr.innerHTML='© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank">CARTO</a>'; host.parentElement.appendChild(attr);
+      im.onload=()=>{ clearTimeout(t); cx.filter="invert(1) hue-rotate(200deg) brightness(.55) contrast(1.25) saturate(.5)"; cx.drawImage(im,(x-x0)*256,(y-y0)*256); cx.filter="none"; ok++; if(++done===total) finish(); }; im.onerror=()=>{ clearTimeout(t); if(++done===total) finish(); };
+      im.src=`https://tile.openstreetmap.org/${z}/${x}/${y}.png`; } }
+  const attr=document.createElement("div"); attr.className="absolute bottom-1 right-2 text-[10px] text-slate-500 z-10"; attr.style.display="none"; attr.innerHTML='© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'; host.parentElement.appendChild(attr);
   try{ basemap(4,-125,-66.5,24.5,49.5,0.0008,false); basemap(7,-109.06,-102.04,36.99,41.0,0.0606,true); }catch(e){}
   // --- Colorado counties (us-atlas counties-10m, FIPS 08xxx) ---
   const coCounties=await (await fetch("/static/vendor/co_counties_proj.json")).json(); const cMeshes=[], cByName={};
