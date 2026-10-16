@@ -139,7 +139,7 @@ if(!webgl){
     const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:ARC[type],transparent:true,opacity:0.95})); arcGroup.add(line); return {line,n:pts.length,t:0}; }
   const coView=()=>{ lookT.copy(coC); camT.set(coC.x,coC.y-0.28,(host.clientWidth/Math.max(1,host.clientHeight)>1.7?1.25:1.6)); };
   Object.assign(api,{
-    busy(){ mode="busy"; panel.classList.add("hidden"); panel.innerHTML=""; try{ tip.classList.add("hidden"); api.stopTour&&api.stopTour(); }catch(e){} clear(); clearTimeout(tour); label.textContent="Agents retrieving across U.S. and Colorado courts…"; document.getElementById("cnt").textContent="";
+    busy(){ mode="busy"; try{ clearInterval(trT); tr.classList.add("hidden"); }catch(e){} panel.classList.add("hidden"); panel.innerHTML=""; try{ tip.classList.add("hidden"); api.stopTour&&api.stopTour(); }catch(e){} clear(); clearTimeout(tour); label.textContent="Agents retrieving across U.S. and Colorado courts…"; document.getElementById("cnt").textContent="";
       busyRing=new THREE.Mesh(new THREE.RingGeometry(0.03,0.04,48),new THREE.MeshBasicMaterial({color:0x818cf8,transparent:true,opacity:0.8,side:THREE.DoubleSide}));
       const [x,y]=xy(DENVER); busyRing.position.set(x,y,Z0+0.002); pinGroup.add(busyRing); coView(); },
     show(c0,edges=[],docs=[]){ mode="show"; clear(); const c=c0.concat(docs); cites=c; api._c=c; const g=groups(c); heatCounties(c); const where={}; let seq=0;
@@ -160,7 +160,7 @@ if(!webgl){
     order(){ return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0]).filter(x=>x[1]>0).sort((a,b)=>a[1]-b[1]).map(x=>x[0]); },
     tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; tbtn.textContent="❚❚ Pause";
       if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.textContent="▶ Tour"; return; }
-      const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); touring=false; tbtn.textContent="▶ Tour"; return; } tpos=n; api.focus(O[n]); tour=setTimeout(()=>step(n+1),2600); }; step(start); },
+      const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.textContent="▶ Tour"; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); tour=setTimeout(()=>step(n+1),Math.max(2600,ms+1200)); }; step(start); },
     stopTour(){ touring=false; clearTimeout(tour); tbtn.textContent="▶ Tour"; },
     fit(){ const fed=pins.some(p=>p.userData.G.cat==="federal"); if(fed){ camT.copy(homeCam); lookT.copy(homeLook); } else coView(); },
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
@@ -196,6 +196,20 @@ if(!webgl){
       const scrW=L.w*U*W*0.45*px; if(_v.z>1||x<0||y<0||x>W||y>H||(scrW<w*0.8&&!(o&&o.n))||hit(x-w/2,y-h/2,w,h)){ L.d.style.display="none"; return; }
       boxes.push([x-w/2,y-h/2,w,h]); L.d.style.display=""; L.d.style.left=x+"px"; L.d.style.top=y+"px"; L.d.style.color=o&&o.n?"#6ee7b7":"rgba(203,213,225,.6)"; L.d.style.fontWeight=o&&o.n?"700":"400"; }); }
   overlay();
+  // --- Tour transcript (derived from answer text + retrieved passage; no extra model call) ---
+  const tr=document.createElement("div"); tr.className="absolute left-1/2 -translate-x-1/2 bottom-16 z-20 hidden rounded-xl px-4 py-3 text-[13px] leading-relaxed text-slate-100 border border-white/10 shadow-2xl"; tr.style.cssText="width:min(560px,60%);background:rgba(15,18,30,.6);backdrop-filter:blur(10px)"; host.parentElement.appendChild(tr);
+  let trT=null;
+  function explain(k){ const c=cites[k]||{}, ctx=api.ctx||{}, ref=c.ref||""; const yr=(String(c.date||"").match(/\d{4}/)||[""])[0];
+    const where=[c.court, c._loc&&c._loc.cat==="county"?c._loc.label.split("→")[0].trim():""].filter(Boolean).join(", ");
+    const ex=window.cleanPassage?cleanPassage(c.passage,ctx.question,180):(c.passage||"").slice(0,180);
+    const sum=`${c.title||"Authority"}${where?" ("+where+(yr?", "+yr:"")+")":(yr?" ("+yr+")":"")}.${ex?" Retrieved passage: “"+ex+"”":" No passage retrieved (graph-linked)."}`;
+    let rel=""; if(ref&&ctx.answer){ const lines=String(ctx.answer).split("\n").filter(l=>l.includes(ref)); const l=lines.find(x=>/^\s*[-*•]/.test(x))||lines[0];
+      if(l) rel=l.replace(/\*\*|[*#>`]/g,"").replace(/\[\d+\]/g,"").replace(/^\s*[-•]\s*/,"").replace(/^short answer:?/i,"").replace(/\s+/g," ").trim(); }
+    return {sum, rel: rel?"Relevant because the memo cites it for: "+rel:""}; }
+  function typeOut(k){ clearInterval(trT); const {sum,rel}=explain(k); const full=`<b style="color:#a5b4fc">${(cites[k]||{}).ref||""}</b> `; const txt=sum+(rel?"\n"+rel:"");
+    tr.classList.remove("hidden"); let n=0; const esc=t=>t.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;");
+    trT=setInterval(()=>{ n+=1; tr.innerHTML=full+esc(txt.slice(0,n)).replace("\n","<br><span style='color:#6ee7b7'>")+(n<txt.length?"<span class='animate-pulse'>▍</span>":""); if(n>=txt.length) clearInterval(trT); },30);
+    return txt.length*30; }
   coView(); cam.position.copy(camT); look.copy(lookT); cam.lookAt(look);
   R.domElement.style.cursor="pointer";
   R.domElement.addEventListener("mousemove",ev=>{ const now=performance.now(); if(now-hovT<40) return; hovT=now; const _co=countyAt(ev); const esc=t=>String(t||"").replace(/</g,"&lt;"); const r0=host.parentElement.getBoundingClientRect();
