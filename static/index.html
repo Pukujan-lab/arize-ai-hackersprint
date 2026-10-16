@@ -69,7 +69,7 @@ function render(r){lastAnswer=r.answer;const byRef={};r.citations.forEach(c=>byR
  const refOf={};r.citations.forEach(c=>refOf[c.id]=c.ref);
  const nodes=[...ids].map(id=>({id,label:(refOf[id]?refOf[id]+" ":"")+(id.length>28?id.slice(0,26)+"…":id),shape:"dot",size:refOf[id]?18:9,
   color:r.seeds.includes(id)?"#f59e0b":refOf[id]?"#818cf8":"#475569",font:{color:"#cbd5e1",size:11}}));
- new vis.Network($("net"),{nodes,edges:r.edges.map(e=>({from:e.src,to:e.dst,arrows:"to",color:{color:"#64748b"}}))},{physics:{stabilization:true},interaction:{hover:true}})}
+ window.caseLinks&&[...$("cites").children].forEach((el,i)=>{const c=r.citations[i];if(c){const d=document.createElement("div");d.innerHTML=caseLinks(c);el.firstElementChild&&el.firstElementChild.appendChild(d)}});new vis.Network($("net"),{nodes,edges:r.edges.map(e=>({from:e.src,to:e.dst,arrows:"to",color:{color:"#64748b"}}))},{physics:{stabilization:true},interaction:{hover:true}})}
 $("go").onclick=ask;$("q").onkeydown=e=>{if(e.key=="Enter")ask()};
 let lastCites=[],actx=null;
 async function speak(){const text=shortLine(lastAnswer);if(!text)return;$("play").textContent="⏳";
