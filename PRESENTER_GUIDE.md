@@ -1,5 +1,5 @@
 # Precedent — presenter guide (3:20 total)
-Positioning: verified research memos for legal teams (law firms, in-house counsel, litigation support).
+Story: multi-agent AI is unreliable in production, and our pipeline fixes it, with each fix a partner. First use case: verified legal research memos (B2B).
 
 ## Pre-demo checklist
 - [ ] Open https://3000-hpm8ocjo7sx9gya1.daytonaproxy01.net in Chrome, mic permission granted
@@ -9,9 +9,9 @@ Positioning: verified research memos for legal teams (law firms, in-house counse
 - [ ] Backup video ready: static/backup_demo.mp4
 
 ## 1. Problem (20s)
-Associates spend hours on first-pass research memos, and generic LLMs cite authorities that were never retrieved, or that don't exist.
+Multi-agent AI is unreliable in production: agents collide, act on unverified output, touch real systems unsafely, and are untraceable.
 ## 2. Precedent (20s)
-A query becomes a research memo: short answer, key authorities with holdings, caveat. Every citation is checked against what was retrieved, and every step is auditable.
+Each fix is a partner: Isolation (Daytona), Grounded memory (SurrealDB + Octo), Observability + evals (Arize), Voice (ElevenLabs), Coordination (ACS), Verification (safeguard), Guardrails (Anthropic fallback, caps). First use case: verified legal memos.
 ## 3. Live demo (60s)
 Click the mic → ask the chip question "Automobile exception: probable cause standard in Colorado" → point at the live agent feed → the map lights up by county and court → hover a case → click Listen.
 ## 4. Partners (60s)
