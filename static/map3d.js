@@ -153,14 +153,27 @@ if(!webgl){
         else { const c0v=P(pa), ang=k*0.9, r=0.035+0.006*(k%4); a=mkArc(c0v.clone().add(new THREE.Vector3(Math.cos(ang)*0.008,Math.sin(ang)*0.008,0)),c0v.clone().add(new THREE.Vector3(Math.cos(ang)*r,Math.sin(ang)*r,0)),arcType(c[id[e.src]],c[id[e.dst]])); }
         a.start=performance.now()+1800+seq++*160; arcs.push(a); });
       document.getElementById("cnt").textContent=`${counties(c)} counties linked · ${states(c)} jurisdictions · ${arcs.length} links`;
-      coView(); clearTimeout(tour); tour=setTimeout(()=>api.focus(0),2600); },
+      coView(); clearTimeout(tour); tour=setTimeout(()=>api.tour(),2400); },
     focus(k){ if(!cites[k]) return; cur=k; const p=pins.find(p=>p.userData.G.items.includes(k)); if(!p) return;
       label.innerHTML=`<b class="text-indigo-300">${cites[k].ref||"retrieved"}</b> ${cites[k].title.replace(/</g,"&lt;")}<br><span class="text-slate-400">${cites[k]._loc.label}</span>`;
-      const far=p.userData.G.cat==="federal"; lookT.copy(p.position); camT.set(p.position.x,p.position.y-(far?0.6:0.3),far?2.6:1.25); },
+      const cat=p.userData.G.cat, far=cat==="federal", d=far?2.6:(cat==="county"?1.05:1.7); lookT.copy(p.position); camT.set(p.position.x,p.position.y-d*0.25,d); if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ cam.position.copy(camT); look.copy(lookT); } },
+    order(){ return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0]).filter(x=>x[1]>0).sort((a,b)=>a[1]-b[1]).map(x=>x[0]); },
+    tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; tbtn.textContent="❚❚ Pause";
+      if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.textContent="▶ Tour"; return; }
+      const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); touring=false; tbtn.textContent="▶ Tour"; return; } tpos=n; api.focus(O[n]); tour=setTimeout(()=>step(n+1),2600); }; step(start); },
+    stopTour(){ touring=false; clearTimeout(tour); tbtn.textContent="▶ Tour"; },
+    fit(){ const fed=pins.some(p=>p.userData.G.cat==="federal"); if(fed){ camT.copy(homeCam); lookT.copy(homeLook); } else coView(); },
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
   R.domElement.addEventListener("click",ev=>{ const r=R.domElement.getBoundingClientRect(); mouse.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
     ray.setFromCamera(mouse,cam); ray.params.Line.threshold=0.01; const hit=ray.intersectObjects(pins.flatMap(p=>[p.userData.head,p.children[0]]),false)[0];
     R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.focus(k); openDoc(cites[k]); } } });
+  let touring=false, tpos=0; const tbar=document.createElement("div"); tbar.className="absolute bottom-10 right-4 z-20 flex gap-1 text-xs";
+  const mk=(t,f)=>{ const b=document.createElement("button"); b.textContent=t; b.className="px-2.5 py-1 rounded-full bg-slate-900/70 border border-indigo-400/40 text-slate-200 hover:bg-indigo-600/60"; b.onclick=e=>{e.stopPropagation();f();}; tbar.appendChild(b); return b; };
+  mk("◀",()=>{ api.stopTour(); const O=api.order(); tpos=Math.max(0,tpos-1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
+  const tbtn=mk("▶ Tour",()=>{ touring?api.stopTour():api.tour(0); });
+  mk("▶",()=>{ api.stopTour(); const O=api.order(); tpos=Math.min(O.length-1,tpos+1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
+  host.parentElement.appendChild(tbar);
+  ["wheel","pointerdown"].forEach(ev=>R.domElement.addEventListener(ev,()=>{ if(touring) api.stopTour(); },{passive:true}));
   coView(); cam.position.copy(camT); look.copy(lookT); cam.lookAt(look);
   R.domElement.style.cursor="pointer";
   R.domElement.addEventListener("mousemove",ev=>{ const now=performance.now(); if(now-hovT<40) return; hovT=now; const _co=countyAt(ev); const esc=t=>String(t||"").replace(/</g,"&lt;"); const r0=host.parentElement.getBoundingClientRect();
