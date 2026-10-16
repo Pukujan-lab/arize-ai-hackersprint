@@ -43,8 +43,8 @@ function locate(c){ const t=(c.type||"").toLowerCase(), court=(c.court||""), lc=
 const proj=d3.geoAlbersUsa().scale(1300).translate([487.5,305]), U=0.01;
 const xy=([la,lo])=>{ const p=proj([lo,la])||proj([-104.98,39.74]); return [(p[0]-487.5)*U,-(p[1]-305)*U]; };
 const COL={county:0x34d399,state:0x818cf8,statute:0xf59e0b,federal:0xf472b6}, ARC={cc:0x34d399,cs:0x60a5fa,st:0xf59e0b,fed:0xf472b6,other:0x94a3b8};
-const panel=document.createElement("div"); panel.id="docpanel"; panel.className="absolute left-4 bottom-4 w-[340px] hidden [perspective:1000px] z-30"; panel.addEventListener("pointerdown",e=>e.stopPropagation()); panel.addEventListener("click",e=>e.stopPropagation()); host.parentElement.appendChild(panel);
-function openDoc(c){ panel.classList.remove("hidden"); const E=t=>String(t||"").replace(/</g,"&lt;"); const q=window.cleanPassage?cleanPassage(c.passage):(c.passage||"").slice(0,300);
+const panel=document.createElement("div"); panel.id="docpanel"; panel.className="absolute left-4 bottom-14 w-[340px] hidden [perspective:1000px] z-30"; panel.addEventListener("pointerdown",e=>e.stopPropagation()); panel.addEventListener("click",e=>e.stopPropagation()); host.parentElement.appendChild(panel);
+function openDoc(c){ panel.classList.remove("hidden"); try{ layoutTr(); }catch(e){} const E=t=>String(t||"").replace(/</g,"&lt;"); const q=window.cleanPassage?cleanPassage(c.passage):(c.passage||"").slice(0,300);
  panel.innerHTML=`<div id="pg" class="w-full max-h-[50vh] overflow-auto rounded-xl p-4 text-slate-100 origin-left transition-transform duration-500 border border-white/10 shadow-2xl" style="transform:rotateY(-95deg);background:rgba(15,18,30,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)">
  <button class="float-right text-slate-400 hover:text-white" onclick="this.closest('.absolute').classList.add('hidden')">✕</button>
  <div class="text-indigo-300 font-semibold text-xs">${c.ref||"related"} · ${E(c.type)}</div><div class="font-semibold text-base leading-snug mt-1">${E(c.title)}</div>
@@ -52,7 +52,7 @@ function openDoc(c){ panel.classList.remove("hidden"); const E=t=>String(t||"").
  ${q?`<blockquote class="mt-3 text-[13px] leading-relaxed text-slate-200 border-l-2 border-indigo-400/70 pl-3 italic">${E(q)}</blockquote>`:`<div class="mt-3 text-xs text-slate-400">Graph-linked authority (no passage retrieved).</div>`}
  <div class="mt-2">${window.caseLinks?caseLinks(c):""}</div></div>`;
  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const p=document.getElementById("pg"); if(p) p.style.transform="rotateY(0)"; })); }
-api.open=openDoc; api.closeDoc=()=>{ panel.classList.add("hidden"); }; addEventListener("keydown",e=>{ if(e.key==="Escape") panel.classList.add("hidden"); });
+api.open=openDoc; api.closeDoc=()=>{ panel.classList.add("hidden"); try{ layoutTr(); }catch(e){} }; new MutationObserver(()=>{ try{ layoutTr(); }catch(e){} }).observe(panel,{attributes:true,attributeFilter:["class"]}); addEventListener("keydown",e=>{ if(e.key==="Escape") panel.classList.add("hidden"); });
 const legend=document.createElement("div"); legend.className="absolute top-3 left-4 text-[11px] text-slate-300 space-y-0.5 pointer-events-none";
 legend.innerHTML=`<div class="uppercase tracking-widest text-slate-500">U.S. citation map · Colorado focus</div><div><span style="color:#34d399">━</span> county↔county</div><div><span style="color:#60a5fa">━</span> county → state court</div><div><span style="color:#f59e0b">━</span> case ↔ statute</div><div><span style="color:#f472b6">━</span> federal / out-of-state</div><div id="cnt" class="text-indigo-300 font-semibold"></div>`;
 host.parentElement.appendChild(legend);
@@ -107,7 +107,7 @@ if(!webgl){
     for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++){ const im=new Image(); im.crossOrigin="anonymous"; let t=setTimeout(()=>{ im.src=""; if(++done===total) finish(); },3000);
       im.onload=()=>{ clearTimeout(t); cx.drawImage(im,(x-x0)*256,(y-y0)*256); cx.filter="none"; ok++; if(++done===total) finish(); }; im.onerror=()=>{ clearTimeout(t); if(++done===total) finish(); };
       im.src=`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${z}/${y}/${x}`; } }
-  const attr=document.createElement("div"); attr.className="absolute bottom-1 right-2 text-[10px] text-slate-500 z-10"; attr.style.display="none"; attr.innerHTML='Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'; host.parentElement.appendChild(attr);
+  const attr=document.createElement("div"); attr.className="absolute bottom-1 right-2 text-[10px] text-slate-500 z-[5] pointer-events-none"; attr.style.display="none"; attr.innerHTML='Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'; host.parentElement.appendChild(attr);
   try{ basemap(7,-109.06,-102.04,36.99,41.0,0.0606,true); }catch(e){}
   // --- Colorado counties (us-atlas counties-10m, FIPS 08xxx) ---
   const coCounties=await (await fetch("/static/vendor/co_counties_proj.json")).json(); const cMeshes=[], cByName={};
@@ -202,7 +202,8 @@ if(!webgl){
       boxes.push([x-w/2,y-h/2,w,h]); L.d.style.display=""; L.d.style.left=x+"px"; L.d.style.top=y+"px"; L.d.style.color=o&&o.n?"#6ee7b7":"rgba(203,213,225,.6)"; L.d.style.fontWeight=o&&o.n?"700":"400"; }); }
   overlay();
   // --- Tour transcript (derived from answer text + retrieved passage; no extra model call) ---
-  const tr=document.createElement("div"); tr.id="transcript"; tr.className="absolute bottom-14 z-20 hidden rounded-xl px-3 py-2 text-[13px] leading-snug text-slate-100 border border-white/10 shadow-xl"; tr.style.cssText="left:50%;transform:translateX(-50%);width:min(440px,44%);max-height:30%;overflow:auto;background:rgba(15,18,30,.55);backdrop-filter:blur(8px)"; tr.addEventListener("pointerdown",e=>e.stopPropagation()); host.parentElement.appendChild(tr);
+  const tr=document.createElement("div"); tr.id="transcript"; tr.className="absolute bottom-14 z-20 hidden rounded-xl px-3 py-2 text-[13px] leading-snug text-slate-100 border border-white/10 shadow-xl"; tr.style.cssText="left:50%;transform:translateX(-50%);width:min(440px,44%);max-height:30%;overflow:auto;background:rgba(15,18,30,.55);backdrop-filter:blur(8px)"; tr.addEventListener("pointerdown",e=>e.stopPropagation());
+  function layoutTr(){ const open=!panel.classList.contains("hidden"); const W=host.parentElement.clientWidth; if(open&&W<1500){ tr.style.left=(16+340+16)+"px"; tr.style.transform="none"; tr.style.width="min(440px,"+(W-16-340-16-200)+"px)"; } else { tr.style.left="50%"; tr.style.transform="translateX(-50%)"; tr.style.width="min(440px,44%)"; } } host.parentElement.appendChild(tr);
   let trT=null;
   const CITE_RE=/\b\d+\s+(U\.S\.|P\.\s?\d?d|Colo\.(\s?App\.)?|S\.\s?Ct\.|F\.\s?\d?d|L\.\s?Ed\.)\s+\d+|\bv\.\s+[A-Z][\w.]*,\s+\d+/;
   function sentences(t){ return String(t||"").replace(/\s+/g," ").split(/(?<=[.!?])\s+(?=[A-Z“"(])/).map(x=>x.trim()).filter(Boolean); }
@@ -261,7 +262,7 @@ if(!webgl){
     cam.position.lerp(camT,0.035); look.lerp(lookT,0.05); cam.lookAt(look);
     if(busyRing){ busyRing.scale.setScalar(1+((t*1.5)%1)*4); busyRing.material.opacity=0.8*(1-((t*1.5)%1)); }
     pins.forEach(p=>{ const u=p.userData, age=(now-u.born)/400; p.scale.setScalar(Math.max(0.001,Math.min(1,age))); const f=u.G.items.includes(cur);
-      u.head.scale.setScalar(1+(f?0.4+level*1.4:0)+Math.sin(t*3+p.position.x*9)*0.08); const ph=((t+p.position.y*5)%1.2)/1.2; u.halo.scale.setScalar(1+ph*2*(f?1.6:1)); u.halo.material.opacity=0.6*(1-ph); });
+      u.head.scale.setScalar(1+(f?0.4+level*1.4:0)+Math.sin(t*3+p.position.x*9)*0.08); const ph=((t+p.position.y*5)%1.2)/1.2; u.halo.scale.setScalar(f?1+ph*2.4:1); u.halo.material.opacity=f?0.6*(1-ph):0.12; /* only the focused pin pulses */ });
     arcs.forEach(a=>{ if(now>a.start){ a.t=Math.min(1,a.t+0.03); a.line.geometry.setDrawRange(0,Math.floor(a.t*a.n)); } });
     R.render(scene,cam); });
 }

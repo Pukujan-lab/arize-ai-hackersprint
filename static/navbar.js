@@ -168,7 +168,7 @@
     const menu = document.createElement('div');
     menu.id = 'exMenu';
     menu.setAttribute('role', 'menu');
-    menu.style.cssText = 'display:none;position:absolute;right:0;top:100%;z-index:1000;background:#0f172a;border:1px solid rgba(129,140,248,0.55);border-radius:0.75rem;margin-top:0.5rem;width:max-content;min-width:260px;max-width:min(420px,90vw);white-space:normal;overflow-wrap:anywhere;text-align:left;box-shadow:0 18px 40px rgba(0,0,0,0.65);';
+    menu.style.cssText = 'display:none;position:absolute;right:0;top:100%;z-index:1000;background:#0f172a;border:1px solid rgba(129,140,248,0.55);border-radius:0.75rem;margin-top:0;width:max-content;min-width:260px;max-width:min(420px,90vw);white-space:normal;overflow-wrap:anywhere;text-align:left;box-shadow:0 18px 40px rgba(0,0,0,0.65);';
 
     let currentFocus = -1;
     const menuItems = [];
@@ -216,7 +216,9 @@
     const menuContainer = document.createElement('div');
     menuContainer.style.cssText = 'position:relative;display:inline-block;';
     menuContainer.appendChild(button);
-    menuContainer.appendChild(menu); menuContainer.style.position='relative'; menuContainer.style.zIndex='1000';
+    document.body.appendChild(menu); menu.style.position='fixed'; menu.style.right='auto'; menu.style.top='0'; menu.style.zIndex='1000';
+    const placeMenu=()=>{ const r=button.getBoundingClientRect(); menu.style.top=(r.bottom+6)+'px'; const w=Math.min(420,innerWidth*0.9); menu.style.left=Math.max(8,Math.min(r.right-menu.offsetWidth, innerWidth-menu.offsetWidth-8))+'px'; menu.style.maxWidth=w+'px'; };
+    addEventListener('resize',()=>{ if(menu.style.display!=='none') placeMenu(); }); addEventListener('scroll',()=>{ if(menu.style.display!=='none') placeMenu(); },true);
 
     // Insert after the go button or form
     let insertTarget = goButton || (form && form.querySelector('button'));
@@ -228,7 +230,7 @@
 
     // Menu state management
     function openMenu() {
-      menu.style.display = 'block';
+      menu.style.display = 'block'; placeMenu();
       button.setAttribute('aria-expanded', 'true');
       currentFocus = -1;
       // Focus first item
@@ -291,7 +293,7 @@
 
     // Close on click outside
     document.addEventListener('click', (e) => {
-      if (!menuContainer.contains(e.target)) {
+      if (!menuContainer.contains(e.target) && !menu.contains(e.target)) {
         closeMenu();
       }
     });

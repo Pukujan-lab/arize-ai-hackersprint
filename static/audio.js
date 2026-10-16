@@ -8,6 +8,7 @@ const play=HTMLMediaElement.prototype.play;
 HTMLMediaElement.prototype.play=function(){
   if(this.tagName==="VIDEO") return play.call(this);
   all.add(this);
+  all.forEach(o=>{ if(o!==this&&!o.paused){ try{ o.pause(); o.dispatchEvent(new Event("ended")); }catch(e){} } });   /* never two at once */
   if(muted){ try{this.pause();}catch(e){} setTimeout(()=>this.dispatchEvent(new Event("ended")),0); return Promise.resolve(); }
   return play.call(this); };
 const of=window.fetch;
@@ -66,12 +67,12 @@ function paint(){ const pl=M.playing(), mu=M.isMuted();
     if(!pl&&b.dataset.owner==="1") b.dataset.owner="0"; }); }
 M.paint=paint; setInterval(paint,200);
 // Fallback speak: cached ElevenLabs via /api/tts_ts, else browser voice. Returns a promise that resolves when done.
-M.say=function(text,btn){ if(!text||M.isMuted()) return Promise.resolve(); M.stopAll(true); if(btn){ btn.dataset.loading="1"; btn.dataset.owner="1"; paint(); }
+M.say=function(text,btn){ if(!text||M.isMuted()) return Promise.resolve(); M.stopAll(true); const D=window.Docs3D; if(D){ D.holdVoice=true; D.stopTour&&D.stopTour(); } M.saying=true; if(btn){ btn.dataset.loading="1"; btn.dataset.owner="1"; paint(); }
   const done=()=>{ if(btn){ btn.dataset.loading="0"; paint(); } };
   return fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})})
    .then(r=>r.ok&&r.status!==204?r.json():null).then(j=>{ done(); if(btn) btn.dataset.owner="1";
      if(j&&j.audio_b64){ const s=atob(j.audio_b64),u=new Uint8Array(s.length); for(let k=0;k<s.length;k++) u[k]=s.charCodeAt(k);
        const a=new Audio(URL.createObjectURL(new Blob([u],{type:"audio/mpeg"}))); return new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); }); }
      if("speechSynthesis" in window&&!M.isMuted()) return new Promise(res=>{ const u=new SpeechSynthesisUtterance(text); u.onend=res; u.onerror=res; speechSynthesis.speak(u); }); })
-   .catch(()=>done()).finally(()=>{ done(); if(btn) btn.dataset.owner="0"; }); };
+   .catch(()=>done()).finally(()=>{ done(); M.saying=false; if(window.Docs3D) Docs3D.holdVoice=false; if(btn) btn.dataset.owner="0"; }); };
 })();

@@ -222,10 +222,10 @@ def runs_list(n: int = 15):
     out = []
     for d in sorted((ROOT / "runs").iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
         f = d / "result.json"
-        if not f.exists() or d.name.startswith(("test","arize")): continue
+        if not f.exists() or d.name.startswith(("test","arize","exp-")): continue
         try: r = json.loads(f.read_text())
         except Exception: continue
-        out.append({"run_id": d.name, "question": r.get("question", ""), "n": len(r.get("citations", []))})
+        out.append({"run_id": d.name, "question": r.get("question", ""), "n": len(r.get("citations", [])), "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(f.stat().st_mtime))})
         if len(out) >= n: break
     return out
 @app.get("/guide", response_class=HTMLResponse)
