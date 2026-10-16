@@ -79,7 +79,7 @@ if(!webgl){
   const THREE = await import("/static/vendor/three.module.min.js");
   const R=new THREE.WebGLRenderer({antialias:true,alpha:true}); R.setPixelRatio(Math.min(devicePixelRatio,2)); host.appendChild(R.domElement);
   const scene=new THREE.Scene(), cam=new THREE.PerspectiveCamera(36,1,0.01,100); cam.up.set(0,0,1);
-  const homeCam=new THREE.Vector3(0,-6.2,6.4), homeLook=new THREE.Vector3(0,0.2,0); cam.position.copy(homeCam);
+  const homeCam=new THREE.Vector3(0,-1.9,8.2), homeLook=new THREE.Vector3(0,0.2,0); cam.position.copy(homeCam);
   const look=homeLook.clone(), lookT=homeLook.clone(), camT=homeCam.clone(); cam.lookAt(look);
   scene.add(new THREE.AmbientLight(0xffffff,0.75)); const dl=new THREE.DirectionalLight(0xc7d2fe,1.5); dl.position.set(-3,-4,6); scene.add(dl);
   const matS=new THREE.MeshStandardMaterial({color:0x172042,roughness:0.7,metalness:0.15}), matCO=new THREE.MeshStandardMaterial({color:0x3730a3,roughness:0.5,metalness:0.3,emissive:0x1e1b4b});
@@ -105,9 +105,9 @@ if(!webgl){
       const g=new THREE.BufferGeometry(); g.setAttribute("position",new THREE.Float32BufferAttribute(pos,3)); g.setAttribute("uv",new THREE.Float32BufferAttribute(uv,2)); g.setIndex(idx);
       scene.add(new THREE.Mesh(g,new THREE.MeshBasicMaterial({map:tex,transparent:true,opacity:clipCO?0.9:0.75,depthWrite:false}))); attr.style.display="block"; };
     for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++){ const im=new Image(); im.crossOrigin="anonymous"; let t=setTimeout(()=>{ im.src=""; if(++done===total) finish(); },3000);
-      im.onload=()=>{ clearTimeout(t); cx.filter="invert(1) hue-rotate(200deg) brightness(.55) contrast(1.25) saturate(.5)"; cx.drawImage(im,(x-x0)*256,(y-y0)*256); cx.filter="none"; ok++; if(++done===total) finish(); }; im.onerror=()=>{ clearTimeout(t); if(++done===total) finish(); };
-      im.src=`https://tile.openstreetmap.org/${z}/${x}/${y}.png`; } }
-  const attr=document.createElement("div"); attr.className="absolute bottom-1 right-2 text-[10px] text-slate-500 z-10"; attr.style.display="none"; attr.innerHTML='© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'; host.parentElement.appendChild(attr);
+      im.onload=()=>{ clearTimeout(t); cx.drawImage(im,(x-x0)*256,(y-y0)*256); cx.filter="none"; ok++; if(++done===total) finish(); }; im.onerror=()=>{ clearTimeout(t); if(++done===total) finish(); };
+      im.src=`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${z}/${y}/${x}`; } }
+  const attr=document.createElement("div"); attr.className="absolute bottom-1 right-2 text-[10px] text-slate-500 z-10"; attr.style.display="none"; attr.innerHTML='Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'; host.parentElement.appendChild(attr);
   try{ basemap(7,-109.06,-102.04,36.99,41.0,0.0606,true); }catch(e){}
   // --- Colorado counties (us-atlas counties-10m, FIPS 08xxx) ---
   const coCounties=await (await fetch("/static/vendor/co_counties_proj.json")).json(); const cMeshes=[], cByName={};
@@ -137,11 +137,11 @@ if(!webgl){
   function mkArc(a,b,type){ const mid=a.clone().add(b).multiplyScalar(0.5); mid.z+=0.04+a.distanceTo(b)*0.35;
     const pts=new THREE.QuadraticBezierCurve3(a,mid,b).getPoints(48), geo=new THREE.BufferGeometry().setFromPoints(pts); geo.setDrawRange(0,0);
     const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:ARC[type],transparent:true,opacity:0.95})); arcGroup.add(line); return {line,n:pts.length,t:0}; }
-  const coView=()=>{ lookT.copy(coC); camT.set(coC.x,coC.y-1.9,1.9); };
+  const coView=()=>{ lookT.copy(coC); camT.set(coC.x,coC.y-0.55,2.1); };
   Object.assign(api,{
     busy(){ mode="busy"; clear(); clearTimeout(tour); label.textContent="Agents retrieving across U.S. and Colorado courts…"; document.getElementById("cnt").textContent="";
       busyRing=new THREE.Mesh(new THREE.RingGeometry(0.03,0.04,48),new THREE.MeshBasicMaterial({color:0x818cf8,transparent:true,opacity:0.8,side:THREE.DoubleSide}));
-      const [x,y]=xy(DENVER); busyRing.position.set(x,y,Z0+0.002); pinGroup.add(busyRing); camT.copy(homeCam); lookT.copy(homeLook); },
+      const [x,y]=xy(DENVER); busyRing.position.set(x,y,Z0+0.002); pinGroup.add(busyRing); coView(); },
     show(c0,edges=[],docs=[]){ mode="show"; clear(); const c=c0.concat(docs); cites=c; api._c=c; const g=groups(c); heatCounties(c); const where={}; let seq=0;
       [...g.values()].forEach((G,k)=>{ const p=mkPin(G); p.userData.born=performance.now()+k*200; pins.push(p); G.items.forEach(i=>where[i]=p); });
       const id={}; c.forEach((x,i)=>id[x.id]=i); const P=p=>new THREE.Vector3().copy(p.position).setZ(p.position.z+0.004);
@@ -153,14 +153,15 @@ if(!webgl){
         else { const c0v=P(pa), ang=k*0.9, r=0.035+0.006*(k%4); a=mkArc(c0v.clone().add(new THREE.Vector3(Math.cos(ang)*0.008,Math.sin(ang)*0.008,0)),c0v.clone().add(new THREE.Vector3(Math.cos(ang)*r,Math.sin(ang)*r,0)),arcType(c[id[e.src]],c[id[e.dst]])); }
         a.start=performance.now()+1800+seq++*160; arcs.push(a); });
       document.getElementById("cnt").textContent=`${counties(c)} counties linked · ${states(c)} jurisdictions · ${arcs.length} links`;
-      camT.copy(homeCam); lookT.copy(homeLook); clearTimeout(tour); tour=setTimeout(()=>{ coView(); tour=setTimeout(()=>api.focus(0),1800); },1400); },
+      coView(); clearTimeout(tour); tour=setTimeout(()=>api.focus(0),2600); },
     focus(k){ if(!cites[k]) return; cur=k; const p=pins.find(p=>p.userData.G.items.includes(k)); if(!p) return;
       label.innerHTML=`<b class="text-indigo-300">${cites[k].ref||"retrieved"}</b> ${cites[k].title.replace(/</g,"&lt;")}<br><span class="text-slate-400">${cites[k]._loc.label}</span>`;
-      const far=p.userData.G.cat==="federal"; lookT.copy(p.position); camT.set(p.position.x,p.position.y-(far?2.2:1.5),far?2.4:1.6); },
+      const far=p.userData.G.cat==="federal"; lookT.copy(p.position); camT.set(p.position.x,p.position.y-(far?0.6:0.3),far?2.6:1.25); },
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
   R.domElement.addEventListener("click",ev=>{ const r=R.domElement.getBoundingClientRect(); mouse.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
     ray.setFromCamera(mouse,cam); ray.params.Line.threshold=0.01; const hit=ray.intersectObjects(pins.flatMap(p=>[p.userData.head,p.children[0]]),false)[0];
     R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.focus(k); openDoc(cites[k]); } } });
+  coView(); cam.position.copy(camT); look.copy(lookT); cam.lookAt(look);
   R.domElement.style.cursor="pointer";
   R.domElement.addEventListener("mousemove",ev=>{ const now=performance.now(); if(now-hovT<40) return; hovT=now; const o=countyAt(ev); if(!o){ tip.classList.add("hidden"); return; }
     const r=host.parentElement.getBoundingClientRect(); tip.style.left=(ev.clientX-r.left+14)+"px"; tip.style.top=(ev.clientY-r.top+14)+"px"; tip.classList.remove("hidden");
