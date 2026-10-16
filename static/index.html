@@ -5,6 +5,18 @@
 <style>body{background:radial-gradient(1200px 600px at 10% -10%,#1e1b4b 0,#0b1020 50%,#05070f 100%)}
 .glass{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(8px)}
 .seat.on{box-shadow:0 0 0 2px #818cf8,0 0 24px #6366f1aa}.seat.done{border-color:#34d399}
+/* answer card */
+.ans-head #liveline{display:none}
+.ans-chips{display:flex;flex-wrap:nowrap;gap:6px;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:4px;white-space:nowrap;font-size:11px;line-height:1;padding:5px 9px;border-radius:999px;background:rgba(148,163,184,.12);color:#cbd5e1;border:1px solid rgba(148,163,184,.18)}
+.chip.ok{background:rgba(16,185,129,.14);color:#6ee7b7;border-color:rgba(16,185,129,.3)}
+.chip.bad{background:rgba(239,68,68,.14);color:#fca5a5;border-color:rgba(239,68,68,.3)}
+.chip.warn{background:rgba(245,158,11,.14);color:#fcd34d;border-color:rgba(245,158,11,.3)}
+.chip[title]{cursor:help}
+#answer{line-height:1.7}#answer>*+*{margin-top:.75rem}
+#answer blockquote{border-left:3px solid rgba(129,140,248,.45)!important;background:rgba(99,102,241,.06)!important;border-radius:0 6px 6px 0;padding:.5rem 1rem!important;margin:.75rem 0!important}
+.ans-meta{margin-top:1.25rem;padding-top:.75rem;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ans-disc{margin-top:.35rem;font-size:11px;color:rgba(252,211,77,.55)}
 @keyframes pulse2{50%{opacity:.4}}.live{animation:pulse2 1s infinite}</style><script src="/static/links.js"></script></head>
 <body class="text-slate-200 min-h-screen font-sans"><nav class="sticky top-0 z-40 backdrop-blur bg-slate-950/60 border-b border-white/5"><div class="max-w-7xl mx-auto px-6 h-11 flex items-center gap-6 text-sm"><span class="font-bold text-indigo-400">⚖ Precedent</span><a href="/" class="text-slate-300 hover:text-white">Demo</a><a href="/map" class="text-slate-300 hover:text-white">Map</a><a href="/dashboard" class="text-slate-300 hover:text-white">Dashboards</a><a href="/slides" class="text-slate-300 hover:text-white">Slides</a><a href="/guide" class="text-slate-300 hover:text-white">Guide</a></div></nav>
 <div class="max-w-7xl mx-auto px-6 py-8">
@@ -19,10 +31,10 @@
 <div class="glass rounded-2xl overflow-hidden relative mb-6" style="height:clamp(300px,42vh,420px)"><div id="docs3d" class="absolute inset-0"></div><div class="absolute bottom-2 left-3 text-[10px] uppercase tracking-widest text-slate-500">United States · Colorado courts &amp; statutes</div><div id="docnav" class="absolute bottom-2 right-3 flex gap-1"></div><a id="fullmap" href="/map" class="absolute top-3 right-4 z-20 text-xs bg-indigo-600/80 hover:bg-indigo-500 px-3 py-1 rounded-full">Open full map ↗</a></div>
 <div class="grid grid-cols-12 gap-6">
  <div class="col-span-8 space-y-6">
-  <div class="glass rounded-2xl p-6"><div class="flex items-center justify-between mb-3"><h2 class="font-semibold text-slate-300">Answer</h2>
-   <div class="flex gap-2 items-center"><span id="sg"></span><label class="text-xs text-slate-400 flex items-center gap-1 mr-1"><input id="hf" type="checkbox" class="accent-indigo-500"> Hands-free</label><button id="play" data-abtn="play" data-label="Listen" data-tip="Listen to the memo" aria-label="Listen to the memo" class="abtn"></button></div></div>
+  <div class="glass rounded-2xl p-6 ans-card"><div class="ans-head flex items-center justify-between gap-3 mb-4"><h2 class="font-semibold text-slate-300">Answer</h2>
+   <div class="flex gap-2 items-center ml-auto"><span id="sg" class="ans-chips"></span><label class="text-xs text-slate-400 flex items-center gap-1 mr-1"><input id="hf" type="checkbox" class="accent-indigo-500"> Hands-free</label><button id="play" data-abtn="play" data-label="Listen" data-tip="Listen to the memo" aria-label="Listen to the memo" class="abtn"></button></div></div>
    <div id="answer" class="leading-relaxed text-slate-100 text-[15px] max-w-none">Ask a question to start the agent pipeline.</div>
-   <div id="meta" class="text-xs text-slate-500 mt-4"></div><div id="disc" class="text-xs text-amber-300/80 mt-2"></div></div>
+   <div id="meta" class="ans-meta"></div><div id="disc" class="ans-disc"></div></div>
 
   <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Retrieved authorities</h2><div id="cites" class="space-y-2"></div></div>
  </div>
@@ -72,7 +84,7 @@ async function ask(){const q=$("q").value.trim();if(!q||running||Date.now()-last
   if(d.result){window.__total=performance.now()-window.__askT;FEED.fast=true;render(d.result);done();res(d.result);const fin=()=>{if(FEED.q.length||FEED.busy)return setTimeout(fin,150);feedFinish();FEED.fast=false};fin()}else setTimeout(poll,d.partial?150:250)};poll()})}
 function render(r){setTimeout(()=>window.FOLLOW&&FOLLOW.onResult(r),0);lastAnswer=r.answer;const byRef={};r.citations.forEach(c=>byRef[c.ref]=c);
  $("answer").innerHTML=md(r.answer,byRef);[...$("answer").children].forEach((el,i)=>{el.style.opacity=0;el.style.transform="translateY(4px)";el.style.transition="opacity .35s,transform .35s";setTimeout(()=>{el.style.opacity=1;el.style.transform="none"},250+i*260)});
- const s=r.safeguard;$("sg").innerHTML=`<span class="px-3 py-1 rounded-full text-xs font-bold ${s.pass?'bg-emerald-500/20 text-emerald-300':'bg-red-500/20 text-red-300'}">🛡 ${s.pass?`${s.used.length} references matched retrieved sources`:`${s.invalid.length+s.unknown_authorities.length} reference(s) not in retrieved sources`}</span><span class="ml-2 text-[11px] text-slate-400">checks references, not legal accuracy</span>${/template/i.test(r.provider||"")?`<span class="ml-2 px-2 py-0.5 rounded-full text-[11px] bg-amber-500/20 text-amber-300">template answer (offline, no model)</span>`:/cached/i.test(r.provider||"")?`<span class="ml-2 px-2 py-0.5 rounded-full text-[11px] bg-slate-700 text-slate-300">cached answer</span>`:""}`;
+ const s=r.safeguard;$("sg").innerHTML=`<span class="chip ${s.pass?'ok':'bad'}">${s.pass?'✓ Safeguard PASS':'✕ Safeguard FAIL'}</span><span class="chip" title="checks references, not legal accuracy">${s.pass?`${s.used.length}/${s.used.length} refs verified`:`${s.invalid.length+s.unknown_authorities.length} ref(s) unverified`}</span>${r.elapsed_s!=null?`<span class="chip">${(+r.elapsed_s).toFixed(1)}s</span>`:''}${/template/i.test(r.provider||"")?`<span class="chip warn" title="offline, no model">template</span>`:/cached/i.test(r.provider||"")?`<span class="chip">cached</span>`:""}`;
  $("disc").textContent="⚠ "+s.disclaimer;$("meta").textContent=`run ${r.run_id} · model: ${r.provider} · passages: ${r.passage_source||"none (graph-only)"} · graph: ${r.backend} · ${r.elapsed_s}s`+(s.unsupported_claims.length?` · ${s.unsupported_claims.length} sentence(s) without citation flagged`:"");
  if(tts)$("play").classList.remove("hidden");
  if(window.Docs3D){Docs3D.holdVoice=false;if(Docs3D.voice&&!(window.AudioMgr&&AudioMgr.isMuted())){const go=()=>{if(!Docs3D.tour)return setTimeout(go,200);Docs3D.stopTour();const g=AudioMgr.gen||0;AudioMgr.say(shortLine(r.answer),$("play")).then(()=>{if((AudioMgr.gen||0)===g)Docs3D.tour(0)});};setTimeout(go,300);}}
