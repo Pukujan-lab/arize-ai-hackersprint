@@ -237,7 +237,7 @@ if(!webgl){
   let sync=null; // {a:Audio, starts:[...]} for the stop currently speaking
   function sayTTS(text){ if(!api.voice||api.holdVoice||(window.AudioMgr&&AudioMgr.isMuted())) return null;
     const S={a:null,starts:[],dead:false}; sync=S;
-    S.done=fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.ok&&r.status!==204?r.json():null).then(j=>{ if(!j||!j.audio_b64||S.dead) return;
+    S.done=fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.ok&&r.status!==204?r.json():null).then(j=>{ if(!j||!j.audio_b64||S.dead||api.holdVoice||(window.AudioMgr&&AudioMgr.saying)) return;
       try{curAudio&&curAudio.pause();}catch(e){}
       const bin=atob(j.audio_b64), u8=new Uint8Array(bin.length); for(let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
       curAudio=new Audio(URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"}))); S.a=curAudio; S.starts=j.starts||[];

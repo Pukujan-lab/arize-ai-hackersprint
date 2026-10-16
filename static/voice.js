@@ -41,20 +41,26 @@ async function fallbackRecord(){ if(!(await ensureMic())) return; if(mr&&mr.stat
     const r=await fetch("/api/stt",{method:"POST",body:fd}); const d=await r.json().catch(()=>({})); if(d.text) submit(d.text); else { caption("Couldn't transcribe: "+(d.error||"")); if(conv) setTimeout(listen,3000); } };
   mr.start(); let quiet=0; const iv=setInterval(()=>{ an.getByteTimeDomainData(buf); let s=0; for(const v of buf){const d=(v-128)/128;s+=d*d} const lvl=Math.sqrt(s/buf.length);
     quiet=lvl<0.02?quiet+100:0; if(quiet>1200||!conv&&!ptt){ clearInterval(iv); if(mr.state==="recording") mr.stop(); } },100); setTimeout(()=>{ clearInterval(iv); if(mr.state==="recording") mr.stop(); },15000); }
+// Voice asks must ALWAYS be spoken: clear global mute + unlock autoplay using the tap gesture.
+let unlockCtx=null;
+function forceAudio(){ try{ if(window.AudioMgr&&AudioMgr.isMuted()) AudioMgr.setMuted(false); }catch(e){} try{ localStorage.setItem("precedent.mute","0"); localStorage.setItem("mapVoice","1"); }catch(e){}
+  try{ if(window.Docs3D){ Docs3D.voice=true; } }catch(e){}
+  try{ unlockCtx=unlockCtx||new (window.AudioContext||window.webkitAudioContext)(); if(unlockCtx.state==="suspended") unlockCtx.resume(); const b=unlockCtx.createBuffer(1,1,22050),n=unlockCtx.createBufferSource(); n.buffer=b; n.connect(unlockCtx.destination); n.start(0); }catch(e){}
+  try{ const a=new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="); a.volume=0; const p=a.play(); p&&p.catch&&p.catch(()=>{}); }catch(e){} }
 async function submit(text){ const myGen=gen; clearTimeout(silenceT); text=(text||"").trim(); pauseRec();
   if(text.split(/\s+/).length<3){ caption(`“${text}” — too short, ask a full question.`,true); if(conv) return setTimeout(listen,800); return setState("idle","tap to talk"); }
   setState("thinking","thinking"); caption("“"+text+"”");
   const res=await window.PRECEDENT.ask(text); if(myGen!==gen) return;
   if(!res){ if(resubmits<1){ resubmits++; caption("Busy — retrying once…",true); await new Promise(r=>setTimeout(r,3000)); return submit(text); } resubmits=0; caption("Server busy — try again in a moment."); return conv?setTimeout(listen,3000):setState("idle"); }
-  resubmits=0; setState("speaking","speaking"); await window.PRECEDENT.speak(); if(myGen!==gen) return;
+  resubmits=0; setState("speaking","speaking"); forceAudio(); await window.PRECEDENT.speak(); if(myGen!==gen) return;
   cooldownUntil=Date.now()+3000; setState("cooldown","cooldown"); caption("");
   setTimeout(()=>{ if(myGen!==gen) return; if(conv) listen(); else setState("idle","tap to talk"); },3000); }
 async function listen(){ const myGen=gen; if(Date.now()<cooldownUntil) return setTimeout(()=>{ if(myGen===gen) listen(); },cooldownUntil-Date.now()); if(!(await ensureMic())) return; startRec(); }
 function stop(paused){ gen++; conv=false; wake=false; ptt=false; pauseRec(); if(mr&&mr.state==="recording") try{mr.stop()}catch(e){} try{ window.AudioMgr&&AudioMgr.stopAll(true); }catch(e){} setState(paused?"paused":"idle","tap to talk"); caption(""); }
-btn.onclick=()=>{ if(state!=="idle"&&state!=="paused") return stop(true); conv=true; wake=false; listen(); };
-btn.oncontextmenu=e=>{ e.preventDefault(); if(conv) stop(); conv=true; wake=true; listen(); caption("✨ Wake mode: say “Hey Precedent, …”",true); };
+btn.onclick=()=>{ if(state!=="idle"&&state!=="paused") return stop(true); forceAudio(); conv=true; wake=false; listen(); };
+btn.oncontextmenu=e=>{ e.preventDefault(); forceAudio(); if(conv) stop(); conv=true; wake=true; listen(); caption("✨ Wake mode: say “Hey Precedent, …”",true); };
 // Space = push-to-talk (when not typing)
-addEventListener("keydown",e=>{ if(e.code!=="Space"||e.repeat||/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; e.preventDefault(); if(state==="thinking"||state==="speaking") return; ptt=true; listen(); });
+addEventListener("keydown",e=>{ if(e.code!=="Space"||e.repeat||/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; e.preventDefault(); if(state==="thinking"||state==="speaking") return; forceAudio(); ptt=true; listen(); });
 addEventListener("keyup",e=>{ if(e.code!=="Space"||!ptt||/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; e.preventDefault(); ptt=false; const t=(finalTxt+interim).trim(); if(mr&&mr.state==="recording") mr.stop(); else submit(t); });
-window.PrecedentVoice={submit,stop,state:()=>state};
+window.PrecedentVoice={submit,stop,forceAudio,state:()=>state};
 })();
