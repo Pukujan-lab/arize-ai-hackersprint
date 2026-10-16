@@ -492,15 +492,15 @@
     const side=document.getElementById('sidebar'), btn=document.getElementById('sideToggle');
     if(!side||!btn) return setTimeout(go,150);
     const css=document.createElement('style'); css.textContent=`
-      #sidebar{width:300px!important;top:0!important;padding-top:56px;font-size:15.5px;line-height:1.5;z-index:45;overflow-y:auto;overscroll-behavior:contain;transition:transform .28s ease!important;background:rgba(10,14,30,.96)}
+      #sidebar{width:300px!important;top:var(--navh,56px)!important;height:calc(100vh - var(--navh,56px))!important;padding-top:8px;font-size:15.5px;line-height:1.5;z-index:45;overflow-y:auto;overscroll-behavior:contain;transition:transform .28s ease!important;background:rgba(10,14,30,.96)}
       #sidebar summary{min-height:48px;display:flex;align-items:center;padding:12px 16px;font-size:16px;font-weight:600;cursor:pointer;color:#e2e8f0}
       #sidebar summary:hover{background:rgba(99,102,241,.12)}
       #sidebar details>*:not(summary){padding:0 16px 14px}
       #sideToggle{position:fixed!important;top:8px;left:10px;z-index:60;width:auto!important;height:40px!important;min-width:40px;padding:0 14px 0 10px!important;gap:8px;border-radius:10px;background:rgba(49,46,129,.85);border:1px solid rgba(165,180,252,.45);color:#fff!important;font-size:15px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.35)}
       #sideToggle:hover{background:rgba(79,70,229,.95)}
-      #sideClose{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:10px;font-size:22px;color:#cbd5e1;background:rgba(30,41,59,.8)}
+      #sideClose{display:none!important;position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:10px;font-size:22px;color:#cbd5e1;background:rgba(30,41,59,.8)}
       #sideClose:hover{color:#fff;background:rgba(71,85,105,.9)}
-      #sideBack{position:fixed;inset:0;background:rgba(2,6,23,.55);z-index:44;opacity:0;pointer-events:none;transition:opacity .25s}
+      #sideBack{position:fixed;inset:var(--navh,56px) 0 0 0;background:rgba(2,6,23,.55);z-index:44;opacity:0;pointer-events:none;transition:opacity .25s}
       #sideBack.on{opacity:1;pointer-events:auto}
       nav .max-w-7xl{padding-left:150px!important}`;
     document.head.appendChild(css);
@@ -518,3 +518,5 @@
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',go); else go();
 })();
+
+;(function(){function m(){var n=document.querySelector("nav");if(n)document.documentElement.style.setProperty("--navh",n.getBoundingClientRect().height+"px")}m();addEventListener("resize",m);addEventListener("load",m)})();

@@ -7,14 +7,13 @@
   // Partner order for logo strip
   const PARTNER_ORDER = ['daytona', 'surrealdb', 'octo', 'arize', 'elevenlabs', 'anthropic'];
   
-  // Logo file mapping
-  const LOGO_FILES = {
-    daytona: 'daytona.png',
-    surrealdb: 'surrealdb.svg',
-    arize: 'arize.png',
-    elevenlabs: 'elevenlabs.svg',
-    anthropic: 'anthropic.svg',
-    octo: null // No logo file, render text
+  // Logo dimensions (width in px, height is 18px for all)
+  const LOGO_DIMS = {
+    daytona: 80,
+    surrealdb: 18,
+    arize: 66,
+    elevenlabs: 18,
+    anthropic: 18
   };
 
   // Example questions (same for both pages)
@@ -33,12 +32,12 @@
     // Create container for logo strip
     const strip = document.createElement('div');
     strip.id = 'partner-strip';
-    strip.style.cssText = 'display:flex;align-items:center;gap:10px;margin-left:auto;';
+    strip.style.cssText = "display:flex;align-items:center;gap:12px;margin-left:auto;flex-shrink:0;";
     
     // Add "Built with" label
     const label = document.createElement('span');
     label.textContent = 'BUILT WITH';
-    label.style.cssText = 'font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(148,163,184,0.6);font-weight:600;';
+    label.style.cssText = 'font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:rgba(148,163,184,0.6);font-weight:600;white-space:nowrap;';
     strip.appendChild(label);
 
     // Add partner logos
@@ -52,47 +51,60 @@
       link.rel = 'noopener';
       link.title = `${partner.name} — open dashboard`;
       link.setAttribute('aria-label', `${partner.name} — open dashboard`);
-      link.style.cssText = 'display:inline-flex;align-items:center;transition:all 0.2s;';
+      link.style.cssText = `display:inline-flex;align-items:center;transition:all 0.2s;--bw:${partner.color};`;
 
-      if (LOGO_FILES[key]) {
-        // Image logo
-        const img = document.createElement('img');
-        img.src = `/static/vendor/logos/${LOGO_FILES[key]}`;
-        img.alt = partner.name;
-        img.style.cssText = 'height:18px;width:auto;filter:grayscale(100%) opacity(0.7);transition:filter 0.2s;';
-        link.appendChild(img);
-        
-        // Hover effect: show brand color
-        link.addEventListener('mouseenter', () => {
-          img.style.filter = 'grayscale(0%) opacity(1)';
-        });
-        link.addEventListener('mouseleave', () => {
-          img.style.filter = 'grayscale(100%) opacity(0.7)';
-        });
-        link.addEventListener('focus', () => {
-          img.style.filter = 'grayscale(0%) opacity(1)';
-        });
-        link.addEventListener('blur', () => {
-          img.style.filter = 'grayscale(100%) opacity(0.7)';
-        });
-      } else {
-        // Text logo for Octo
+      if (key === 'octo') {
+        // Text wordmark for Octo
         const text = document.createElement('span');
         text.textContent = partner.name;
-        text.style.cssText = `font-size:13px;font-weight:700;color:${partner.color};opacity:0.7;transition:opacity 0.2s;`;
+        text.style.cssText = 'font-size:13px;font-weight:700;color:#94a3b8;opacity:0.75;transition:all 0.2s;';
         link.appendChild(text);
         
         link.addEventListener('mouseenter', () => {
+          text.style.color = '#f59e0b';
           text.style.opacity = '1';
         });
         link.addEventListener('mouseleave', () => {
-          text.style.opacity = '0.7';
+          text.style.color = '#94a3b8';
+          text.style.opacity = '0.75';
         });
         link.addEventListener('focus', () => {
+          text.style.color = '#f59e0b';
           text.style.opacity = '1';
         });
         link.addEventListener('blur', () => {
-          text.style.opacity = '0.7';
+          text.style.color = '#94a3b8';
+          text.style.opacity = '0.75';
+        });
+      } else {
+        // SVG logo using CSS mask
+        const logoSpan = document.createElement('span');
+        logoSpan.className = 'bw-logo';
+        logoSpan.style.cssText = `display:inline-block;width:${LOGO_DIMS[key]}px;height:18px;background-color:#94a3b8;opacity:0.75;mask-image:url(/static/vendor/logos/${key}.svg);-webkit-mask-image:url(/static/vendor/logos/${key}.svg);mask-size:contain;-webkit-mask-size:contain;mask-repeat:no-repeat;-webkit-mask-repeat:no-repeat;mask-position:center;-webkit-mask-position:center;transition:all 0.2s;`;
+        
+        // Visually hidden text for screen readers
+        const srText = document.createElement('span');
+        srText.textContent = partner.name;
+        srText.style.cssText = 'position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0;';
+        
+        link.appendChild(logoSpan);
+        link.appendChild(srText);
+        
+        link.addEventListener('mouseenter', () => {
+          logoSpan.style.backgroundColor = partner.color;
+          logoSpan.style.opacity = '1';
+        });
+        link.addEventListener('mouseleave', () => {
+          logoSpan.style.backgroundColor = '#94a3b8';
+          logoSpan.style.opacity = '0.75';
+        });
+        link.addEventListener('focus', () => {
+          logoSpan.style.backgroundColor = partner.color;
+          logoSpan.style.opacity = '1';
+        });
+        link.addEventListener('blur', () => {
+          logoSpan.style.backgroundColor = '#94a3b8';
+          logoSpan.style.opacity = '0.75';
         });
       }
 
