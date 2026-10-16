@@ -14,7 +14,7 @@ function chips(r){ const t=(r.question+" "+r.answer).toLowerCase(), out=[];
   return [...new Set(out)].slice(0,3); }
 function ui(){ const c=F.cfg; if(!c) return; const inp=c.input();
   let th=document.getElementById("fuThread"); if(!th){ th=document.createElement("details"); th.id="fuThread"; th.className="mb-3 rounded-xl border border-indigo-500/25 bg-slate-900/50 text-[15px]"; c.threadHost().before(th); }
-  let ch=document.getElementById("fuChips"); if(!ch){ ch=document.createElement("div"); ch.id="fuChips"; ch.className="flex flex-wrap gap-2 my-2"; c.chipsHost().after(ch); }
+  let ch=document.getElementById("fuChips"); if(!ch){ ch=document.createElement("div"); ch.id="fuChips"; ch.className="flex flex-wrap gap-2 my-2"; ch.style.cssText="box-sizing:border-box;max-width:100%;min-width:0;justify-content:flex-start;padding-left:2px;overflow:visible"; c.chipsHost().after(ch); }
   let nb=document.getElementById("fuNew"); if(!nb){ nb=document.createElement("button"); nb.id="fuNew"; nb.type="button"; nb.textContent="✚ New question"; nb.title="Start a fresh research thread"; nb.className="rounded-xl border border-slate-500/50 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-700/60 whitespace-nowrap"; nb.onclick=()=>F.reset(); c.newHost().after(nb); }
   const n=F.thread.length; nb.style.display=n?"":"none";
   th.style.display=n>1?"":"none";
