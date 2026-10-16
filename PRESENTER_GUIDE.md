@@ -23,4 +23,4 @@ Click the mic → ask the chip question "Automobile exception: probable cause st
 ## 5. Safeguards (20s)
 No unretrieved citation survives; quotes are verbatim; rate limits and hourly caps; a "not legal advice" disclaimer.
 ## 6. Close (20s)
-Slides (/slides, 8 big-statement slides): hero → problem → what Precedent does → demo moment (map tour + transcript) → how it works (pipeline + ACS, real numbers) → trust → one partners slide → thank you / Open live demo. Voiceover: static/voiceover.mp3 (regenerated for the 8-slide deck).
+Slides (/slides, 8 slides): 1 hero → 2 problem → 3 what Precedent does (ask, cited memo, map tour, voice) → 4 demo moment (map tour + transcript) → 5 how it works (Planner → Retriever → Answer → Safeguard → Voice; 327k passages, 120k nodes, 161k edges, ~1.9s cached) → 6 trust (safeguard, limits, Arize evals, honest labels) → 7 Built with (7 partners) → 8 thank you / Open live demo. Arize click steps: ARIZE_SETUP.md. Voiceover: static/voiceover.mp3 (regenerated for the 8-slide deck).

@@ -60,7 +60,9 @@ body {
   transform: translateY(-4px);
 }
 
+/* stat-row: equal grid, clamped */
 .pipeline-step {
+  overflow-wrap:anywhere;
   background: var(--surface);
   border: 2px solid var(--primary);
   border-radius: 12px;
@@ -114,7 +116,7 @@ body {
   <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">The Problem</div>
   <h1 class="text-7xl font-bold mb-16 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Multi-agent AI is unreliable in production</h1>
   
-  <div class="space-y-10 max-w-6xl">
+  <div class="space-y-8 max-w-6xl">
     <div class="flex items-start gap-8">
       <div class="text-8xl font-black" style="color: #E57373; min-width: 480px;">Hallucinate</div>
       <div class="text-3xl pt-4" style="color: var(--muted); line-height: 1.4;">Agents invent citations and facts that don't exist</div>
@@ -137,13 +139,13 @@ body {
 <!-- Slide 3: Product Screenshot -->
 <section class="slide min-h-screen flex-col justify-center px-20 pt-14">
   <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">What Precedent Does</div>
-  <h1 class="text-7xl font-bold mb-12 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Ask a question → get a grounded memo with verified citations</h1>
+  <h1 class="text-7xl font-bold mb-12 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Ask. Get a cited memo. Tour it on the map. Hear it.</h1>
   
   <div class="flex items-center justify-center">
-    <img src="/static/slides/answer_v2.png" class="screenshot" alt="Precedent answer interface" onerror="this.style.display='none'">
+    <img src="/static/slides/answer_v2.png" class="screenshot" style="max-height:56vh;width:auto" alt="Precedent answer interface" onerror="this.style.display='none'">
   </div>
   
-  <div class="mt-8 text-2xl text-center" style="color: var(--muted);">Every citation is verified against retrieved sources. Every claim is traceable.</div>
+  <div class="mt-8 text-2xl text-center" style="color: var(--muted);">Cited memo · county map tour · voice in and out · for legal professionals</div>
 </section>
 
 <!-- Slide 4: Demo Map -->
@@ -152,7 +154,7 @@ body {
   <h1 class="text-7xl font-bold mb-12 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Watch the agents walk the map</h1>
   
   <div class="flex items-center justify-center">
-    <img src="/static/slides/map_tour_v2.png" class="screenshot" alt="Live map visualization" onerror="this.style.display='none'">
+    <img src="/static/slides/map_tour_v2.png" class="screenshot" style="max-height:50vh;width:auto" alt="Live map visualization" onerror="this.style.display='none'">
   </div>
   
   <div class="mt-8 max-w-4xl mx-auto">
@@ -165,55 +167,59 @@ body {
 </section>
 
 <!-- Slide 5: How It Works -->
-<section class="slide min-h-screen flex-col justify-center px-20 pt-14">
+<section class="slide min-h-screen flex-col justify-center px-20 pt-24">
   <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">How It Works</div>
-  <h1 class="text-7xl font-bold mb-12 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Pipeline: Planner → Retriever → Drafter → Safeguard</h1>
+  <h1 class="text-6xl font-bold mb-10 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Planner → Retriever → Answer → Safeguard → Voice</h1>
   
-  <div class="grid grid-cols-4 gap-6 max-w-7xl mb-12">
+  <div class="grid grid-cols-5 gap-6 max-w-7xl mb-12">
     <div class="pipeline-step">
       <div class="text-3xl font-bold mb-3" style="color: var(--primary);">Planner</div>
-      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Claims seat via ACS, breaks query into research tasks</div>
+      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Rewrites the question; claims its ACS seat</div>
     </div>
     
     <div class="pipeline-step">
       <div class="text-3xl font-bold mb-3" style="color: var(--primary);">Retriever</div>
-      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Octo passages + SurrealDB graph expansion</div>
+      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Octo: 327k passages + SurrealDB citation graph</div>
     </div>
     
     <div class="pipeline-step">
-      <div class="text-3xl font-bold mb-3" style="color: var(--primary);">Drafter</div>
-      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Anthropic Haiku writes memo from retrieved authorities</div>
+      <div class="text-3xl font-bold mb-3" style="color: var(--primary);">Answer</div>
+      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Haiku drafts the memo from retrieved authorities only</div>
     </div>
     
     <div class="pipeline-step">
       <div class="text-3xl font-bold mb-3" style="color: var(--primary);">Safeguard</div>
-      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Verifies every citation against retrieved set</div>
+      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Every citation must match a retrieved source</div>
+    </div>
+    <div class="pipeline-step">
+      <div class="text-3xl font-bold mb-3" style="color: var(--primary);">Voice</div>
+      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">ElevenLabs reads the summary and narrates the tour</div>
     </div>
   </div>
   
-  <div class="grid grid-cols-4 gap-8 max-w-5xl">
+  <div class="stat-row" style="display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:56px;max-width:1300px;width:100%;">
     <div class="text-center">
-      <div class="text-6xl font-black n mb-2" style="color: var(--accent);">80</div>
-      <div class="text-xl" style="color: var(--muted);">runs completed</div>
+      <div class="font-black n mb-2" style="font-size:clamp(2.5rem,4.2vw,4.5rem);white-space:nowrap;line-height:1;color: var(--accent);">327k</div>
+      <div class="text-xl" style="color: var(--muted);">Octo passages</div>
     </div>
     
     <div class="text-center">
-      <div class="text-6xl font-black n mb-2" style="color: var(--accent);">21</div>
-      <div class="text-xl" style="color: var(--muted);">model calls (rest cached)</div>
+      <div class="font-black n mb-2" style="font-size:clamp(2.5rem,4.2vw,4.5rem);white-space:nowrap;line-height:1;color: var(--accent);">120k</div>
+      <div class="text-xl" style="color: var(--muted);">graph nodes</div>
     </div>
     
     <div class="text-center">
-      <div class="text-6xl font-black n mb-2" style="color: var(--accent);">~1.9s</div>
+      <div class="font-black n mb-2" style="font-size:clamp(2.5rem,4.2vw,4.5rem);white-space:nowrap;line-height:1;color: var(--accent);">161k</div>
+      <div class="text-xl" style="color: var(--muted);">citation edges</div>
+    </div>
+    
+    <div class="text-center">
+      <div class="font-black n mb-2" style="font-size:clamp(2.5rem,4.2vw,4.5rem);white-space:nowrap;line-height:1;color: var(--accent);">~1.9s</div>
       <div class="text-xl" style="color: var(--muted);">pipeline on cache</div>
     </div>
-    
-    <div class="text-center">
-      <div class="text-6xl font-black n mb-2" style="color: var(--accent);">5/5</div>
-      <div class="text-xl" style="color: var(--muted);">references matched</div>
-    </div>
   </div>
   
-  <div class="mt-10 text-2xl text-center" style="color: var(--muted);">Coordinated via ACS task claims · Traced in Arize · Isolated in Daytona sandbox</div>
+  <div class="mt-10 text-2xl text-center" style="color: var(--muted);">Each agent claims a seat through ACS · every handoff audited · every run traced in Arize</div>
 </section>
 
 <!-- Slide 6: Trust -->
@@ -224,14 +230,19 @@ body {
   <div class="space-y-10 max-w-6xl">
     <div class="flex items-start gap-8">
       <div class="text-7xl font-black" style="color: #4CAF50; min-width: 420px;">Safeguard</div>
-      <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Checks every reference against retrieved sources — no hallucinated citations</div>
+      <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Checks references, not legal accuracy</div>
     </div>
     
     <div class="flex items-start gap-8">
       <div class="text-7xl font-black" style="color: var(--primary); min-width: 420px;">Guardrails</div>
-      <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Rate limits, cost caps, model fallback — safe by construction</div>
+      <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Rate limits, hourly caps, labeled fallbacks</div>
     </div>
     
+    <div class="flex items-start gap-8">
+      <div class="text-7xl font-black" style="color: #FF4F8B; min-width: 420px;">Arize</div>
+      <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Groundedness, hallucination and citation-relevance evals on every trace</div>
+    </div>
+
     <div class="flex items-start gap-8">
       <div class="text-7xl font-black" style="color: var(--accent); min-width: 420px;">Honest</div>
       <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Labels: "checks references, not legal accuracy" · "cached answer"</div>
@@ -245,56 +256,56 @@ body {
 
 <!-- Slide 7: Partners -->
 <section class="slide min-h-screen flex-col justify-center px-20 pt-14">
-  <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">Made Possible By</div>
-  <h1 class="text-7xl font-bold mb-16 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Seven partners, one reliable pipeline</h1>
+  <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">Made possible · made faster</div>
+  <h1 class="text-7xl font-bold mb-16 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Built with</h1>
   
   <div class="partner-grid max-w-7xl">
     <div class="partner-card">
       <div class="text-4xl font-bold mb-4" style="color: #00D4AA;">Daytona</div>
       <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
-        <strong style="color: var(--ink);">Made it possible:</strong> Isolated sandboxes for safe agent execution. 96 vCPUs, zero infra work.
+        <strong style="color: var(--ink);">Made it possible:</strong> The whole stack runs in one isolated sandbox.
       </div>
     </div>
     
     <div class="partner-card">
       <div class="text-4xl font-bold mb-4" style="color: #FF00A0;">SurrealDB</div>
       <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
-        <strong style="color: var(--ink);">Made it possible:</strong> Grounded graph memory. 119,770 authorities, 160,793 citation edges.
+        <strong style="color: var(--ink);">Made it possible:</strong> Citation graph: 119,770 nodes, 160,793 edges.
       </div>
     </div>
     
     <div class="partner-card">
       <div class="text-4xl font-bold mb-4" style="color: #FF6B35;">Octo</div>
       <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
-        <strong style="color: var(--ink);">Made it faster:</strong> 804k passages indexed and ready. Fast full-text passage search.
+        <strong style="color: var(--ink);">Made it faster:</strong> Passage search over Colorado law, ready day one.
       </div>
     </div>
     
     <div class="partner-card">
       <div class="text-4xl font-bold mb-4" style="color: #A78BFA;">Arize</div>
       <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
-        <strong style="color: var(--ink);">Made it faster:</strong> Traces & evals without building our own. Live in 30 minutes.
+        <strong style="color: var(--ink);">Made it faster:</strong> Traces plus groundedness and citation evals.
       </div>
     </div>
     
     <div class="partner-card">
       <div class="text-4xl font-bold mb-4" style="color: #E8E8E8;">ElevenLabs</div>
       <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
-        <strong style="color: var(--ink);">Made it faster:</strong> Voice in and out, each one API call. Hands-free research.
+        <strong style="color: var(--ink);">Made it faster:</strong> Voice in and out.
       </div>
     </div>
     
     <div class="partner-card">
       <div class="text-4xl font-bold mb-4" style="color: #38BDF8;">ACS</div>
       <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
-        <strong style="color: var(--ink);">Made it possible:</strong> Agent coordination via task claims. No collisions, full audit trail.
+        <strong style="color: var(--ink);">Made it possible:</strong> Seats, handoffs, an audit record per run.
       </div>
     </div>
     
     <div class="partner-card">
       <div class="text-4xl font-bold mb-4" style="color: #D97757;">Anthropic</div>
       <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
-        <strong style="color: var(--ink);">Made it faster:</strong> Haiku for drafts, prompt caching, guardrails. Fast and safe.
+        <strong style="color: var(--ink);">Made it faster:</strong> Haiku drafts fast and cheap.
       </div>
     </div>
   </div>

@@ -1,7 +1,7 @@
 Precedent is a reliable pipeline for multi-agent AI. First up: legal research for professionals.
 Multi-agent AI is unreliable in production. Agents hallucinate, collide, and can't be audited. And lawyers can't cite what they can't verify.
-Ask Precedent a question, and you get a grounded research memo with verified citations, on a live map.
+Ask Precedent a question: you get a cited memo, a county-by-county map tour, and the answer read aloud.
 Watch the agents walk the map: a guided tour of every authority, with a spoken transcript.
-Under the hood, a planner, retriever, drafter and safeguard claim tasks through ACS. Eighty runs so far, most answers served from cache.
-Every reference is checked against retrieved sources, with caps, fallbacks and honest labels.
+Under the hood: a planner, a retriever over 327 thousand Octo passages and a SurrealDB graph of 120 thousand authorities, an answer agent, a safeguard, and voice. Each agent claims its seat through ACS.
+The safeguard checks references, not legal accuracy. Rate limits, labeled fallbacks, and Arize evals on every trace.
 Built with Daytona, SurrealDB, Octo, Arize, ElevenLabs, ACS and Anthropic. Thank you. Open the live demo.
