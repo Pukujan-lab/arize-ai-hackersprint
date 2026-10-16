@@ -15,7 +15,7 @@ select{background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8
 <div class="wrap"><div class="s" style="text-transform:uppercase;letter-spacing:.08em">Arize snapshot · project <span id="proj"></span></div><h1>Observability</h1>
 <div class="s">Traces, LLM-as-judge evals and experiments exported from Arize, embedded here so you can inspect them without an account.</div>
 <div style="display:flex;gap:10px;align-items:center;margin-top:16px"><button id="rf" class="btn">↻ Refresh</button><span class="s" id="st"></span></div><div class="kpis" id="kpis"></div>
-<div class="card"><h2>Runs &amp; judge evals</h2><div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap"><input id="q" placeholder="Search question, run id, case name…" style="flex:1;min-width:240px;background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8px;padding:8px"><button id="prev" class="btn">‹ Prev</button><span class="s" id="pg"></span><button id="next" class="btn">Next ›</button></div><div class="s" style="margin-bottom:8px">Newest first. Click a row for judge explanations and its waterfall.</div><table id="ev"></table></div>
+<div class="card"><h2>Runs &amp; judge evals</h2><div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap"><input id="q" placeholder="Search question, run id, case name…" style="flex:1;min-width:240px;background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8px;padding:8px"><select id="flt" style="background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8px;padding:7px"><option value="all">All</option><option value="judged">Judged</option><option value="live">Live</option></select><button id="prev" class="btn">‹ Prev</button><span class="s" id="pg"></span><button id="next" class="btn">Next ›</button></div><div class="s" style="margin-bottom:8px">Newest first. Click a row for judge explanations and its waterfall.</div><table id="ev"></table></div>
 <div class="card"><h2>Trace waterfall</h2><select id="sel"></select><div class="wf" id="wf" style="margin-top:14px"></div></div>
 <div class="card" id="dx"></div>
 <div class="s" id="foot" style="margin:24px 0"></div></div>
@@ -36,7 +36,7 @@ function liveRow(r,d){const res=d&&d.result||{},ev=(d&&d.events)||[];const ts=ev
  const lat=ts.length>1?(t1-t0)*1000:(res.elapsed_s!=null?res.elapsed_s*1000:null);
  return {run_id:r.run_id,question:r.question||res.question,start_time:r.ts,latency_ms:lat,model:res.provider,safeguard:res.safeguard?!!res.safeguard.pass:null,cases:(res.citations||[]).map(c=>c.title||c.id).join(" · "),n:r.n,spans,live:true,evals:null};}
 async function load(){ $("st").textContent="Refreshing…";
- if(!SNAP) SNAP=await fetch("/static/data/observability.json").then(r=>r.json()).catch(()=>({traces:[]}));
+ if(!SNAP){SNAP=await fetch("/static/data/observability.json").then(r=>r.json()).catch(()=>({traces:[]}));$("proj").textContent=SNAP.project||"precedent-legal-graphrag";}
  let runs=[];try{runs=await (await fetch("/api/runs?n=50",{cache:"no-store"})).json();}catch(e){}
  if(!Array.isArray(runs))runs=[];
  const ds=await Promise.all(runs.map((r,i)=>i<30?detail(r.run_id):null));
@@ -47,11 +47,11 @@ async function load(){ $("st").textContent="Refreshing…";
  rows.sort((a,b)=>new Date(b.start_time)-new Date(a.start_time)); ROWS=rows;
  kpis(runs.length); render(); $("st").textContent="Updated "+fmtT(new Date())+" · auto-refresh 30 s"; }
 function kpis(nLive){const live=ROWS.filter(r=>r.live),base=live.length?live:ROWS;const L=base.map(r=>r.latency_ms).filter(x=>x!=null&&!isNaN(x));const S=base.map(r=>r.safeguard).filter(x=>x!=null);
- const judged=ROWS.filter(r=>r.evals);const k=[["Live runs (your session)",nLive],["Rows shown",ROWS.length],["Safeguard pass",S.length?Math.round(100*S.filter(Boolean).length/S.length)+"%":"–"],["Avg latency",ms(avg(L))],["p95 latency",ms(p95(L))]];
+ const judged=ROWS.filter(r=>r.evals);const k=[["Live runs",nLive],["Rows shown",ROWS.length],["Safeguard pass",S.length?Math.round(100*S.filter(Boolean).length/S.length)+"%":"–"],["Avg latency",ms(avg(L))],["p95 latency",ms(p95(L))]];
  J.forEach(j=>k.push(["Avg "+j.replace("_"," ")+" (Arize)",f(avg(judged.map(t=>t.evals[j]?.score).filter(x=>x!=null)))]));
  const K=$("kpis");K.replaceChildren();k.forEach(([a,b])=>K.append(el("div",{class:"kpi"},el("span",{class:"s"},a),el("b",{},String(b)))));
  K.append(el("div",{class:"s",style:"grid-column:1/-1"},"Latency & safeguard from "+(live.length?"live /api/runs":"Arize snapshot")+". Judge scores: Arize snapshot "+fmtT(SNAP.generated_at)+"."));}
-function render(){const q=$("q").value.trim().toLowerCase();const F=ROWS.filter(r=>!q||[r.question,r.run_id,r.cases,r.trace_id].some(x=>(x||"").toLowerCase().includes(q)));
+function render(){const q=$("q").value.trim().toLowerCase();const fl=$("flt").value;const F=ROWS.filter(r=>(fl=="all"||(fl=="judged"?!!r.evals:r.live))&&(!q||[r.question,r.run_id,r.cases,r.trace_id].some(x=>(x||"").toLowerCase().includes(q))));
  const pages=Math.max(1,Math.ceil(F.length/PER));page=Math.min(page,pages-1);const P=F.slice(page*PER,page*PER+PER);
  $("pg").textContent=F.length?`${page*PER+1}–${page*PER+P.length} of ${F.length}`:"0 results";$("prev").disabled=page==0;$("next").disabled=page>=pages-1;
  const E=$("ev");E.replaceChildren(el("tr",{},el("th",{},"Time"),el("th",{},"Question / run"),el("th",{},"Latency"),el("th",{},"Safeguard"),...J.map(j=>el("th",{},j.replace("_"," ")))));
@@ -74,7 +74,7 @@ function dx(){const ds=SNAP.dataset||{},xp=SNAP.experiment||{},D=$("dx");D.repla
   el("div",{style:"margin-top:6px"},el("b",{},"Experiment: "),xp.name+(xp.examples?" · "+xp.examples+" runs · metric "+xp.metric:"")));
  if(xp.by_setting){const tb=el("table",{style:"margin-top:8px;max-width:500px"},el("tr",{},el("th",{},"Setting"),el("th",{},"Avg "+xp.metric)));Object.entries(xp.by_setting).forEach(([a,b])=>tb.append(el("tr",{},el("td",{},a),el("td",{},f(b,3)))));D.append(tb);}
  $("foot").textContent="Judge scores: snapshot from Arize at "+fmtT(SNAP.generated_at)+"; evaluator: deepseek-v4.1-flash via InferHub. Runs, latency and safeguard are live.";}
-$("q").oninput=()=>{page=0;render();};$("prev").onclick=()=>{page--;render();};$("next").onclick=()=>{page++;render();};$("rf").onclick=load;$("sel").onchange=draw;
+$("flt").onchange=()=>{page=0;render();};$("q").oninput=()=>{page=0;render();};$("prev").onclick=()=>{page--;render();};$("next").onclick=()=>{page++;render();};$("rf").onclick=load;$("sel").onchange=draw;
 load().then(dx).catch(e=>$("st").textContent="Load failed: "+e);setInterval(load,30000);
 </script>
 <script src="/static/navbar.js"></script></body></html>
