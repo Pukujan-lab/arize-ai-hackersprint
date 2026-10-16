@@ -1,5 +1,5 @@
-<!doctype html><html lang="en"><head><script src="/static/session.js"></script><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Precedent · Observability</title>
-<script src="/static/vendor/logos.js"></script><script src="/static/partners.js"></script>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Precedent · Observability</title>
+<script src="/static/vendor/logos.js"></script><script src="/static/partners.js"></script><script src="/static/session.js"></script>
 <style>*{box-sizing:border-box}body{margin:0;background:#0a0a0b;color:#ededed;font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:15px;line-height:1.5}
 a{color:inherit;text-decoration:none}.nav{position:sticky;top:0;z-index:5;display:flex;gap:28px;align-items:center;height:56px;padding:0 40px;border-bottom:1px solid #1f1f22;background:rgba(10,10,11,.85);backdrop-filter:blur(8px)}.nav a{color:#a1a1aa;font-size:14px}.nav a.on,.nav a:hover{color:#fff}
 .wrap{max-width:1200px;margin:0 auto;padding:32px 40px}h1{font-size:38px;letter-spacing:-.03em;margin:0 0 6px}h2{font-size:20px;margin:0 0 12px}.s{color:#8f8f95;font-size:13px}
@@ -10,12 +10,12 @@ tr.r{cursor:pointer}tr.r:hover{background:#16161a}.bar{height:8px;border-radius:
 .ex{display:none;background:#0d0d10}.ex.open{display:table-row}.ex div{margin:4px 0;color:#c4c4c8}
 .wf{position:relative}.wrow{display:grid;grid-template-columns:260px 1fr;gap:10px;align-items:center;font-size:12px;padding:3px 0}.track{position:relative;height:18px;background:#141417;border-radius:4px}.track i{position:absolute;top:2px;height:14px;border-radius:3px;min-width:2px}
 select{background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8px;padding:6px;max-width:100%}
-.lbl{font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid #2a2a2e}</style></head><body>
+.btn{background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:999px;padding:6px 14px;cursor:pointer;font:inherit;font-size:13px}.btn:disabled{opacity:.4;cursor:default}.lbl{font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid #2a2a2e}</style></head><body>
 <nav class="nav"><b>⚖ Precedent</b><a href="/">Demo</a><a href="/map">Map</a><a href="/dashboard">Dashboards</a><a href="/slides">Slides</a><a href="/guide">Guide</a><a href="/observability" class="on">Observability</a></nav>
 <div class="wrap"><div class="s" style="text-transform:uppercase;letter-spacing:.08em">Arize snapshot · project <span id="proj"></span></div><h1>Observability</h1>
 <div class="s">Traces, LLM-as-judge evals and experiments exported from Arize, embedded here so you can inspect them without an account.</div>
-<div class="kpis" id="kpis"></div>
-<div class="card"><h2>Judge evals per trace</h2><div class="s" style="margin-bottom:8px">Click a row for the judge's explanations.</div><table id="ev"></table></div>
+<div style="display:flex;gap:10px;align-items:center;margin-top:16px"><button id="rf" class="btn">↻ Refresh</button><span class="s" id="st"></span></div><div class="kpis" id="kpis"></div>
+<div class="card"><h2>Runs &amp; judge evals</h2><div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap"><input id="q" placeholder="Search question, run id, case name…" style="flex:1;min-width:240px;background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8px;padding:8px"><button id="prev" class="btn">‹ Prev</button><span class="s" id="pg"></span><button id="next" class="btn">Next ›</button></div><div class="s" style="margin-bottom:8px">Newest first. Click a row for judge explanations and its waterfall.</div><table id="ev"></table></div>
 <div class="card"><h2>Trace waterfall</h2><select id="sel"></select><div class="wf" id="wf" style="margin-top:14px"></div></div>
 <div class="card" id="dx"></div>
 <div class="s" id="foot" style="margin:24px 0"></div></div>
@@ -24,35 +24,57 @@ const J=["groundedness","citation_relevance","legal_safety"];
 const el=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k=="style")e.style.cssText=a[k];else if(k=="class")e.className=a[k];else e[k]=a[k];}c.forEach(x=>e.append(x instanceof Node?x:document.createTextNode(x??"")));return e;};
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null, p95=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.ceil(.95*s.length)-1)];};
 const f=(x,d=2)=>x==null?"–":(+x).toFixed(d), ms=x=>x==null?"–":(x>=1000?(x/1000).toFixed(2)+" s":Math.round(x)+" ms");
-const good=(j,e)=>e&&e.label?(j=="hallucination"?e.label!="hallucinated":["grounded","relevant","safe","factual"].includes(e.label)):null;
-const col={LLM:"#d97757",RETRIEVER:"#ff00a0",CHAIN:"#6366f1",TOOL:"#f59e0b",AGENT:"#22d3a6",GUARDRAIL:"#22d3a6"};
-Promise.all([fetch("/static/data/observability.json").then(r=>r.json()),fetch("/api/runs").then(r=>r.json()).catch(()=>null)]).then(([d,runs])=>{
- document.getElementById("proj").textContent=d.project;
- let R=Array.isArray(runs)?runs:(runs&&(runs.runs||runs.items))||[];
- const lat=R.map(r=>r.latency_ms??(r.latency_s!=null?r.latency_s*1000:(r.latency!=null?r.latency*1000:null))).filter(x=>x!=null&&!isNaN(x));
- const sg=R.map(r=>r.safeguard??r.citation_pass??r.safeguard_pass).filter(x=>x!=null).map(x=>typeof x=="object"?!!(x.pass??x.ok??x.passed):!!x);
- const T=d.traces, tl=T.map(t=>t.latency_ms).filter(x=>x);
- const L=lat.length?lat:tl, src=lat.length?"app /api/runs":"Arize traces";
- const tsg=T.map(t=>t.safeguard).filter(x=>x!=null); const S=sg.length?sg:tsg;
- const k=[["Runs (app)",R.length||"–"],["Traces in snapshot",T.length],["Safeguard pass",S.length?Math.round(100*S.filter(Boolean).length/S.length)+"%":"–"],["Avg latency",ms(avg(L))],["p95 latency",ms(p95(L))]];
- J.forEach(j=>k.push(["Avg "+j.replace("_"," "),f(avg(T.map(t=>t.evals[j]?.score).filter(x=>x!=null)))]));
- const K=document.getElementById("kpis");k.forEach(([a,b])=>K.append(el("div",{class:"kpi"},el("span",{class:"s"},a),el("b",{},String(b)))));
- K.append(el("div",{class:"s",style:"grid-column:1/-1"},"Latency source: "+src+"."));
- const E=document.getElementById("ev");E.append(el("tr",{},el("th",{},"Question"),el("th",{},"Latency"),...J.map(j=>el("th",{},j.replace("_"," ")))));
- T.forEach((t,i)=>{const tr=el("tr",{class:"r"},el("td",{},t.question||t.trace_id),el("td",{},ms(t.latency_ms)));
-  J.forEach(j=>{const e=t.evals[j]||{},g=good(j,e),c=g==null?"#555":g?"#22d3a6":"#f87171";tr.append(el("td",{},el("span",{class:"lbl",style:"color:"+c+";border-color:"+c},e.label||"n/a")," ",f(e.score),el("div",{class:"bar"},el("i",{style:"width:"+(100*(e.score||0))+"%;background:"+c}))));});
-  const ex=el("tr",{class:"ex"},el("td",{colSpan:6},...J.map(j=>el("div",{},el("b",{},j+": "),(t.evals[j]||{}).explanation||"—")),el("div",{class:"s"},"trace "+t.trace_id+" · model "+(t.model||"–")+" · tokens "+(t.tokens||"–"))));
-  tr.onclick=()=>ex.classList.toggle("open");E.append(tr,ex);});
- const sel=document.getElementById("sel");T.forEach((t,i)=>sel.append(el("option",{value:i},(t.start_time||"").slice(11,19)+" UTC · "+(t.question||t.trace_id).slice(0,90))));
- const draw=()=>{const t=T[sel.value],W=document.getElementById("wf");W.replaceChildren();const sp=t.spans,end=Math.max(1,...sp.map(s=>s.start_ms+s.dur_ms));
-  const depth={};const byId=Object.fromEntries(sp.map(s=>[s.id,s]));const dep=s=>{let n=0,p=s.parent;while(p&&byId[p]&&n<8){n++;p=byId[p].parent;}return n;};
-  sp.forEach(s=>{const c=col[s.kind]||"#8f8f95";W.append(el("div",{class:"wrow"},el("div",{style:"padding-left:"+dep(s)*12+"px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"},el("b",{},s.name)," ",el("span",{class:"s"},[s.kind,s.model,s.tokens?s.tokens+" tok":null,ms(s.dur_ms)].filter(Boolean).join(" · "))),
-   el("div",{class:"track"},el("i",{style:"left:"+(100*s.start_ms/end)+"%;width:"+(100*s.dur_ms/end)+"%;background:"+c}))));});};
- sel.onchange=draw;if(T.length)draw();
- const ds=d.dataset||{},xp=d.experiment||{},D=document.getElementById("dx");D.append(el("h2",{},"Dataset & experiment"),
+const good=e=>e&&e.label?["grounded","relevant","safe","factual"].includes(e.label):null;
+const col={LLM:"#d97757",RETRIEVER:"#ff00a0",CHAIN:"#6366f1",TOOL:"#f59e0b",AGENT:"#22d3a6",GUARDRAIL:"#22d3a6",planner:"#6366f1",retriever:"#ff00a0",answer:"#d97757",safeguard:"#22d3a6"};
+const fmtT=s=>{try{return new Date(s).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit",second:"2-digit"})+" ET"}catch(e){return s||""}};
+let SNAP=null, ROWS=[], page=0, cache={};
+const PER=10, $=id=>document.getElementById(id);
+async function detail(id){ if(cache[id])return cache[id]; try{const d=await (await fetch("/api/run/"+encodeURIComponent(id))).json(); if(d&&d.result)cache[id]=d; return d;}catch(e){return null;} }
+function liveRow(r,d){const res=d&&d.result||{},ev=(d&&d.events)||[];const ts=ev.map(e=>e.t).filter(x=>x!=null);const t0=ts.length?Math.min(...ts):0,t1=ts.length?Math.max(...ts):0;
+ const ag={};ev.forEach(e=>{const a=ag[e.agent]||(ag[e.agent]={s:e.t,e:e.t});a.s=Math.min(a.s,e.t);a.e=Math.max(a.e,e.t);});
+ const spans=[{name:"pipeline",kind:"CHAIN",start_ms:0,dur_ms:(t1-t0)*1000,id:"root"}].concat(Object.entries(ag).map(([k,a])=>({name:k,kind:k,start_ms:(a.s-t0)*1000,dur_ms:Math.max(1,(a.e-a.s)*1000),parent:"root",model:k=="answer"?res.provider:null})));
+ const lat=ts.length>1?(t1-t0)*1000:(res.elapsed_s!=null?res.elapsed_s*1000:null);
+ return {run_id:r.run_id,question:r.question||res.question,start_time:r.ts,latency_ms:lat,model:res.provider,safeguard:res.safeguard?!!res.safeguard.pass:null,cases:(res.citations||[]).map(c=>c.title||c.id).join(" · "),n:r.n,spans,live:true,evals:null};}
+async function load(){ $("st").textContent="Refreshing…";
+ if(!SNAP) SNAP=await fetch("/static/data/observability.json").then(r=>r.json()).catch(()=>({traces:[]}));
+ let runs=[];try{runs=await (await fetch("/api/runs?n=50",{cache:"no-store"})).json();}catch(e){}
+ if(!Array.isArray(runs))runs=[];
+ const ds=await Promise.all(runs.map((r,i)=>i<30?detail(r.run_id):null));
+ const snapBy={};SNAP.traces.forEach(t=>{if(t.run_id)snapBy[t.run_id]=t;});
+ const rows=runs.map((r,i)=>{const L=liveRow(r,ds[i]),S=snapBy[r.run_id];if(S){L.evals=S.evals;L.trace_id=S.trace_id;if(S.spans&&S.spans.length)L.spans=S.spans;L.tokens=S.tokens;}return L;});
+ const seen=new Set(runs.map(r=>r.run_id));
+ SNAP.traces.forEach(t=>{if(!t.run_id||!seen.has(t.run_id))rows.push(Object.assign({},t,{live:false}));});
+ rows.sort((a,b)=>new Date(b.start_time)-new Date(a.start_time)); ROWS=rows;
+ kpis(runs.length); render(); $("st").textContent="Updated "+fmtT(new Date())+" · auto-refresh 30 s"; }
+function kpis(nLive){const live=ROWS.filter(r=>r.live),base=live.length?live:ROWS;const L=base.map(r=>r.latency_ms).filter(x=>x!=null&&!isNaN(x));const S=base.map(r=>r.safeguard).filter(x=>x!=null);
+ const judged=ROWS.filter(r=>r.evals);const k=[["Live runs (your session)",nLive],["Rows shown",ROWS.length],["Safeguard pass",S.length?Math.round(100*S.filter(Boolean).length/S.length)+"%":"–"],["Avg latency",ms(avg(L))],["p95 latency",ms(p95(L))]];
+ J.forEach(j=>k.push(["Avg "+j.replace("_"," ")+" (Arize)",f(avg(judged.map(t=>t.evals[j]?.score).filter(x=>x!=null)))]));
+ const K=$("kpis");K.replaceChildren();k.forEach(([a,b])=>K.append(el("div",{class:"kpi"},el("span",{class:"s"},a),el("b",{},String(b)))));
+ K.append(el("div",{class:"s",style:"grid-column:1/-1"},"Latency & safeguard from "+(live.length?"live /api/runs":"Arize snapshot")+". Judge scores: Arize snapshot "+fmtT(SNAP.generated_at)+"."));}
+function render(){const q=$("q").value.trim().toLowerCase();const F=ROWS.filter(r=>!q||[r.question,r.run_id,r.cases,r.trace_id].some(x=>(x||"").toLowerCase().includes(q)));
+ const pages=Math.max(1,Math.ceil(F.length/PER));page=Math.min(page,pages-1);const P=F.slice(page*PER,page*PER+PER);
+ $("pg").textContent=F.length?`${page*PER+1}–${page*PER+P.length} of ${F.length}`:"0 results";$("prev").disabled=page==0;$("next").disabled=page>=pages-1;
+ const E=$("ev");E.replaceChildren(el("tr",{},el("th",{},"Time"),el("th",{},"Question / run"),el("th",{},"Latency"),el("th",{},"Safeguard"),...J.map(j=>el("th",{},j.replace("_"," ")))));
+ const sel=$("sel"),cur=sel.value;sel.replaceChildren();
+ P.forEach((t,i)=>{const sg=t.safeguard==null?el("span",{class:"s"},"–"):el("span",{class:"lbl",style:"color:"+(t.safeguard?"#22d3a6":"#f87171")},t.safeguard?"pass":"fail");
+  const tr=el("tr",{class:"r"},el("td",{class:"s",style:"white-space:nowrap"},fmtT(t.start_time)),el("td",{},t.question||t.trace_id,el("div",{class:"s"},(t.run_id||"")+(t.live?" · live":" · snapshot"))),el("td",{},ms(t.latency_ms)),el("td",{},sg));
+  if(t.evals)J.forEach(j=>{const e=t.evals[j]||{},g=good(e),c=g==null?"#555":g?"#22d3a6":"#f87171";tr.append(el("td",{},el("span",{class:"lbl",style:"color:"+c+";border-color:"+c},e.label||"n/a")," ",f(e.score),el("div",{class:"bar"},el("i",{style:"width:"+(100*(e.score||0))+"%;background:"+c}))));});
+  else tr.append(el("td",{colSpan:3,class:"s"},"not yet judged"));
+  const ex=el("tr",{class:"ex"},el("td",{colSpan:7},...(t.evals?J.map(j=>el("div",{},el("b",{},j+": "),(t.evals[j]||{}).explanation||"—")).concat([el("div",{class:"s"},"Judge scores: Arize snapshot "+fmtT(SNAP.generated_at))]):[el("div",{},"Not yet judged (judges run on the Arize snapshot).")]),
+   el("div",{class:"s"},[t.trace_id&&"trace "+t.trace_id,"model "+(t.model||"–"),t.tokens&&"tokens "+t.tokens,t.cases&&"cases: "+t.cases].filter(Boolean).join(" · "))));
+  tr.onclick=()=>{ex.classList.toggle("open");sel.value=String(i);draw();};E.append(tr,ex);
+  sel.append(el("option",{value:i},fmtT(t.start_time)+" · "+(t.question||t.trace_id||"").slice(0,90)));});
+ sel._P=P;if(cur&&cur<P.length)sel.value=cur;draw();}
+function draw(){const sel=$("sel"),W=$("wf");W.replaceChildren();const t=(sel._P||[])[sel.value];if(!t||!t.spans)return;const sp=t.spans,end=Math.max(1,...sp.map(s=>s.start_ms+s.dur_ms));
+ const byId=Object.fromEntries(sp.map(s=>[s.id,s]));const dep=s=>{let n=0,p=s.parent;while(p&&byId[p]&&n<8){n++;p=byId[p].parent;}return n;};
+ sp.forEach(s=>{const c=col[s.kind]||"#8f8f95";W.append(el("div",{class:"wrow"},el("div",{style:"padding-left:"+dep(s)*12+"px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"},el("b",{},s.name)," ",el("span",{class:"s"},[s.kind!=s.name?s.kind:null,s.model,s.tokens?s.tokens+" tok":null,ms(s.dur_ms)].filter(Boolean).join(" · "))),
+  el("div",{class:"track"},el("i",{style:"left:"+(100*s.start_ms/end)+"%;width:"+(100*s.dur_ms/end)+"%;background:"+c}))));});}
+function dx(){const ds=SNAP.dataset||{},xp=SNAP.experiment||{},D=$("dx");D.replaceChildren(el("h2",{},"Dataset & experiment"),
   el("div",{},el("b",{},"Dataset: "),ds.name+" · "+(ds.rows??"?")+" rows · columns: "+(ds.columns||[]).join(", ")),
   el("div",{style:"margin-top:6px"},el("b",{},"Experiment: "),xp.name+(xp.examples?" · "+xp.examples+" runs · metric "+xp.metric:"")));
  if(xp.by_setting){const tb=el("table",{style:"margin-top:8px;max-width:500px"},el("tr",{},el("th",{},"Setting"),el("th",{},"Avg "+xp.metric)));Object.entries(xp.by_setting).forEach(([a,b])=>tb.append(el("tr",{},el("td",{},a),el("td",{},f(b,3)))));D.append(tb);}
- document.getElementById("foot").textContent="Snapshot from Arize at "+new Date(d.generated_at).toLocaleString("en-US",{timeZone:"America/New_York"})+" ET; evaluator: deepseek-v4.1-flash via InferHub.";
-}).catch(e=>document.getElementById("kpis").textContent="Failed to load snapshot: "+e);
-</script><script src="/static/navbar.js"></script></body></html>
+ $("foot").textContent="Judge scores: snapshot from Arize at "+fmtT(SNAP.generated_at)+"; evaluator: deepseek-v4.1-flash via InferHub. Runs, latency and safeguard are live.";}
+$("q").oninput=()=>{page=0;render();};$("prev").onclick=()=>{page--;render();};$("next").onclick=()=>{page++;render();};$("rf").onclick=load;$("sel").onchange=draw;
+load().then(dx).catch(e=>$("st").textContent="Load failed: "+e);setInterval(load,30000);
+</script>
+<script src="/static/navbar.js"></script></body></html>
