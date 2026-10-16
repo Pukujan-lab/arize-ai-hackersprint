@@ -198,3 +198,5 @@ def runs_list(n: int = 15):
         out.append({"run_id": d.name, "question": r.get("question", ""), "n": len(r.get("citations", []))})
         if len(out) >= n: break
     return out
+@app.get("/guide", response_class=HTMLResponse)
+def guide_page(): return (ROOT / "static" / "guide.html").read_text()
