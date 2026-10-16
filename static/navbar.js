@@ -385,6 +385,9 @@
     // Nav link classes + active state
     (function(){var routes={"/":"/","/map":"/map","/dashboard":"/dashboard","/slides":"/slides","/guide":"/guide","/observability":"/observability"};var path=location.pathname.replace(/\/+$/,"")||"/";if(path==="/index.html")path="/";document.querySelectorAll("nav a[href]").forEach(function(a){var h=a.getAttribute("href");if(!(h in routes))return;a.classList.add("nav-link");a.classList.toggle("nav-active",path===h||(h!=="/"&&path.indexOf(h+"/")===0));if(a.classList.contains("nav-active"))a.setAttribute("aria-current","page");});})();
 
+    // Logo + favicon
+    (function(){var h=document.head;h.querySelectorAll("link[rel~=icon]").forEach(function(l){l.remove();});var f=document.createElement("link");f.rel="icon";f.type="image/svg+xml";f.href="/static/logo.svg";h.appendChild(f);var b=document.querySelector("nav .nav-brand")||document.querySelector("nav b")||[].slice.call(document.querySelectorAll("nav span,nav a,nav div")).find(function(e){return [].some.call(e.childNodes,function(n){return n.nodeType===3&&/Precedent/.test(n.textContent);});});if(b){[].forEach.call(b.childNodes,function(n){if(n.nodeType===3)n.textContent=n.textContent.replace(/^\s*⚖️?\s*/,"");});}if(b&&!document.getElementById("nav-logo")){var i=document.createElement("img");i.id="nav-logo";i.src="/static/logo.svg";i.alt="";i.width=24;i.height=24;i.style.cssText="width:24px;height:24px;border-radius:6px;display:inline-block;vertical-align:-6px;margin-right:9px;flex-shrink:0";b.insertBefore(i,b.firstChild);}})();
+
     // Fix navbar layout
     fixNavbarLayout();
 

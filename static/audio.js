@@ -8,6 +8,7 @@ const play=HTMLMediaElement.prototype.play;
 HTMLMediaElement.prototype.play=function(){
   if(this.tagName==="VIDEO") return play.call(this);
   all.add(this);
+  try{ speechSynthesis.cancel(); }catch(e){}   /* one source: element audio cancels browser speech */
   all.forEach(o=>{ if(o!==this&&!o.paused){ try{ o.pause(); o.dispatchEvent(new Event("ended")); }catch(e){} } });   /* never two at once */
   if(muted){ try{this.pause();}catch(e){} setTimeout(()=>this.dispatchEvent(new Event("ended")),0); return Promise.resolve(); }
   return play.call(this); };
@@ -18,7 +19,7 @@ window.fetch=function(u,o){ const url=String(u&&u.url||u);
     return of.call(this,u,o).finally(()=>ctrls.delete(c)); }
   return of.apply(this,arguments); };
 if("speechSynthesis" in window){ const sp=speechSynthesis.speak.bind(speechSynthesis);
-  speechSynthesis.speak=u=>{ if(muted){ setTimeout(()=>u.onend&&u.onend(),0); return; } sp(u); }; }
+  speechSynthesis.speak=u=>{ all.forEach(o=>{ if(!o.paused){ try{ o.pause(); o.dispatchEvent(new Event("ended")); }catch(e){} } }); if(muted){ setTimeout(()=>u.onend&&u.onend(),0); return; } sp(u); }; }
 function stopAll(fromVoice){ if(!fromVoice) window.AudioMgr&&(AudioMgr.gen=(AudioMgr.gen||0)+1);
   all.forEach(a=>{ try{ a.pause(); a.currentTime=0; a.dispatchEvent(new Event("ended")); }catch(e){} });
   document.querySelectorAll("audio").forEach(a=>{ try{a.pause();a.currentTime=0;}catch(e){} });
