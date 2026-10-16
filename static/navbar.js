@@ -300,7 +300,7 @@
 
     // Close on focus outside
     document.addEventListener('focusin', (e) => {
-      if (!menuContainer.contains(e.target)) {
+      if (!menuContainer.contains(e.target) && !menu.contains(e.target)) {
         closeMenu();
       }
     });

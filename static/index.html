@@ -17,7 +17,10 @@
 #answer blockquote{border-left:3px solid rgba(129,140,248,.45)!important;background:rgba(99,102,241,.06)!important;border-radius:0 6px 6px 0;padding:.5rem 1rem!important;margin:.75rem 0!important}
 .ans-meta{margin-top:1.25rem;padding-top:.75rem;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ans-disc{margin-top:.35rem;font-size:11px;color:rgba(252,211,77,.55)}
-@keyframes pulse2{50%{opacity:.4}}.live{animation:pulse2 1s infinite}</style><script src="/static/links.js"></script></head>
+@keyframes pulse2{50%{opacity:.4}}.live{animation:pulse2 1s infinite}</style><script src="/static/links.js"></script>
+<link rel="stylesheet" href="/static/theme/precedent-theme.css?v=20261016-1">
+<link rel="icon" type="image/svg+xml" href="/static/theme/favicon.svg?v=20261016-1">
+</head>
 <body class="text-slate-200 min-h-screen font-sans"><nav class="sticky top-0 z-40 backdrop-blur bg-slate-950/60 border-b border-white/5"><div class="max-w-7xl mx-auto px-6 h-11 flex items-center gap-6 text-sm"><span class="font-bold text-indigo-400">⚖ Precedent</span><a href="/" class="text-slate-300 hover:text-white">Demo</a><a href="/map" class="text-slate-300 hover:text-white">Map</a><a href="/dashboard" class="text-slate-300 hover:text-white">Dashboards</a><a href="/slides" class="text-slate-300 hover:text-white">Slides</a><a href="/guide" class="text-slate-300 hover:text-white">Guide</a></div></nav>
 <div class="max-w-7xl mx-auto px-6 py-8">
 <header class="flex items-center justify-between mb-8">
@@ -72,7 +75,7 @@ function feedDrain(){if(FEED.busy||!FEED.q.length)return;FEED.busy=true;const [e
  const hand=["release","handoff","done"].includes(e.kind)||(FEED.prevAgent&&FEED.prevAgent!==e.agent);FEED.prevAgent=e.agent;
  setTimeout(()=>{FEED.busy=false;feedDrain()},FEED.fast?120:(hand?1200:600+Math.random()*300));}
 let running=false,lastAskT=0,resultWaiters=[];
-async function ask(){const q=$("q").value.trim();if(!q||running||Date.now()-lastAskT<800)return null;window.__askT=performance.now();window.__ttft=0;if(window.Docs3D)Docs3D.holdVoice=true;lastAskT=Date.now();running=true;$("go").disabled=true;$("go").classList.add("opacity-50");
+async function ask(){const q=$("q").value.trim();if(!q||running||Date.now()-lastAskT<800)return null;window.__askT=performance.now();window.__ttft=0;if(window.Docs3D)Docs3D.holdVoice=true;window.AudioMgr&&AudioMgr.stopAll();lastAskT=Date.now();running=true;$("go").disabled=true;$("go").classList.add("opacity-50");
  $("answer").innerHTML='<span class="live text-slate-400">Agents working…</span>';$("events").innerHTML="";$("sg").innerHTML="";$("cites").innerHTML="";$("play").classList.add("hidden");seats({});window.Docs3D&&Docs3D.busy();
  const done=()=>{running=false;$("go").disabled=false;$("go").classList.remove("opacity-50")};
  const resp=await fetch("/api/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(window.FOLLOW?FOLLOW.body(q):{question:q})});const j=await resp.json().catch(()=>({}));
