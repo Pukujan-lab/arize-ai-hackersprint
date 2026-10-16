@@ -111,7 +111,7 @@ if(!webgl){
   try{ basemap(7,-109.06,-102.04,36.99,41.0,0.0606,true); }catch(e){}
   // --- Colorado counties (us-atlas counties-10m, FIPS 08xxx) ---
   const coCounties=await (await fetch("/static/vendor/co_counties_proj.json")).json(); const cMeshes=[], cByName={};
-  const ctyLine=new THREE.LineBasicMaterial({color:0x818cf8,transparent:true,opacity:0.55});
+  const ctyLine=new THREE.LineBasicMaterial({color:0xc7d2fe,transparent:true,opacity:0.95});
   for(const C of coCounties){ const key=C.name.toLowerCase(); const grp=new THREE.Group(); grp.position.z=0.061;
     const mat=new THREE.MeshStandardMaterial({color:0x312e81,transparent:true,opacity:0.18,emissive:0x000000,depthWrite:false});
     for(const r of C.polys){ const sh=new THREE.Shape(r.map(([x,y])=>new THREE.Vector2((x-487.5)*U,-(y-305)*U)));
@@ -127,7 +127,7 @@ if(!webgl){
   const pinGroup=new THREE.Group(), arcGroup=new THREE.Group(); scene.add(pinGroup, arcGroup);
   let pins=[], arcs=[], cites=[], mode="idle", level=0, cur=-1, busyRing=null, tour=null;
   const ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
-  function clear(){ pinGroup.clear(); arcGroup.clear(); pins=[]; arcs=[]; cur=-1; }
+  function clear(){ pinGroup.clear(); arcGroup.clear(); pins=[]; arcs=[]; cur=-1; try{ pTags.forEach(t=>t.d.remove()); pTags=[]; }catch(e){} }
   function mkPin(G){ const [x,y]=xy(G.ll); const off=G.key==="capitol"?[0.018,0.018]:[0,0]; const n=G.items.length, col=COL[G.cat], far=G.cat==="federal";
     const k=far?2.2:1, h=(0.07+0.012*n)*k; const g=new THREE.Group(); g.position.set(x+off[0],y+off[1],Zof(G.ll,G.key));
     const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.0025*k,0.0025*k,h,6),new THREE.MeshBasicMaterial({color:col})); stem.rotation.x=Math.PI/2; stem.position.z=h/2; g.add(stem);
@@ -137,7 +137,7 @@ if(!webgl){
   function mkArc(a,b,type){ const mid=a.clone().add(b).multiplyScalar(0.5); mid.z+=0.04+a.distanceTo(b)*0.35;
     const pts=new THREE.QuadraticBezierCurve3(a,mid,b).getPoints(48), geo=new THREE.BufferGeometry().setFromPoints(pts); geo.setDrawRange(0,0);
     const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:ARC[type],transparent:true,opacity:0.95})); arcGroup.add(line); return {line,n:pts.length,t:0}; }
-  const coView=()=>{ lookT.copy(coC); camT.set(coC.x,coC.y-0.55,2.1); };
+  const coView=()=>{ lookT.copy(coC); camT.set(coC.x,coC.y-0.28,(host.clientWidth/Math.max(1,host.clientHeight)>1.7?1.25:1.6)); };
   Object.assign(api,{
     busy(){ mode="busy"; clear(); clearTimeout(tour); label.textContent="Agents retrieving across U.S. and Colorado courts…"; document.getElementById("cnt").textContent="";
       busyRing=new THREE.Mesh(new THREE.RingGeometry(0.03,0.04,48),new THREE.MeshBasicMaterial({color:0x818cf8,transparent:true,opacity:0.8,side:THREE.DoubleSide}));
@@ -152,11 +152,11 @@ if(!webgl){
         if(pa!==pb) a=mkArc(P(pa),P(pb),arcType(c[id[e.src]],c[id[e.dst]]));
         else { const c0v=P(pa), ang=k*0.9, r=0.035+0.006*(k%4); a=mkArc(c0v.clone().add(new THREE.Vector3(Math.cos(ang)*0.008,Math.sin(ang)*0.008,0)),c0v.clone().add(new THREE.Vector3(Math.cos(ang)*r,Math.sin(ang)*r,0)),arcType(c[id[e.src]],c[id[e.dst]])); }
         a.start=performance.now()+1800+seq++*160; arcs.push(a); });
-      document.getElementById("cnt").textContent=`${counties(c)} counties linked · ${states(c)} jurisdictions · ${arcs.length} links`;
+      document.getElementById("cnt").textContent=`${counties(c)} counties linked · ${states(c)} jurisdictions · ${arcs.length} links`; try{ pinTags(); }catch(e){}
       coView(); clearTimeout(tour); tour=setTimeout(()=>api.tour(),1000+Math.min(6,g.size)*200); },
     focus(k){ if(!cites[k]) return; cur=k; const p=pins.find(p=>p.userData.G.items.includes(k)); if(!p) return;
       label.innerHTML=`<b class="text-indigo-300">${cites[k].ref||"retrieved"}</b> ${cites[k].title.replace(/</g,"&lt;")}<br><span class="text-slate-400">${cites[k]._loc.label}</span>`;
-      const cat=p.userData.G.cat, far=cat==="federal", d=far?2.6:(cat==="county"?1.05:1.7); lookT.copy(p.position); camT.set(p.position.x,p.position.y-d*0.25,d); if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ cam.position.copy(camT); look.copy(lookT); } },
+      const cat=p.userData.G.cat, far=cat==="federal", d=far?2.6:(cat==="county"?0.75:1.0); lookT.copy(p.position); camT.set(p.position.x,p.position.y-d*0.25,d); if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ cam.position.copy(camT); look.copy(lookT); } },
     order(){ return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0]).filter(x=>x[1]>0).sort((a,b)=>a[1]-b[1]).map(x=>x[0]); },
     tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; tbtn.textContent="❚❚ Pause";
       if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.textContent="▶ Tour"; return; }
@@ -174,6 +174,27 @@ if(!webgl){
   mk("▶",()=>{ api.stopTour(); const O=api.order(); tpos=Math.min(O.length-1,tpos+1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
   host.parentElement.appendChild(tbar);
   ["wheel","pointerdown"].forEach(ev=>R.domElement.addEventListener(ev,()=>{ if(touring) api.stopTour(); },{passive:true}));
+  // --- HTML overlay: county names + always-on pin tags with greedy collision avoidance ---
+  const ov=document.createElement("div"); ov.className="absolute inset-0 pointer-events-none z-[15] overflow-hidden"; host.parentElement.appendChild(ov);
+  const cLab=coCounties.map(C=>{ const d=document.createElement("div"); d.textContent=C.name; d.style.cssText="position:absolute;left:0;top:0;font-size:10px;letter-spacing:.04em;white-space:nowrap;transform:translate(-50%,-50%);color:rgba(203,213,225,.55);text-shadow:0 1px 2px #000"; ov.appendChild(d);
+    const xs=C.polys.flat().map(p=>p[0]), ys=C.polys.flat().map(p=>p[1]); return {C,d,key:C.name.toLowerCase(),v:new THREE.Vector3((C.c[0]-487.5)*U,-(C.c[1]-305)*U,0.066),w:Math.max(...xs)-Math.min(...xs)}; });
+  let pTags=[];
+  function pinTags(){ pTags.forEach(t=>t.d.remove()); pTags=pins.filter(p=>p.userData.G.items.length).map(p=>{ const G=p.userData.G; const its=G.items.filter(i=>cites[i]&&cites[i].ref).sort((a,b)=>parseInt(String(cites[a].ref).replace(/\D/g,""))-parseInt(String(cites[b].ref).replace(/\D/g,""))); const lead=its.length?its:G.items;
+      const c0=cites[lead[0]]||{}; const court=(c0.court||"").trim()||G.label; const refs=its.slice(0,3).map(i=>cites[i].ref).join("");
+      const d=document.createElement("div"); d.style.cssText="position:absolute;left:0;top:0;white-space:nowrap;font-size:11px;padding:2px 7px;border-radius:999px;background:rgba(15,18,30,.6);backdrop-filter:blur(6px);border:1px solid rgba(165,180,252,.35);color:#e2e8f0;transform:translate(-50%,-140%)";
+      d.innerHTML=(refs?`<b style="color:#a5b4fc">${refs}</b> `:`<span style="color:#94a3b8">related</span> `)+court.replace(/</g,"&lt;").slice(0,38); ov.appendChild(d); return {p,d,items:G.items}; }); }
+  const _v=new THREE.Vector3();
+  function overlay(){ requestAnimationFrame(overlay); const W=host.clientWidth,H=host.clientHeight; if(!W) return; const boxes=[];
+    const hit=(x,y,w,h)=>boxes.some(b=>x<b[0]+b[2]&&x+w>b[0]&&y<b[1]+b[3]&&y+h>b[1]);
+    pTags.forEach(t=>{ _v.copy(t.p.position); _v.z+=0.09; _v.project(cam); if(_v.z>1||Math.abs(_v.x)>1.1||Math.abs(_v.y)>1.1){ t.d.style.display="none"; return; }
+      let x=(_v.x+1)/2*W, y=(1-_v.y)/2*H; const w=t.d.offsetWidth||90, h=18; let k=0; while(k<5&&hit(x-w/2,y-h*1.4-k*20,w,h)) k++;
+      y-=k*20; boxes.push([x-w/2,y-h*1.4,w,h]); const act=t.items.includes(cur); t.d.style.display=""; t.d.style.left=x+"px"; t.d.style.top=y+"px";
+      t.d.style.borderColor=act?"#a5b4fc":"rgba(165,180,252,.35)"; t.d.style.boxShadow=act?"0 0 14px rgba(129,140,248,.8)":"none"; t.d.style.zIndex=act?2:1; });
+    const px=1/Math.max(1e-6,cam.position.distanceTo(look));
+    cLab.forEach(L=>{ _v.copy(L.v); _v.project(cam); const x=(_v.x+1)/2*W, y=(1-_v.y)/2*H; const o=cByName[L.key]; const w=L.d.offsetWidth||50, h=12;
+      const scrW=L.w*U*W*0.45*px; if(_v.z>1||x<0||y<0||x>W||y>H||(scrW<w*0.8&&!(o&&o.n))||hit(x-w/2,y-h/2,w,h)){ L.d.style.display="none"; return; }
+      boxes.push([x-w/2,y-h/2,w,h]); L.d.style.display=""; L.d.style.left=x+"px"; L.d.style.top=y+"px"; L.d.style.color=o&&o.n?"#6ee7b7":"rgba(203,213,225,.6)"; L.d.style.fontWeight=o&&o.n?"700":"400"; }); }
+  overlay();
   coView(); cam.position.copy(camT); look.copy(lookT); cam.lookAt(look);
   R.domElement.style.cursor="pointer";
   R.domElement.addEventListener("mousemove",ev=>{ const now=performance.now(); if(now-hovT<40) return; hovT=now; const _co=countyAt(ev); const esc=t=>String(t||"").replace(/</g,"&lt;"); const r0=host.parentElement.getBoundingClientRect();
