@@ -24,7 +24,7 @@ function side(r){ const c=(window.Docs3D&&Docs3D._c)||r.citations; const g={};
 function summaryOf(a){ a=String(a||""); const L=a.split("\n"); let i=L.findIndex(l=>/short answer|bottom line/i.test(l)); let txt="";
  if(i>=0){ txt=L[i].replace(/^[#*\s-]*(short answer|bottom line)[:*\s-]*/i,""); for(let k=i+1;k<L.length&&txt.length<380;k++){ if(/^\s*(#|\*\*[A-Z])/.test(L[k])&&txt) break; txt+=" "+L[k]; } }
  if(!txt.trim()) txt=a.replace(/^#.*$/mg,"");
- txt=txt.replace(/\*\*|[*#>`_]/g,"").replace(/\[\d+\]/g,"").replace(/\s+/g," ").trim();
+ txt=txt.replace(/\*\*|[*#>`_]/g,"").replace(/\s*\[\d+\]/g,"").replace(/\s+/g," ").trim();
  const S=txt.match(/[^.!?]+[.!?]+/g)||[txt]; return S.slice(0,3).join(" ").trim().slice(0,520); }
 function renderSum(r){ const sg=r.safeguard||{}; const used=(sg.used||[]).length; const ok=sg.pass;
  const badge=r.answer?`<span class="inline-block mt-2 rounded-full px-2 py-0.5 text-xs ${ok?"bg-emerald-500/15 text-emerald-300 border border-emerald-500/40":"bg-amber-500/15 text-amber-300 border border-amber-500/40"}">${ok?"🛡 "+used+" references matched retrieved sources":"⚠ citation check flagged issues"}</span> <span class="text-[11px] text-slate-500">checks references, not legal accuracy</span>`:"";

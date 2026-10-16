@@ -2,12 +2,12 @@
 (function(){
 const esc=t=>String(t||"").replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;");
 const F=window.FOLLOW={prev:null,thread:[],cfg:null};
-function bottom(a){ const m=String(a||"").match(/(?:short answer|bottom line)[:*\s]*([^\n]+)/i); return (m?m[1]:String(a||"")).replace(/\*\*|\[\d+\]|[*#>`]/g,"").trim().slice(0,220); }
+function bottom(a){ const m=String(a||"").match(/(?:short answer|bottom line)[:*\s]*([^\n]+)/i); return (m?m[1]:String(a||"")).replace(/\s*\[\d+\]/g,"").replace(/\*\*|[*#>`]/g,"").trim().slice(0,220); }
 function chips(r){ const t=(r.question+" "+r.answer).toLowerCase(), out=[];
   if(/stop|police|search|vehicle|traffic|warrant|suppress/.test(t)) out.push("What if they find evidence?","Can I refuse a search?");
   if(/landlord|tenant|deposit|evict/.test(t)) out.push("What damages can the tenant recover?","What notice is required?");
   if(/water|appropriat|ditch|priority/.test(t)) out.push("How is a senior call enforced?","Can a junior user challenge it?");
-  if(/contract|limitation/.test(t)) out.push("When does the clock start running?");
+  if(/\bcontracts?\b|statute of limitations/.test(t)) out.push("When does the clock start running?");
   if(/homestead|bankrupt/.test(t)) out.push("What is the exemption amount?");
   const c=(r.citations||[]).find(x=>x.ref&&/v\./.test(x.title||"")); if(c) out.push(`How does ${String(c.title).split(",")[0].slice(0,48)} apply here?`);
   out.push("What are the main exceptions?","What should I verify before relying on this?");

@@ -50,7 +50,7 @@ function openDoc(c){ panel.classList.remove("hidden"); const E=t=>String(t||"").
  <div class="text-indigo-300 font-semibold text-xs">${c.ref||"related"} · ${E(c.type)}</div><div class="font-semibold text-base leading-snug mt-1">${E(c.title)}</div>
  <div class="text-[11px] text-slate-400 mt-1">${[c.court,c.date].filter(Boolean).map(E).join(" · ")}${c._loc?" · "+E(c._loc.label):""}</div>
  ${q?`<blockquote class="mt-3 text-[13px] leading-relaxed text-slate-200 border-l-2 border-indigo-400/70 pl-3 italic">${E(q)}</blockquote>`:`<div class="mt-3 text-xs text-slate-400">Graph-linked authority (no passage retrieved).</div>`}
- <div class="mt-2">${window.caseLinks?caseLinks(c):""}</div>${c.url?`<a href="${c.url}" target="_blank" rel="noopener" class="text-indigo-300 text-xs underline mt-2 inline-block">Open source ↗</a>`:""}</div>`;
+ <div class="mt-2">${window.caseLinks?caseLinks(c):""}</div></div>`;
  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const p=document.getElementById("pg"); if(p) p.style.transform="rotateY(0)"; })); }
 api.open=openDoc; api.closeDoc=()=>{ panel.classList.add("hidden"); }; addEventListener("keydown",e=>{ if(e.key==="Escape") panel.classList.add("hidden"); });
 const legend=document.createElement("div"); legend.className="absolute top-3 left-4 text-[11px] text-slate-300 space-y-0.5 pointer-events-none";
