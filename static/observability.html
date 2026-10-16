@@ -20,7 +20,7 @@ select{background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8
 <div class="card" id="dx"></div>
 <div class="s" id="foot" style="margin:24px 0"></div></div>
 <script>
-const J=["groundedness","hallucination","citation_relevance","legal_safety"];
+const J=["groundedness","citation_relevance","legal_safety"];
 const el=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k=="style")e.style.cssText=a[k];else if(k=="class")e.className=a[k];else e[k]=a[k];}c.forEach(x=>e.append(x instanceof Node?x:document.createTextNode(x??"")));return e;};
 const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null, p95=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.ceil(.95*s.length)-1)];};
 const f=(x,d=2)=>x==null?"–":(+x).toFixed(d), ms=x=>x==null?"–":(x>=1000?(x/1000).toFixed(2)+" s":Math.round(x)+" ms");
@@ -37,7 +37,7 @@ Promise.all([fetch("/static/data/observability.json").then(r=>r.json()),fetch("/
  const k=[["Runs (app)",R.length||"–"],["Traces in snapshot",T.length],["Safeguard pass",S.length?Math.round(100*S.filter(Boolean).length/S.length)+"%":"–"],["Avg latency",ms(avg(L))],["p95 latency",ms(p95(L))]];
  J.forEach(j=>k.push(["Avg "+j.replace("_"," "),f(avg(T.map(t=>t.evals[j]?.score).filter(x=>x!=null)))]));
  const K=document.getElementById("kpis");k.forEach(([a,b])=>K.append(el("div",{class:"kpi"},el("span",{class:"s"},a),el("b",{},String(b)))));
- K.append(el("div",{class:"s",style:"grid-column:1/-1"},"Latency source: "+src+". Hallucination score: 1 = hallucinated (lower is better)."));
+ K.append(el("div",{class:"s",style:"grid-column:1/-1"},"Latency source: "+src+"."));
  const E=document.getElementById("ev");E.append(el("tr",{},el("th",{},"Question"),el("th",{},"Latency"),...J.map(j=>el("th",{},j.replace("_"," ")))));
  T.forEach((t,i)=>{const tr=el("tr",{class:"r"},el("td",{},t.question||t.trace_id),el("td",{},ms(t.latency_ms)));
   J.forEach(j=>{const e=t.evals[j]||{},g=good(j,e),c=g==null?"#555":g?"#22d3a6":"#f87171";tr.append(el("td",{},el("span",{class:"lbl",style:"color:"+c+";border-color:"+c},e.label||"n/a")," ",f(e.score),el("div",{class:"bar"},el("i",{style:"width:"+(100*(e.score||0))+"%;background:"+c}))));});
