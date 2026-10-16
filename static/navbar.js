@@ -111,10 +111,7 @@
       strip.appendChild(link);
     });
 
-    // Add media query to hide below 900px
-    const style = document.createElement('style');
-    style.textContent = '@media (max-width: 899px) { #partner-strip { display: none !important; } }';
-    document.head.appendChild(style);
+    // Media query for partner strip is now handled in fixNavbarLayout()
 
     // Append to nav (find the flex container inside nav)
     const navContainer = nav.querySelector('div');
@@ -171,7 +168,7 @@
     const menu = document.createElement('div');
     menu.id = 'exMenu';
     menu.setAttribute('role', 'menu');
-    menu.style.cssText = 'display:none;position:absolute;z-index:50;background:rgba(30,41,59,0.95);border:1px solid rgba(99,102,241,0.3);border-radius:0.75rem;backdrop-filter:blur(12px);margin-top:0.5rem;min-width:400px;max-width:600px;box-shadow:0 10px 25px rgba(0,0,0,0.5);';
+    menu.style.cssText = 'display:none;position:absolute;right:0;top:100%;z-index:1000;background:#0f172a;border:1px solid rgba(129,140,248,0.55);border-radius:0.75rem;margin-top:0.5rem;width:max-content;min-width:260px;max-width:min(420px,90vw);white-space:normal;overflow-wrap:anywhere;text-align:left;box-shadow:0 18px 40px rgba(0,0,0,0.65);';
 
     let currentFocus = -1;
     const menuItems = [];
@@ -219,7 +216,7 @@
     const menuContainer = document.createElement('div');
     menuContainer.style.cssText = 'position:relative;display:inline-block;';
     menuContainer.appendChild(button);
-    menuContainer.appendChild(menu);
+    menuContainer.appendChild(menu); menuContainer.style.position='relative'; menuContainer.style.zIndex='1000';
 
     // Insert after the go button or form
     let insertTarget = goButton || (form && form.querySelector('button'));
@@ -307,6 +304,57 @@
     });
   }
 
+  // ========== Navbar Layout Fixes ==========
+  function fixNavbarLayout() {
+    const style = document.createElement('style');
+    style.id = 'navbar-layout-fixes';
+    style.textContent = `
+      /* Navbar container: prevent overflow, consistent gaps */
+      nav .max-w-7xl {
+        display: flex !important;
+        align-items: center !important;
+        gap: 14px !important;
+        flex-wrap: nowrap !important;
+        min-width: 0 !important;
+        overflow: visible !important;
+      }
+      
+      /* Remove ad-hoc margins from nav items */
+      nav .max-w-7xl > * {
+        margin: 0 !important;
+      }
+      
+      /* Sidebar toggle button: inline flex item, not floating */
+      #sideToggle {
+        position: static !important;
+        order: -1 !important;
+        flex-shrink: 0 !important;
+      }
+      
+      /* Partner strip responsive hiding at 760px */
+      @media (max-width: 760px) {
+        #partner-strip {
+          display: none !important;
+        }
+        
+        /* Wrap nav items instead of clipping on narrow screens */
+        nav .max-w-7xl {
+          flex-wrap: wrap !important;
+          height: auto !important;
+          min-height: 44px;
+          row-gap: 6px !important;
+          padding: 6px 12px !important;
+        }
+      }
+      
+      /* Ensure right side never clips */
+      nav .max-w-7xl > *:last-child {
+        margin-left: auto !important;
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
   // ========== Initialize ==========
   function init() {
     // Wait for DOM and partners.js to load
@@ -314,6 +362,9 @@
       document.addEventListener('DOMContentLoaded', init);
       return;
     }
+
+    // Fix navbar layout
+    fixNavbarLayout();
 
     // Add partner strip to nav
     addPartnerStrip();
