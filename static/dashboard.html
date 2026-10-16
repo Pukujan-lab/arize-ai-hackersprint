@@ -1,92 +1,63 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Precedent · Sponsor stack</title><meta name="viewport" content="width=device-width,initial-scale=1">
-<script src="/static/vendor/tailwind.js"></script><script src="/static/vendor/vis-network.min.js"></script>
-<style>body{background:radial-gradient(1200px 600px at 10% -10%,#1e1b4b 0,#0b1020 50%,#05070f 100%)}.glass{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
-.edge{stroke:#334155;stroke-width:2.5;fill:none}.edge.on{stroke:#818cf8;stroke-dasharray:8 6;animation:flow .6s linear infinite;filter:drop-shadow(0 0 4px #818cf8)}
-@keyframes flow{to{stroke-dashoffset:-14}}.node rect{fill:#0f172a;stroke:#475569;stroke-width:1.5}.node.on rect{stroke:#a5b4fc;fill:#1e1b4b;filter:drop-shadow(0 0 8px #6366f1)}
-.node text{fill:#e2e8f0;font:600 12px ui-sans-serif}.node .sub{fill:#94a3b8;font:400 10px ui-sans-serif}</style></head>
-<body class="text-slate-200 min-h-screen font-sans"><nav class="sticky top-0 z-40 backdrop-blur bg-slate-950/60 border-b border-white/5"><div class="max-w-7xl mx-auto px-6 h-11 flex items-center gap-6 text-sm"><span class="font-bold text-indigo-400">⚖ Precedent</span><a href="/" class="text-slate-300 hover:text-white">Demo</a><a href="/map" class="text-slate-300 hover:text-white">Map</a><a href="/dashboard" class="text-slate-300 hover:text-white">Dashboards</a><a href="/slides" class="text-slate-300 hover:text-white">Slides</a></div></nav><div id="wrap" class="max-w-7xl mx-auto px-6 py-6">
-<div class="flex justify-between items-end mb-4" id="hdr"><div><h1 class="text-2xl font-bold"><span class="text-indigo-400">⚖ Precedent</span> <span class="text-slate-400 font-light">live sponsor stack</span></h1>
-<p class="text-xs text-slate-500">Real counters from the running sandbox · refreshes every 2s</p></div><a href="/" class="text-sm text-indigo-300 hover:underline">← back to demo</a></div>
-<div class="flex flex-wrap gap-2 mb-5" id="tabs"><button data-t="Overview" class="tab px-4 py-1.5 rounded-full text-sm glass hover:bg-white/10">Overview</button><button data-t="SurrealDB" class="tab px-4 py-1.5 rounded-full text-sm glass hover:bg-white/10">SurrealDB</button><button data-t="Daytona" class="tab px-4 py-1.5 rounded-full text-sm glass hover:bg-white/10">Daytona</button><button data-t="ACS" class="tab px-4 py-1.5 rounded-full text-sm glass hover:bg-white/10">ACS</button><button data-t="Arize" class="tab px-4 py-1.5 rounded-full text-sm glass hover:bg-white/10">Arize</button><button data-t="ElevenLabs" class="tab px-4 py-1.5 rounded-full text-sm glass hover:bg-white/10">ElevenLabs</button><button data-t="Octo" class="tab px-4 py-1.5 rounded-full text-sm glass hover:bg-white/10">Octo</button><button data-t="Model" class="tab px-4 py-1.5 rounded-full text-sm glass hover:bg-white/10">Model</button></div><div id="p-Overview" class="panel"><div class="glass rounded-2xl p-4 mb-5"><svg viewBox="0 0 1000 170" class="w-full">
-<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" fill="#64748b"/></marker></defs>
-<path id="e-q-p" class="edge" d="M110,85 L170,85" marker-end="url(#ar)"/><path id="e-p-o" class="edge" d="M290,85 C320,85 320,40 350,40" marker-end="url(#ar)"/>
-<path id="e-p-s" class="edge" d="M290,85 C320,85 320,130 350,130" marker-end="url(#ar)"/><path id="e-o-s" class="edge" d="M420,58 L420,110" marker-end="url(#ar)"/>
-<path id="e-o-m" class="edge" d="M490,40 C520,40 520,85 550,85" marker-end="url(#ar)"/><path id="e-s-m" class="edge" d="M490,130 C520,130 520,85 550,85" marker-end="url(#ar)"/>
-<path id="e-m-g" class="edge" d="M670,85 L710,85" marker-end="url(#ar)"/><path id="e-g-e" class="edge" d="M830,85 L870,85" marker-end="url(#ar)"/>
-<g class="node" id="n-q"><rect x="10" y="60" width="100" height="50" rx="10"/><text x="60" y="82" text-anchor="middle">Question</text><text class="sub" x="60" y="98" text-anchor="middle">web :3000</text></g>
-<g class="node" id="n-p"><rect x="170" y="60" width="120" height="50" rx="10"/><text x="230" y="82" text-anchor="middle">Planner</text><text class="sub" x="230" y="98" text-anchor="middle">ACS seat</text></g>
-<g class="node" id="n-o"><rect x="350" y="15" width="140" height="50" rx="10"/><text x="420" y="37" text-anchor="middle">Octo passages</text><text class="sub" x="420" y="53" text-anchor="middle">retriever</text></g>
-<g class="node" id="n-s"><rect x="350" y="105" width="140" height="50" rx="10"/><text x="420" y="127" text-anchor="middle">SurrealDB graph</text><text class="sub" x="420" y="143" text-anchor="middle">->cites traversal</text></g>
-<g class="node" id="n-m"><rect x="550" y="60" width="120" height="50" rx="10"/><text x="610" y="82" text-anchor="middle">Haiku answer</text><text class="sub" x="610" y="98" text-anchor="middle">cached</text></g>
-<g class="node" id="n-g"><rect x="710" y="60" width="120" height="50" rx="10"/><text x="770" y="82" text-anchor="middle">Safeguard</text><text class="sub" x="770" y="98" text-anchor="middle">citations ✓</text></g>
-<g class="node" id="n-e"><rect x="870" y="60" width="120" height="50" rx="10"/><text x="930" y="82" text-anchor="middle">ElevenLabs</text><text class="sub" x="930" y="98" text-anchor="middle">voice</text></g>
-</svg><div class="text-xs text-slate-500 mt-1" id="lastrun"></div></div>
-<div class="grid grid-cols-3 xl:grid-cols-5 gap-4" id="cards"></div>
-<div class="glass rounded-2xl p-4 mt-5"><div class="text-sm font-semibold text-slate-300 mb-2">Latency per agent per run (ms)</div><svg id="chart" viewBox="0 0 1000 160" class="w-full"></svg>
-<div class="flex gap-4 text-xs mt-1" id="lg"></div></div></div><div id="p-SurrealDB" class="panel hidden"></div><div id="p-Daytona" class="panel hidden"></div><div id="p-ACS" class="panel hidden"></div><div id="p-Arize" class="panel hidden"></div><div id="p-ElevenLabs" class="panel hidden"></div><div id="p-Octo" class="panel hidden"></div><div id="p-Model" class="panel hidden"></div></div>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Precedent · Partner dashboards</title>
+<script src="/static/vendor/logos.js"></script><script src="/static/partners.js"></script>
+<style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:#0a0a0b;color:#ededed;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+.nav{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:28px;height:56px;padding:0 40px;border-bottom:1px solid #1f1f22;background:rgba(10,10,11,.85);backdrop-filter:blur(10px)}
+.nav b{font-size:15px}.nav a{color:#8f8f95;font-size:13px}.nav a.on,.nav a:hover{color:#fff}
+.wrap{max-width:1440px;margin:0 auto;padding:40px}
+.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:24px}
+.card{background:#111113;border:1px solid #1f1f22;border-radius:16px;padding:32px}
+.s{font-size:13px;color:#8f8f95}.up{text-transform:uppercase;letter-spacing:.08em;font-size:13px;color:#6b6b72}
+h1{font-size:44px;font-weight:700;letter-spacing:-.03em;margin:0}
+.num{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0 20px}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 16px;border-radius:999px;border:1px solid #2a2a2e;font-size:13px;color:#ededed}
+.btn:hover{border-color:#555}
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin:28px 0}.tabs a{font-size:13px;color:#8f8f95;padding:6px 12px;border-radius:999px;border:1px solid #1f1f22}.tabs a:hover{color:#fff;border-color:#3a3a3e}
+.pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:999px;background:#18181b;color:#8f8f95}
+</style></head><body>
+<nav class="nav"><b>⚖ Precedent</b><a href="/">Demo</a><a href="/map">Map</a><a href="/dashboard" class="on">Dashboards</a><a href="/slides">Slides</a><span class="s" style="margin-left:auto" id="upd"></span></nav>
+<div class="wrap">
+ <div class="up">Partner dashboards · live from this sandbox</div>
+ <h1 style="margin-top:8px">How Precedent runs on its partners</h1>
+ <div class="card" style="margin-top:28px;padding:28px 32px"><div class="up" style="margin-bottom:16px">Dataflow · one research query</div><div id="flow"></div></div>
+ <div class="tabs" id="tabs"></div>
+ <div class="grid" id="cards"></div>
+</div>
 <script>
-const $=id=>document.getElementById(id), esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-if(new URLSearchParams(location.search).has("compact")){document.querySelector("nav").style.display="none";$("tabs").style.display="none";$("hdr").style.display="none";$("wrap").className="px-2 py-2"}
-const SEQ=[["n-q"],["e-q-p","n-p"],["e-p-o","n-o"],["e-o-s","e-p-s","n-s"],["e-o-m","e-s-m","n-m"],["e-m-g","n-g"],["e-g-e","n-e"]];
-function animate(){document.querySelectorAll(".on").forEach(e=>e.classList.remove("on"));SEQ.forEach((g,i)=>setTimeout(()=>g.forEach(id=>$(id).classList.add("on")),i*450));setTimeout(()=>document.querySelectorAll(".edge.on").forEach(e=>e.classList.remove("on")),SEQ.length*450+2500)}
-const card=(t,c,rows,how,ok=true)=>`<div class="glass rounded-2xl p-4"><div class="flex justify-between"><div class="font-semibold">${t}</div><span class="w-2 h-2 mt-2 rounded-full ${ok?'bg-emerald-400':'bg-slate-600'}"></span></div>
-<div class="text-[11px] text-slate-500 mb-2">${how}</div>${rows.map(([k,v])=>`<div class="flex justify-between text-sm py-0.5"><span class="text-slate-400">${k}</span><span class="font-mono ${c}">${esc(v)}</span></div>`).join("")}</div>`;
-let lastRun=null;const COLORS={planner:"#38bdf8",retriever:"#818cf8",answer:"#e879f9",safeguard:"#34d399"};
-async function tick(){try{const d=await (await fetch("/api/stack")).json();
- if(d.runs.length){const r=d.runs[d.runs.length-1];if(r.run_id!==lastRun){if(lastRun!==null)animate();lastRun=r.run_id}
-  $("lastrun").textContent=`last run ${r.run_id} · "${r.q}" · ${r.elapsed_s}s · passages: ${r.passages||"graph-only"} · model: ${r.provider} · safeguard ${r.pass?"PASS":"FAIL"}`}
- const D=d.daytona,S=d.surrealdb,O=d.octo,M=d.model,E=d.elevenlabs,A=d.acs,Z=d.arize;
- $("cards").innerHTML=card("Daytona","text-sky-300",[["sandbox",D.sandbox],["CPU / RAM",`${D.cpus} cpu · ${D.ram_used_gb}/${D.ram_gb} GB`],["sandbox uptime",D.uptime_h+" h"],["server uptime",D.server_uptime_min+" min"]],D.how)
- +card("SurrealDB","text-indigo-300",[["nodes",S.nodes.toLocaleString()],["edges",S.edges.toLocaleString()],["queries",S.queries],["last / avg",`${S.last_ms??"-"} / ${S.avg_ms??"-"} ms`]],S.how,S.backend=="surrealdb")
- +card("Octo DB","text-amber-300",[["searches",O.searches],["live / snapshot",`${O.live} / ${O.snapshot}`],["cache hits",O.cache_hits],["last source",O.last_source||"-"]],O.how)
- +card("Model (Haiku)","text-fuchsia-300",[["real calls",M.real_total],["cached answers",M.cached_answers],["template fallback",M.template],["runs",M.runs]],M.how,M.anthropic_key)
- +card("ElevenLabs","text-emerald-300",[["TTS calls",E.tts_calls],["cache hits",E.cache_hits],["cached clips",E.cached_files],["status",E.enabled?"live":"key missing"]],E.how,E.enabled)
- +card("ACS coordination","text-sky-300",[["tasks",`${A.tasks} (${A.claimed} claimed, ${A.done} done)`],["issue logs",A.issue_logs],["events",A.events]],A.how+`<div class="mt-1 font-mono text-[10px] text-slate-500 leading-tight">${A.recent.slice(-3).map(esc).join("<br>")}</div>`)
- +card("Arize","text-rose-300",[["status",Z.status],["spans sent",Z.spans_sent]],Z.how,Z.connected)
- +card("Rate limits","text-amber-300",Object.entries(d.limits.caps).map(([k,v])=>[k.replace("elevenlabs_","11labs "),`${v.used_last_hour}/${v.cap_per_hour} /hr`]).concat([["per IP",d.limits.per_ip_per_min+" q/min"],["in flight",d.limits.in_flight?"1 (busy)":"0"],["blocked",Object.values(d.limits.blocked).reduce((a,b)=>a+b,0)]]),"One run at a time, per-IP and hourly caps; over cap falls back to cache/template/browser voice with a notice.")
- +card("Safeguard","text-emerald-300",[["runs passed",`${d.runs.filter(r=>r.pass).length}/${d.runs.length} recent`],["hallucinated cites","blocked by design"]],"Every citation must be in the retrieved set; disclaimer always on.");
- const rs=d.runs.slice(-12),ag=["planner","retriever","answer","safeguard"],mx=Math.max(50,...rs.flatMap(r=>ag.map(a=>r.latency[a]||0)));const bw=1000/Math.max(rs.length,1);
- $("chart").innerHTML=rs.map((r,i)=>ag.map((a,j)=>{const v=r.latency[a]||0,h=Math.max(1,v/mx*130);return `<rect x="${i*bw+8+j*(bw-16)/4}" y="${145-h}" width="${(bw-16)/4-3}" height="${h}" fill="${COLORS[a]}" rx="2"><title>${a}: ${v} ms (${esc(r.q)})</title></rect>`}).join("")+`<text x="${i*bw+bw/2}" y="158" fill="#64748b" font-size="9" text-anchor="middle">${r.run_id.slice(0,6)}</text>`).join("");
- $("lg").innerHTML=ag.map(a=>`<span><span style="color:${COLORS[a]}">■</span> ${a}</span>`).join("")}catch(e){}}
-tick();setInterval(tick,2000);
-const OPEN={SurrealDB:["https://app.surrealdb.com","Open in Surrealist"],Daytona:["https://app.daytona.io/dashboard/sandboxes","Open in Daytona"],ACS:["https://github.com/Pukujan/agent-custom-setup","Open ACS on GitHub"],
- Arize:["https://app.arize.com","Open in Arize"],ElevenLabs:["https://elevenlabs.io/app/usage","Open ElevenLabs usage"],Octo:["https://octodb.design-bakery.com","Open Octo"],Model:["https://console.anthropic.com","Open Anthropic console"]};
-let TAB=location.hash.slice(1)||"Overview",SP=null,ST=null,net=null,netRun=null;
-function selTab(t){TAB=t;location.hash=t;document.querySelectorAll(".panel").forEach(p=>p.classList.toggle("hidden",p.id!=="p-"+t));document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("bg-indigo-500/40",b.dataset.t===t));renderTab()}
-document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>selTab(b.dataset.t));
-const hdr=(t,sub)=>`<div class="flex justify-between items-start mb-4"><div><h2 class="text-xl font-semibold">${t}</h2><div class="text-xs text-slate-500">${sub}</div></div><a href="${OPEN[t][0]}" target="_blank" rel="noopener" class="px-4 py-2 rounded-xl bg-indigo-500 hover:bg-indigo-400 text-sm font-semibold">${OPEN[t][1]} ↗</a></div>`;
-const kv=o=>`<div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">${Object.entries(o).map(([k,v])=>`<div class="glass rounded-xl p-3"><div class="text-[11px] text-slate-500">${k}</div><div class="font-mono text-sm mt-1">${esc(v)}</div></div>`).join("")}</div>`;
-const tbl=(rows,cols)=>`<div class="glass rounded-xl overflow-auto max-h-96"><table class="w-full text-xs"><tr class="text-slate-500 text-left">${cols.map(c=>`<th class="p-2">${c}</th>`).join("")}</tr>${rows.map(r=>`<tr class="border-t border-white/5">${r.map(x=>`<td class="p-2 align-top">${x}</td>`).join("")}</tr>`).join("")}</table></div>`;
-const T=t=>new Date(t*1000).toLocaleTimeString();
-function renderTab(){if(!SP||!ST||TAB==="Overview")return;const el=$("p-"+TAB),L=SP.last_run;
- if(TAB==="SurrealDB"){el.innerHTML=hdr("SurrealDB",`ns <b>${SP.surreal.ns}</b> / db <b>${SP.surreal.db}</b> · tables ${SP.surreal.tables.join(", ")} · ${ST.surrealdb.nodes.toLocaleString()} nodes · ${ST.surrealdb.edges.toLocaleString()} edges · credentials never shown`)
-  +`<div class="grid grid-cols-5 gap-4"><div class="col-span-3 glass rounded-xl p-2"><div class="text-xs text-slate-400 px-2">Retrieved subgraph — last question: “${esc(L?L.question:"")}”</div><div id="sg" style="height:420px"></div></div>
-  <div class="col-span-2">${tbl(SP.surreal.queries.slice().reverse().map(q=>[`<code class="text-indigo-200">${esc(q.sql)}</code>`,q.ms+" ms",T(q.t)]),["SurrealQL (actual)","time","at"])}</div></div>`;
-  if(L){const ids=new Set();L.citations.forEach(c=>ids.add(c.id));L.edges.forEach(e=>{ids.add(e.src);ids.add(e.dst)});const ref={};L.citations.forEach(c=>ref[c.id]=c.ref);
-   net=new vis.Network($("sg"),{nodes:[...ids].map(id=>({id,label:(ref[id]||"")+" "+(id.length>30?id.slice(0,28)+"…":id),shape:"dot",size:ref[id]?16:8,color:L.seeds.includes(id)?"#f59e0b":ref[id]?"#818cf8":"#475569",font:{color:"#cbd5e1",size:10}})),
-    edges:L.edges.map(e=>({from:e.src,to:e.dst,arrows:"to",color:{color:"#64748b"},label:"cites",font:{size:8,color:"#64748b",strokeWidth:0}}))},{physics:{stabilization:true}})}}
- if(TAB==="Daytona"){const D=ST.daytona;el.innerHTML=hdr("Daytona","Everything — agents, SurrealDB, CI, triage, web app — runs in this one sandbox")
-  +kv({"sandbox id":SP.daytona.sandbox_id,"CPUs":D.cpus,"RAM":`${D.ram_used_gb} / ${D.ram_gb} GB`,"sandbox uptime":D.uptime_h+" h","server uptime":D.server_uptime_min+" min","Daytona SDK":SP.daytona.sdk,"preview":SP.daytona.preview.replace("https://",""),"GPU":"none"})
-  +tbl(Object.entries(SP.daytona.services).map(([k,v])=>[k,v?'<span class="text-emerald-300">● up</span>':'<span class="text-red-300">● down</span>']),["service","status"])}
- if(TAB==="ACS"){const A=SP.acs;el.innerHTML=hdr("ACS",`hotload <b class="${A.hotload_state==="READY"?"text-emerald-300":"text-amber-300"}">${A.hotload_state||"?"}</b> (installed ${esc(A.hotload_installed||"")}) · claim-file seats, task board, OIO issue logs`)
-  +`<div class="grid grid-cols-2 gap-4 mb-4">${tbl(Object.entries(A.board).map(([k,t])=>[`<b class="text-indigo-300">${k}</b>`,esc(t.title),t.status,esc(t.owner||"-")]),["task","title","status","owner"])}${tbl(Object.entries(A.by_agent).map(([a,h])=>[esc(a),esc(h.join(", "))]),["agent","claims / releases"])}</div>`
-  +`<div class="grid grid-cols-2 gap-4">${tbl(A.issue_logs.map(l=>[esc(l.name),l.status==="resolved"?'<span class="text-emerald-300">resolved</span>':'<span class="text-amber-300">open</span>',esc(l.consequence)]),["issue log","status","summary"])}${tbl(A.events.slice().reverse().map(e=>[esc((e.ts||"").slice(11,19)),esc(e.agent||""),esc((e.msg||"").slice(0,90))]),["time","agent","event"])}</div>`}
- if(TAB==="Arize"){const Z=SP.arize,sp=Z.spans.filter(s=>!s.event),mx=Math.max(1,...Z.spans.map(s=>s.start_ms+s.dur_ms));
-  if(Z.space_id)OPEN.Arize[0]="https://app.arize.com/organizations/-/spaces/"+encodeURIComponent(Z.space_id);
-  el.innerHTML=hdr("Arize",(Z.connected?'<span class="text-emerald-300">Connected — OTel spans exporting</span>':'<span class="text-amber-300">Not connected — space ID pending</span>')+` · waterfall below is the local span view of the last question (“${esc(L?L.question:"")}”)`)
-  +`<div class="glass rounded-xl p-4 space-y-1">${Z.spans.map(s=>`<div class="flex items-center gap-2 text-xs"><div class="w-44 truncate ${s.event?"text-slate-500 pl-4":"text-slate-200 font-semibold"}">${esc(s.name)}</div><div class="flex-1 relative h-4 bg-white/5 rounded">
-   <div class="absolute h-4 rounded ${s.event?"bg-slate-500 w-1":"bg-rose-400/70"}" style="left:${s.start_ms/mx*100}%;width:${s.event?"3px":Math.max(0.5,s.dur_ms/mx*100)+"%"}"></div></div><div class="w-20 text-right font-mono text-slate-400">${s.event?"+"+s.start_ms:s.dur_ms} ms</div></div>`).join("")}</div>`}
- if(TAB==="ElevenLabs"){const E=ST.elevenlabs,H=SP.elevenlabs.history;el.innerHTML=hdr("ElevenLabs","eleven_flash_v2_5 TTS (short answer, ≤400 chars, cached by hash) · scribe_v1 STT fallback · hourly caps")
-  +kv({"TTS calls":E.tts_calls,"cache hits":E.cache_hits,"cached clips":E.cached_files,"STT calls":ST.stt_calls,"chars synthesized":H.filter(h=>h.kind==="tts"&&!h.cached).reduce((a,h)=>a+h.chars,0),"TTS cap":`${ST.limits.caps.elevenlabs_tts.used_last_hour}/${ST.limits.caps.elevenlabs_tts.cap_per_hour} /hr`,"STT cap":`${ST.limits.caps.elevenlabs_stt.used_last_hour}/${ST.limits.caps.elevenlabs_stt.cap_per_hour} /hr`,"status":E.enabled?"live":"key missing"})
-  +tbl(H.slice().reverse().map(h=>[T(h.t),h.kind.toUpperCase(),h.chars+(h.kind==="stt"?" bytes":" chars"),h.cached?'<span class="text-emerald-300">cache hit</span>':"API call"]),["time","type","size","source"])}
- if(TAB==="Octo"){const O=ST.octo;el.innerHTML=hdr("Octo","Alex's Octo data layer: workspace SQL over 804,646 opinion passages · sandbox can't reach octodb directly, so a snapshot (327,407 passages / 45,048 cases) serves when live is blocked")
-  +kv({"searches":O.searches,"live":O.live,"snapshot":O.snapshot,"cache hits":O.cache_hits,"last source":O.last_source||"-","live corpus":"804,646 passages","snapshot":"327,407 passages","cases":"45,048"})
-  +(L?tbl(L.citations.filter(c=>c.passage).map(c=>[`<b class="text-indigo-300">${c.ref}</b> ${esc(c.title)}`,`<span class="italic text-slate-400">${esc(c.passage.slice(0,220))}…</span>`]),["passage-backed authority (last question)","passage"]):"")}
- if(TAB==="Model"){const M=ST.model;el.innerHTML=hdr("Model","Fallback chain tried in order; every answer cached by prompt hash; over the hourly cap answers fall back to the labeled template")
-  +kv({"real calls":JSON.stringify(SP.model.calls),"cached answers":M.cached_answers,"template answers":M.template,"cache files":SP.model.cache_files,"Anthropic cap":`${ST.limits.caps.anthropic.used_last_hour}/${ST.limits.caps.anthropic.cap_per_hour} /hr`,"key":M.anthropic_key?"set":"missing"})
-  +`<div class="glass rounded-xl p-4 mb-4 flex gap-3 items-center text-sm">${SP.model.chain.map((c,i)=>`<span class="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10">${i+1}. ${esc(c)}</span>`).join('<span class="text-slate-500">→</span>')}</div>`
-  +tbl(SP.model.providers.slice().reverse().map(p=>[esc(p)]),["provider per recent run"])}}
-async function sp(){try{SP=await (await fetch("/api/sponsor")).json();ST=await (await fetch("/api/stack")).json();if(TAB!=="SurrealDB"||!net||netRun!==(SP.last_run&&SP.last_run.run_id)){netRun=SP.last_run&&SP.last_run.run_id;renderTab()}}catch(e){}}
-sp();setInterval(sp,4000);selTab(TAB);
-
+const fmt=n=>n==null?"–":typeof n==="number"?(n>=1e5?(n/1000).toFixed(0)+"k":n.toLocaleString()):n;
+function spark(vals,color,w=360,h=56){ if(!vals.length) return ""; const mx=Math.max(...vals,1), st=w/Math.max(1,vals.length-1);
+ const pts=vals.map((v,i)=>`${(i*st).toFixed(1)},${(h-4-(v/mx)*(h-8)).toFixed(1)}`).join(" ");
+ return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"><polyline points="0,${h} ${pts} ${w},${h}" fill="${color}" fill-opacity=".08" stroke="none"/><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/></svg>`; }
+function bars(items,color){ return items.map(([l,v,cap])=>`<div style="display:flex;align-items:center;gap:12px;margin-top:8px"><span class="s" style="width:130px">${l}</span><div style="flex:1;height:8px;border-radius:4px;background:#1c1c1f"><div style="width:${Math.min(100,cap?v/cap*100:0)}%;min-width:2px;height:100%;border-radius:4px;background:${color}"></div></div><span class="s" style="width:60px;text-align:right">${v}/${cap}</span></div>`).join(""); }
+function card(k,kpis,chart,label,span=6){ const p=PARTNERS[k];
+ return `<section id="${k}" class="card" style="grid-column:span ${span};border-top:2px solid ${p.color}">
+ <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">${partnerMark(k,40)}<a class="btn" href="${p.url}" target="_blank" rel="noopener">${p.open} ↗</a></div>
+ <div class="s" style="margin-top:12px;font-size:15px;color:#a1a1aa">${p.powers}</div>
+ <div class="kpis">${kpis.map(([v,l])=>`<div><div class="num">${fmt(v)}</div><div class="s">${l}</div></div>`).join("")}</div>
+ <div class="up" style="margin-bottom:8px">${label}</div>${chart}</section>`; }
+function flow(){ const N=[["Query","#ededed"],["Octo","#f59e0b"],["SurrealDB","#ff00a0"],["Claude Haiku","#d97757"],["Safeguard","#ededed"],["ElevenLabs","#f5f5f4"]];
+ const w=1300,bw=170,gap=(w-60-N.length*bw)/(N.length-1);
+ let s=`<svg viewBox="0 0 ${w} 150" width="100%"><rect x="1" y="1" width="${w-2}" height="98" rx="14" fill="none" stroke="#22d3a6" stroke-dasharray="4 6" opacity=".6"/><text x="20" y="22" fill="#22d3a6" font-size="13" font-weight="600">DAYTONA SANDBOX</text>`;
+ N.forEach(([n,c],i)=>{ const x=30+i*(bw+gap); s+=`<rect x="${x}" y="36" width="${bw}" height="48" rx="10" fill="#18181b" stroke="${c}" stroke-opacity=".7"/><text x="${x+bw/2}" y="65" fill="${c}" font-size="15" font-weight="600" text-anchor="middle">${n}</text>`;
+  if(i) s+=`<path d="M${x-gap+4} 60 H${x-6}" stroke="#3f3f46" stroke-width="2" marker-end="url(#a)"/>`; });
+ s+=`<defs><marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 8 4 0 8z" fill="#3f3f46"/></marker></defs>`;
+ s+=`<text x="30" y="128" fill="#38bdf8" font-size="13" font-weight="600">ACS · seats, handoffs, audit record per run</text><text x="${w-30}" y="128" fill="#a78bfa" font-size="13" font-weight="600" text-anchor="end">Arize · OpenTelemetry span per agent</text></svg>`;
+ document.getElementById("flow").innerHTML=s; }
+async function load(){ const d=await (await fetch("/api/stack")).json(); const R=(d.runs||[]).slice().reverse(), L=d.limits||{}, C=L.caps||{};
+ const el=R.map(r=>r.elapsed_s||0), pass=R.filter(r=>r.pass).length;
+ const cards=[
+  card("daytona",[[d.daytona.cpus,"vCPUs"],[d.daytona.ram_gb+" GB","RAM"],[d.daytona.uptime_h+" h","sandbox uptime"]],spark(el,PARTNERS.daytona.color),"Pipeline latency · last "+R.length+" runs (s)"),
+  card("surrealdb",[[d.surrealdb.nodes,"authorities"],[d.surrealdb.edges,"citation edges"],[d.surrealdb.avg_ms+" ms","avg graph query"]],bars([["queries",d.surrealdb.queries,Math.max(d.surrealdb.queries,1)],["last query ms",Math.round(d.surrealdb.last_ms),250]],PARTNERS.surrealdb.color),"Graph activity since restart"),
+  card("arize",[[d.arize.spans_sent,"spans sent"],[d.arize.connected?"Live":"Pending","status"],[4,"agents instrumented"]],`<div class="s">${d.arize.status}. Spans: planner → retriever → answer → safeguard.</div>`,"Tracing"),
+  card("elevenlabs",[[d.elevenlabs.tts_calls,"TTS calls"],[d.elevenlabs.cached_files,"cached clips"],[d.stt_calls||0,"STT calls"]],bars([["TTS / hour",(C.elevenlabs_tts||{}).used_last_hour||0,(C.elevenlabs_tts||{}).cap_per_hour||30],["STT / hour",(C.elevenlabs_stt||{}).used_last_hour||0,(C.elevenlabs_stt||{}).cap_per_hour||20]],PARTNERS.elevenlabs.color),"Usage vs hourly cap"),
+  card("anthropic",[[d.model.real_calls.anthropic,"Haiku calls"],[d.model.cached_answers,"cached answers"],[d.model.runs,"total runs"]],bars([["Haiku / hour",(C.anthropic||{}).used_last_hour||0,(C.anthropic||{}).cap_per_hour||40]],PARTNERS.anthropic.color),"Cost control"),
+  card("octo",[["804k","opinion passages"],["45k","cases in snapshot"],[d.octo.searches,"searches"]],`<div class="s">Source: ${d.octo.last_source||"–"}</div>`,"Retrieval"),
+  card("acs",[[d.acs.issue_logs,"audit records"],[d.acs.events,"events"],[pass+"/"+R.length,"safeguard pass"]],spark(R.map(r=>r.pass?1:0.15),PARTNERS.acs.color),"Safeguard outcome · recent runs",12)];
+ document.getElementById("cards").innerHTML=cards.join("");
+ document.getElementById("tabs").innerHTML=Object.keys(PARTNERS).map(k=>`<a href="#${k}">${PARTNERS[k].name}</a>`).join("");
+ document.getElementById("upd").textContent="Updated "+new Date().toLocaleTimeString(); }
+flow(); load(); setInterval(load,15000);
 </script></body></html>
