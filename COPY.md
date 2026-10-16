@@ -1,7 +1,18 @@
-# Precedent — presentation copy (B2B, legal professionals)
+# Precedent — presentation copy
+
+## Core story
+Multi-agent AI is unreliable in production: agents collide and duplicate work, act on unverified output, touch real systems unsafely, and can't be traced. Precedent is a pipeline that fixes each problem, and each fix is a partner:
+- **Isolation: Daytona.** Agents run sandboxed and can use real tools safely.
+- **Grounded memory: SurrealDB + Octo.** A knowledge graph of 119,770 authorities plus 804k passages.
+- **Observability + evals: Arize.** Traces and evaluators on every agent step.
+- **Voice interface: ElevenLabs.**
+- **Coordination: ACS.** A claim file and audit log; teammates' agents can claim tasks.
+- **Verification: the safeguard agent.**
+- **Guardrails: Anthropic Haiku**, with fallback, rate limits and cost caps.
+The first high-stakes use case is legal research for professionals (B2B), and the same pipeline generalizes.
 
 ## Hero
-**Verified research memos for legal teams.**
+**A reliable pipeline for multi-agent AI. First use case: verified research memos for legal teams.**
 Every authority checked against what was actually retrieved, with an auditable agent trail, running in isolated Daytona sandboxes.
 
 ## Who it's for

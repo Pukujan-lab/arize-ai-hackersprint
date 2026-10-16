@@ -9,15 +9,15 @@ a{color:inherit;text-decoration:none}.nav{position:sticky;top:0;z-index:5;displa
 .btn{display:inline-flex;height:34px;align-items:center;padding:0 14px;border-radius:999px;border:1px solid #2a2a2e;font-size:13px;margin-left:auto}.btn:hover{border-color:#666}
 .p{display:flex;align-items:center;gap:16px;padding:10px 0;border-top:1px solid #1f1f22}label{display:block;padding:6px 0}input[type=checkbox]{width:18px;height:18px;margin-right:10px;accent-color:#6366f1;vertical-align:-3px}</style></head><body>
 <nav class="nav"><b>⚖ Precedent</b><a href="/">Demo</a><a href="/map">Map</a><a href="/dashboard">Dashboards</a><a href="/slides">Slides</a><a href="/guide" class="on">Guide</a></nav>
-<div class="wrap"><div class="s" style="text-transform:uppercase;letter-spacing:.08em">Presenter guide · 3 min 20 s · click a timer to start it</div><h1>Precedent: verified research memos for legal teams</h1>
+<div class="wrap"><div class="s" style="text-transform:uppercase;letter-spacing:.08em">Presenter guide · 3 min 20 s · click a timer to start it</div><h1>Precedent: a reliable pipeline for multi-agent AI</h1>
 <div style="background:#111113;border:1px solid #1f1f22;border-radius:16px;padding:24px;margin-top:24px"><div class="s" style="margin-bottom:10px">FLOW</div><svg id="flow" viewBox="0 0 1020 120" width="100%"></svg></div>
 <div style="background:#111113;border:1px solid #1f1f22;border-radius:16px;padding:24px;margin-top:16px"><div class="t" style="font-size:20px">Pre-demo checklist</div>
 <label><input type="checkbox">Open the demo URL in Chrome; mic permission granted</label><label><input type="checkbox">Partner tabs logged in: Daytona, Surrealist, Arize, ElevenLabs</label><label><input type="checkbox">/dashboard Arize card shows Connected</label><label><input type="checkbox">Use a cached chip question (no new model call); sound on</label><label><input type="checkbox">Backup video ready: /static/backup_demo.mp4</label></div>
 <div id="steps"></div></div>
 <script>
 const A="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjo1MjM0Mjo2cVRj/spaces/U3BhY2U6NTY4Nzk6MHhDRQ==";
-const S=[["Problem",20,"Associates spend hours on first-pass research memos, and generic LLMs cite authorities that were never retrieved."],
-["Precedent",20,"A query becomes a research memo (short answer, key authorities with holdings, caveat). Every citation is checked against what was retrieved."],
+const S=[["Problem",20,"Multi-agent AI is unreliable in production: agents collide and duplicate work, act on unverified output, touch real systems unsafely, and leave no trace."],
+["Precedent",20,"Our pipeline fixes each problem, and each fix is a partner: isolation (Daytona), grounded memory (SurrealDB + Octo), observability and evals (Arize), voice (ElevenLabs), coordination (ACS), verification (safeguard), guardrails (Anthropic fallback and caps). First use case: verified legal research memos for professionals."],
 ["Live demo",60,"Click the mic → ask <b>“Automobile exception: probable cause standard in Colorado”</b> (cached) → point at the live agent feed → map lights up by county and court → hover a case → click <b>Listen</b>. <a class='btn' style='margin-left:8px' href='/' target='_blank'>Open demo ↗</a>"],
 ["Partners",60,"__P__"],["Safeguards",20,"No unretrieved citation survives; quotes are verbatim; rate limits and hourly caps; a ‘not legal advice’ disclaimer."],
 ["Close",20,"Go to the partner wall (last slide). “Verified memos, auditable agents, built on Daytona, SurrealDB, Arize and ElevenLabs.” <a class='btn' style='margin-left:8px' href='/slides' target='_blank'>Open slides ↗</a>"]];
