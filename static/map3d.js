@@ -160,8 +160,9 @@ if(!webgl){
     order(){ return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0]).filter(x=>x[1]>0).sort((a,b)=>a[1]-b[1]).map(x=>x[0]); },
     tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; tbtn.textContent="❚❚ Pause";
       if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.textContent="▶ Tour"; return; }
-      const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.textContent="▶ Tour"; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); tour=setTimeout(()=>step(n+1),Math.max(2600,ms+1200)); }; step(start); },
-    stopTour(){ touring=false; clearTimeout(tour); tbtn.textContent="▶ Tour"; },
+      const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.textContent="▶ Tour"; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,Math.max(2600,ms+1200)); }),a]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
+    replay(){ if(cur>=0) typeOut(cur); },
+    stopTour(){ touring=false; clearTimeout(tour); try{curAudio&&curAudio.pause();}catch(e){} tbtn.textContent="▶ Tour"; },
     fit(){ const fed=pins.some(p=>p.userData.G.cat==="federal"); if(fed){ camT.copy(homeCam); lookT.copy(homeLook); } else coView(); },
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
   R.domElement.addEventListener("click",ev=>{ const r=R.domElement.getBoundingClientRect(); mouse.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
@@ -170,6 +171,7 @@ if(!webgl){
   let touring=false, tpos=0; const tbar=document.createElement("div"); tbar.className="absolute bottom-10 right-4 z-20 flex gap-1 text-xs";
   const mk=(t,f)=>{ const b=document.createElement("button"); b.textContent=t; b.className="px-2.5 py-1 rounded-full bg-slate-900/70 border border-indigo-400/40 text-slate-200 hover:bg-indigo-600/60"; b.onclick=e=>{e.stopPropagation();f();}; tbar.appendChild(b); return b; };
   mk("◀",()=>{ api.stopTour(); const O=api.order(); tpos=Math.max(0,tpos-1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
+  const vbtn=mk(api.voice?"🔊":"🔇",()=>{ api.voice=!api.voice; try{localStorage.setItem("mapVoice",api.voice?"1":"0");}catch(e){} vbtn.textContent=api.voice?"🔊":"🔇"; if(!api.voice&&curAudio) curAudio.pause(); }); vbtn.title="Speak tour stops (ElevenLabs, cached)";
   const tbtn=mk("▶ Tour",()=>{ touring?api.stopTour():api.tour(0); });
   mk("▶",()=>{ api.stopTour(); const O=api.order(); tpos=Math.min(O.length-1,tpos+1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
   host.parentElement.appendChild(tbar);
@@ -202,11 +204,13 @@ if(!webgl){
   function explain(k){ const c=cites[k]||{}, ctx=api.ctx||{}, ref=c.ref||""; const yr=(String(c.date||"").match(/\d{4}/)||[""])[0];
     const where=[c.court, c._loc&&c._loc.cat==="county"?c._loc.label.split("→")[0].trim():""].filter(Boolean).join(", ");
     const ex=window.cleanPassage?cleanPassage(c.passage,ctx.question,180):(c.passage||"").slice(0,180);
-    const sum=`${c.title||"Authority"}${where?" ("+where+(yr?", "+yr:"")+")":(yr?" ("+yr+")":"")}.${ex?" Retrieved passage: “"+ex+"”":" No passage retrieved (graph-linked)."}`;
+    const sum=`${c.title||"Authority"}${where?" ("+where+(yr?", "+yr:"")+")":(yr?" ("+yr+")":"")}: ${ex||"graph-linked authority; no passage text retrieved."}`;
     let rel=""; if(ref&&ctx.answer){ const lines=String(ctx.answer).split("\n").filter(l=>l.includes(ref)); const l=lines.find(x=>/^\s*[-*•]/.test(x))||lines[0];
       if(l) rel=l.replace(/\*\*|[*#>`]/g,"").replace(/\[\d+\]/g,"").replace(/^\s*[-•]\s*/,"").replace(/^short answer:?/i,"").replace(/\s+/g," ").trim(); }
-    return {sum, rel: rel?"Relevant because the memo cites it for: "+rel:""}; }
-  function typeOut(k){ clearInterval(trT); const {sum,rel}=explain(k); const full=`<b style="color:#a5b4fc">${(cites[k]||{}).ref||""}</b> `; const txt=sum+(rel?"\n"+rel:"");
+    return {sum, rel: rel?"Relevant because: "+rel:""}; }
+  let curAudio=null; api.voice=(()=>{ try{ return localStorage.getItem("mapVoice")==="1"; }catch(e){ return false; } })();
+  function sayTTS(text){ if(!api.voice) return Promise.resolve(); return fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.ok?r.blob():null).then(b=>{ if(!b) return; try{curAudio&&curAudio.pause();}catch(e){} curAudio=new Audio(URL.createObjectURL(b)); return new Promise(res=>{ curAudio.onended=res; curAudio.onerror=res; curAudio.play().catch(res); }); }).catch(()=>{}); }
+  function typeOut(k){ clearInterval(trT); const {sum,rel}=explain(k); const full=`<button title="Replay" onclick="Docs3D.replay()" style="float:right;margin-left:8px;color:#a5b4fc">↻</button><b style="color:#a5b4fc">${(cites[k]||{}).ref||""}</b> `; const txt=sum+(rel?"\n"+rel:""); api._audio=sayTTS(txt.replace("\n"," "));
     tr.classList.remove("hidden"); let n=0; const esc=t=>t.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;");
     trT=setInterval(()=>{ n+=1; tr.innerHTML=full+esc(txt.slice(0,n)).replace("\n","<br><span style='color:#6ee7b7'>")+(n<txt.length?"<span class='animate-pulse'>▍</span>":""); if(n>=txt.length) clearInterval(trT); },30);
     return txt.length*30; }
