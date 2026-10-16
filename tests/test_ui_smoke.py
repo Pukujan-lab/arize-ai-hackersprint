@@ -142,7 +142,7 @@ def test_tour_controls_consistent_style(browser):
 @pytest.mark.parametrize("path", ["/", "/map", "/dashboard", "/slides", "/guide"])
 def test_navbar_logo_strip(browser, path):
     pg = page(browser, path); pg.wait_for_timeout(1500)
-    links = pg.evaluate("[...document.querySelectorAll('#logoStrip a')].map(a=>({t:a.target, l:a.getAttribute('aria-label')||'', img:!!a.querySelector('img,svg')}))")
+    links = pg.evaluate("[...document.querySelectorAll('#partner-strip a')].map(a=>({t:a.target, l:a.getAttribute('aria-label')||'', img:!!a.querySelector('img,svg')}))")
     assert len(links) == 6 and all(x["t"] == "_blank" and "dashboard" in x["l"] for x in links), links
 
 def test_no_green_pills_in_hero(browser):
