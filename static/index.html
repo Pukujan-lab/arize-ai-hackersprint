@@ -6,36 +6,35 @@
 .glass{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(8px)}
 .seat.on{box-shadow:0 0 0 2px #818cf8,0 0 24px #6366f1aa}.seat.done{border-color:#34d399}
 @keyframes pulse2{50%{opacity:.4}}.live{animation:pulse2 1s infinite}</style><script src="/static/links.js"></script></head>
-<body class="text-slate-200 min-h-screen font-sans"><nav class="sticky top-0 z-40 backdrop-blur bg-slate-950/60 border-b border-white/5"><div class="max-w-7xl mx-auto px-6 h-11 flex items-center gap-6 text-sm"><span class="font-bold text-indigo-400">⚖ Precedent</span><a href="/" class="text-slate-300 hover:text-white">Demo</a><a href="/dashboard" class="text-slate-300 hover:text-white">Dashboards</a><a href="/slides" class="text-slate-300 hover:text-white">Slides</a></div></nav>
+<body class="text-slate-200 min-h-screen font-sans"><nav class="sticky top-0 z-40 backdrop-blur bg-slate-950/60 border-b border-white/5"><div class="max-w-7xl mx-auto px-6 h-11 flex items-center gap-6 text-sm"><span class="font-bold text-indigo-400">⚖ Precedent</span><a href="/" class="text-slate-300 hover:text-white">Demo</a><a href="/map" class="text-slate-300 hover:text-white">Map</a><a href="/dashboard" class="text-slate-300 hover:text-white">Dashboards</a><a href="/slides" class="text-slate-300 hover:text-white">Slides</a></div></nav>
 <div class="max-w-7xl mx-auto px-6 py-8">
 <header class="flex items-center justify-between mb-8">
- <div><h1 class="text-3xl font-bold tracking-tight"><span class="text-indigo-400">⚖ Precedent</span> <span class="text-slate-400 font-light">Legal GraphRAG Agents</span></h1>
+ <div><h1 class="text-3xl font-bold tracking-tight"><span class="text-indigo-400">⚖ Precedent</span> <span class="text-slate-400 font-light">cited legal answers, checked by agents</span></h1>
  <p class="text-slate-400 text-sm mt-1">Multi-agent retrieval over a 120k-node citation graph · every citation verified</p></div>
  <div id="badges" class="flex gap-2 text-xs"></div></header>
 <div class="glass rounded-2xl p-4 flex gap-3 mb-6">
  <input id="q" class="flex-1 bg-transparent outline-none text-lg placeholder-slate-500" placeholder="Ask a legal research question…" value="When can police search a vehicle without a warrant?">
  <button id="go" class="bg-indigo-500 hover:bg-indigo-400 px-6 py-2 rounded-xl font-semibold">Ask</button></div>
 <div class="flex gap-2 mb-6 text-xs" id="examples"></div>
-<div class="glass rounded-2xl overflow-hidden relative mb-6" style="height:clamp(460px,60vh,680px)"><div id="docs3d" class="absolute inset-0"></div><div class="absolute bottom-2 left-3 text-[10px] uppercase tracking-widest text-slate-500">United States · Colorado courts &amp; statutes</div><div id="docnav" class="absolute bottom-2 right-3 flex gap-1"></div></div>
+<div class="glass rounded-2xl overflow-hidden relative mb-6" style="height:clamp(300px,42vh,420px)"><div id="docs3d" class="absolute inset-0"></div><div class="absolute bottom-2 left-3 text-[10px] uppercase tracking-widest text-slate-500">United States · Colorado courts &amp; statutes</div><div id="docnav" class="absolute bottom-2 right-3 flex gap-1"></div><a id="fullmap" href="/map" class="absolute top-3 right-4 z-20 text-xs bg-indigo-600/80 hover:bg-indigo-500 px-3 py-1 rounded-full">Open full map ↗</a></div>
 <div class="grid grid-cols-12 gap-6">
  <div class="col-span-8 space-y-6">
   <div class="glass rounded-2xl p-6"><div class="flex items-center justify-between mb-3"><h2 class="font-semibold text-slate-300">Answer</h2>
    <div class="flex gap-2 items-center"><span id="sg"></span><label class="text-xs text-slate-400 flex items-center gap-1 mr-1"><input id="hf" type="checkbox" class="accent-indigo-500"> Hands-free</label><button id="play" class="hidden text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg">🔊 Listen</button></div></div>
    <div id="answer" class="leading-relaxed text-slate-100 text-[15px] max-w-none">Ask a question to start the agent pipeline.</div>
    <div id="meta" class="text-xs text-slate-500 mt-4"></div><div id="disc" class="text-xs text-amber-300/80 mt-2"></div></div>
-  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Citation trail</h2><div id="net" style="height:360px"></div></div>
+
   <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Retrieved authorities</h2><div id="cites" class="space-y-2"></div></div>
  </div>
  <div class="col-span-4 space-y-6">
-  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-4">Agent seats <span class="text-xs text-slate-500">(ACS claim file)</span></h2>
-   <div class="grid grid-cols-2 gap-3" id="seats"></div></div>
-  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Live pipeline <span class="text-xs text-slate-500">events.jsonl</span></h2>
+
+  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Live agent activity <span class="text-xs text-slate-500">planner → Octo → SurrealDB → Haiku → safeguard</span></h2>
    <div id="events" class="space-y-2 text-xs font-mono max-h-[520px] overflow-auto"></div></div>
-  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Team task board <span class="text-xs text-slate-500">ACS · claim via /api/claim</span></h2>
-   <div id="tasks" class="space-y-1 text-xs"></div></div>
+
  </div></div>
-<div class="glass rounded-2xl p-2 mt-6"><div class="flex justify-between px-3 pt-2"><h2 class="font-semibold text-slate-300">Live sponsor stack</h2><span class="text-xs"><a class="text-indigo-300 hover:underline" href="/dashboard" target="_blank">dashboard ↗</a> · <a class="text-indigo-300 hover:underline" href="/slides" target="_blank">slides ↗</a></span></div>
-<iframe src="/dashboard?compact=1" class="w-full rounded-xl" style="height:760px;border:0"></iframe></div></div>
+<a href="/dashboard" class="mt-6 flex flex-wrap items-center justify-center gap-x-6 gap-y-1 glass rounded-2xl px-4 py-3 text-xs text-slate-400 hover:text-white">Built with <b>Daytona</b><b>SurrealDB</b><b>Octo</b><b>Claude Haiku</b><b>ElevenLabs</b><b>Arize</b><b>ACS</b><span class="text-indigo-300">Open dashboards ↗</span></a><div class="hidden">  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Citation trail</h2><div id="net" style="height:360px"></div></div>  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-4">Agent seats <span class="text-xs text-slate-500">(ACS claim file)</span></h2>
+   <div class="grid grid-cols-2 gap-3" id="seats"></div></div>  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Team task board <span class="text-xs text-slate-500">ACS · claim via /api/claim</span></h2>
+   <div id="tasks" class="space-y-1 text-xs"></div></div></div></div>
 <script>
 const SEATS=[["planner","🧭","Planner"],["retriever","🕸","Retriever"],["answer","✍️","Answer"],["safeguard","🛡","Safeguard"]];
 const C={planner:"text-sky-300",retriever:"text-indigo-300",answer:"text-fuchsia-300",safeguard:"text-emerald-300"};
@@ -57,7 +56,7 @@ async function ask(){const q=$("q").value.trim();if(!q||running||Date.now()-last
   d.events.slice(shown).forEach(e=>{const el=document.createElement("div");el.className="glass rounded-lg p-2";el.innerHTML=`<span class="text-slate-500">${e.ts.slice(11,19)}</span> <span class="${C[e.agent]||''} font-bold">${e.agent}</span> <span class="text-slate-400">${e.kind}</span><div class="text-slate-300 mt-1">${esc(e.msg)}${e.to?' → <b>'+e.to+'</b>':''}</div>`;$("events").appendChild(el)});shown=d.events.length;
   if(d.result){render(d.result);done();res(d.result)}else setTimeout(poll,300)};poll()})}
 function render(r){lastAnswer=r.answer;const byRef={};r.citations.forEach(c=>byRef[c.ref]=c);
- $("answer").innerHTML=md(r.answer,byRef);
+ $("answer").innerHTML=md(r.answer,byRef);[...$("answer").children].forEach((el,i)=>{el.style.opacity=0;el.style.transform="translateY(4px)";el.style.transition="opacity .35s,transform .35s";setTimeout(()=>{el.style.opacity=1;el.style.transform="none"},250+i*260)});
  const s=r.safeguard;$("sg").innerHTML=`<span class="px-3 py-1 rounded-full text-xs font-bold ${s.pass?'bg-emerald-500/20 text-emerald-300':'bg-red-500/20 text-red-300'}">🛡 Safeguard ${s.pass?'PASS':'FAIL'} · ${s.used.length} cited · ${s.invalid.length+s.unknown_authorities.length} hallucinated</span>`;
  $("disc").textContent="⚠ "+s.disclaimer;$("meta").textContent=`run ${r.run_id} · model: ${r.provider} · passages: ${r.passage_source||"none (graph-only)"} · graph: ${r.backend} · ${r.elapsed_s}s`+(s.unsupported_claims.length?` · ${s.unsupported_claims.length} sentence(s) without citation flagged`:"");
  if(tts)$("play").classList.remove("hidden");
