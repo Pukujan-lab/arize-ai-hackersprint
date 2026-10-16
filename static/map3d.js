@@ -43,14 +43,14 @@ function locate(c){ const t=(c.type||"").toLowerCase(), court=(c.court||""), lc=
 const proj=d3.geoAlbersUsa().scale(1300).translate([487.5,305]), U=0.01;
 const xy=([la,lo])=>{ const p=proj([lo,la])||proj([-104.98,39.74]); return [(p[0]-487.5)*U,-(p[1]-305)*U]; };
 const COL={county:0x34d399,state:0x818cf8,statute:0xf59e0b,federal:0xf472b6}, ARC={cc:0x34d399,cs:0x60a5fa,st:0xf59e0b,fed:0xf472b6,other:0x94a3b8};
-const panel=document.createElement("div"); panel.className="absolute inset-y-4 right-4 w-[min(520px,45%)] hidden [perspective:1000px] z-10"; host.parentElement.appendChild(panel);
-function openDoc(c){ panel.classList.remove("hidden"); panel.innerHTML=`<div id="pg" class="w-full h-full bg-[#f8f5ec] text-slate-800 rounded-lg shadow-2xl p-5 overflow-auto origin-left transition-transform duration-700" style="transform:rotateY(-95deg)">
- <button class="float-right text-slate-500 hover:text-slate-900" onclick="this.closest('.absolute').classList.add('hidden')">✕</button>
- <div class="text-indigo-600 font-bold text-sm">${c.ref||"retrieved"} · ${c.type||""}</div><div class="font-serif text-xl font-bold leading-tight mt-1">${(c.title||"").replace(/</g,"&lt;")}</div>
- <div class="text-xs text-slate-500 mt-1">${[c.court,c.date].filter(Boolean).join(" · ")} · ${c._loc?c._loc.label:""}</div>
- <blockquote class="mt-4 font-serif text-[15px] leading-relaxed bg-yellow-200/60 border-l-4 border-indigo-500 px-3 py-2 shadow-[0_0_24px_rgba(250,204,21,.45)]">${((c.passage||"").split("\n").slice(-1)[0]||"No passage retrieved — graph-linked authority.").replace(/</g,"&lt;")}</blockquote>
-<div class="mt-3">${window.caseLinks?window.caseLinks(c):""}</div>
- ${c.url?`<a href="${c.url}" target="_blank" rel="noopener" class="text-indigo-600 text-sm underline mt-3 inline-block">Open source ↗</a>`:""}</div>`;
+const panel=document.createElement("div"); panel.className="absolute left-4 bottom-4 w-[340px] hidden [perspective:1000px] z-30"; host.parentElement.appendChild(panel);
+function openDoc(c){ panel.classList.remove("hidden"); const E=t=>String(t||"").replace(/</g,"&lt;"); const q=window.cleanPassage?cleanPassage(c.passage):(c.passage||"").slice(0,300);
+ panel.innerHTML=`<div id="pg" class="w-full max-h-[50vh] overflow-auto rounded-xl p-4 text-slate-100 origin-left transition-transform duration-500 border border-white/10 shadow-2xl" style="transform:rotateY(-95deg);background:rgba(15,18,30,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)">
+ <button class="float-right text-slate-400 hover:text-white" onclick="this.closest('.absolute').classList.add('hidden')">✕</button>
+ <div class="text-indigo-300 font-semibold text-xs">${c.ref||"related"} · ${E(c.type)}</div><div class="font-semibold text-base leading-snug mt-1">${E(c.title)}</div>
+ <div class="text-[11px] text-slate-400 mt-1">${[c.court,c.date].filter(Boolean).map(E).join(" · ")}${c._loc?" · "+E(c._loc.label):""}</div>
+ ${q?`<blockquote class="mt-3 text-[13px] leading-relaxed text-slate-200 border-l-2 border-indigo-400/70 pl-3 italic">${E(q)}</blockquote>`:`<div class="mt-3 text-xs text-slate-400">Graph-linked authority (no passage retrieved).</div>`}
+ <div class="mt-2">${window.caseLinks?caseLinks(c):""}</div>${c.url?`<a href="${c.url}" target="_blank" rel="noopener" class="text-indigo-300 text-xs underline mt-2 inline-block">Open source ↗</a>`:""}</div>`;
  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const p=document.getElementById("pg"); if(p) p.style.transform="rotateY(0)"; })); }
 api.open=openDoc;
 const legend=document.createElement("div"); legend.className="absolute top-3 left-4 text-[11px] text-slate-300 space-y-0.5 pointer-events-none";
@@ -163,7 +163,11 @@ if(!webgl){
     R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.focus(k); openDoc(cites[k]); } } });
   coView(); cam.position.copy(camT); look.copy(lookT); cam.lookAt(look);
   R.domElement.style.cursor="pointer";
-  R.domElement.addEventListener("mousemove",ev=>{ const now=performance.now(); if(now-hovT<40) return; hovT=now; const o=countyAt(ev); if(!o){ tip.classList.add("hidden"); return; }
+  R.domElement.addEventListener("mousemove",ev=>{ const now=performance.now(); if(now-hovT<40) return; hovT=now; const esc=t=>String(t||"").replace(/</g,"&lt;"); const r0=host.parentElement.getBoundingClientRect();
+    ray.params.Line.threshold=0.01; const ph=ray.intersectObjects(pins.flatMap(p=>[p.userData.head,p.children[0]]),false)[0];
+    if(ph){ const G=ph.object.parent.userData.G; tip.style.left=(ev.clientX-r0.left+14)+"px"; tip.style.top=(ev.clientY-r0.top+14)+"px"; tip.classList.remove("hidden");
+      tip.innerHTML=`<b class="text-emerald-300">${esc(G.label)}</b><div class="mt-1 text-slate-400">${G.items.length} document${G.items.length>1?"s":""} · click to open</div><ul class="mt-1 list-disc pl-4">${G.items.slice(0,6).map(i=>`<li><b class="text-indigo-300">${esc(cites[i].ref||"")}</b> ${esc(cites[i].title).slice(0,70)}</li>`).join("")}</ul>`; return; }
+    const o=countyAt(ev); if(!o){ tip.classList.add("hidden"); return; }
     const r=host.parentElement.getBoundingClientRect(); tip.style.left=(ev.clientX-r.left+14)+"px"; tip.style.top=(ev.clientY-r.top+14)+"px"; tip.classList.remove("hidden");
     const esc=t=>String(t||"").replace(/</g,"&lt;"); tip.innerHTML=`<b class="text-emerald-300">${esc(o.C.name)} County</b> <span class="text-slate-400">FIPS ${o.C.fips}</span>`+(o.n?`<div class="mt-1 text-slate-400">${o.n} retrieved case${o.n>1?"s":""} · click to open</div><ul class="mt-1 list-disc pl-4">${o.items.slice(0,6).map(i=>`<li>${esc(cites[i].title).slice(0,70)}</li>`).join("")}</ul>`:'<div class="text-slate-500">no retrieved cases</div>'); });
   R.domElement.addEventListener("mouseleave",()=>tip.classList.add("hidden"));
