@@ -108,7 +108,7 @@ if(!webgl){
       im.onload=()=>{ clearTimeout(t); cx.filter="invert(1) hue-rotate(200deg) brightness(.55) contrast(1.25) saturate(.5)"; cx.drawImage(im,(x-x0)*256,(y-y0)*256); cx.filter="none"; ok++; if(++done===total) finish(); }; im.onerror=()=>{ clearTimeout(t); if(++done===total) finish(); };
       im.src=`https://tile.openstreetmap.org/${z}/${x}/${y}.png`; } }
   const attr=document.createElement("div"); attr.className="absolute bottom-1 right-2 text-[10px] text-slate-500 z-10"; attr.style.display="none"; attr.innerHTML='© <a href="https://www.openstreetmap.org/copyright" target="_blank">OpenStreetMap</a> contributors'; host.parentElement.appendChild(attr);
-  try{ basemap(4,-125,-66.5,24.5,49.5,0.0008,false); basemap(7,-109.06,-102.04,36.99,41.0,0.0606,true); }catch(e){}
+  try{ basemap(7,-109.06,-102.04,36.99,41.0,0.0606,true); }catch(e){}
   // --- Colorado counties (us-atlas counties-10m, FIPS 08xxx) ---
   const coCounties=await (await fetch("/static/vendor/co_counties_proj.json")).json(); const cMeshes=[], cByName={};
   const ctyLine=new THREE.LineBasicMaterial({color:0x818cf8,transparent:true,opacity:0.55});
