@@ -560,15 +560,16 @@
       #sidebar summary:hover{background:rgba(99,102,241,.12)}
       #sidebar details>*:not(summary){padding:0 16px 14px}
       #sidebar details{margin-bottom:8px!important}
-      #sideToggle{width:auto!important;height:32px!important;min-width:32px;padding:0 12px 0 8px!important;gap:6px;border-radius:8px;background:rgba(49,46,129,.85);border:1px solid rgba(165,180,252,.45);color:#fff!important;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.25);flex-shrink:0!important}
-      #sideToggle:hover{background:rgba(79,70,229,.95)}
+      #sideToggle{width:32px!important;height:32px!important;min-width:32px;padding:0!important;justify-content:center;border-radius:8px;background:transparent!important;border:1px solid transparent!important;color:#cbd5e1!important;box-shadow:none!important;flex-shrink:0!important;transition:border-color .15s,background .15s,color .15s}
+      #sideToggle:hover,#sideToggle:focus-visible{border-color:rgba(148,163,184,.35)!important;background:rgba(148,163,184,.08)!important;color:#fff!important}
+      #sideToggle .lbl{display:none!important}
       #sideClose{display:none!important;position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:10px;font-size:22px;color:#cbd5e1;background:rgba(30,41,59,.8)}
       #sideClose:hover{color:#fff;background:rgba(71,85,105,.9)}
       #sideBack{position:fixed;inset:var(--navh,56px) 0 0 0;background:rgba(2,6,23,.55);z-index:44;opacity:0;pointer-events:none;transition:opacity .25s}
       #sideBack.on{opacity:1;pointer-events:auto}`;
     document.head.appendChild(css);
     if(!btn.querySelector('.lbl')){ const l=document.createElement('span'); l.className='lbl'; l.textContent='Menu'; btn.appendChild(l); }
-    btn.style.display='flex'; btn.style.alignItems='center'; (document.querySelector('nav .max-w-7xl')||document.body).prepend(btn);
+    btn.style.display='flex'; btn.style.alignItems='center'; btn.title='Menu'; btn.setAttribute('aria-label','Menu'); (document.querySelector('nav .max-w-7xl')||document.body).prepend(btn);
     const x=document.createElement('button'); x.id='sideClose'; x.setAttribute('aria-label','Close menu'); x.textContent='✕'; side.prepend(x);
     const back=document.createElement('div'); back.id='sideBack'; document.body.appendChild(back);
     const isOpen=()=>side.style.transform==='translateX(0px)'||side.style.transform==='translateX(0)';

@@ -19,28 +19,58 @@ def health():
             "arize": tracing.enabled(), "sandbox": os.environ.get("DAYTONA_SANDBOX_ID", "")}
 from fastapi import Request
 _recent_q = {}
+_inflight = {}; _inflight_lock = threading.Lock()   # single-flight: normalized key -> run_id while running
+_SID_RE = re.compile(r"[A-Za-z0-9-]{8,64}")
+def _sid(request):
+    s = (request.headers.get("x-session-id") or "").strip()
+    return s if _SID_RE.fullmatch(s) else ""
+def _run_sessions(rid):
+    f = ROOT / "runs" / rid / "sessions.json"
+    try: return set(json.loads(f.read_text()))
+    except Exception: return set()
+def _add_session(rid, sid):
+    if not sid: return
+    d = ROOT / "runs" / rid; d.mkdir(parents=True, exist_ok=True)
+    with _inflight_lock:
+        ss = _run_sessions(rid); ss.add(sid); (d / "sessions.json").write_text(json.dumps(sorted(ss)))
+def _rl_msg(): return JSONResponse({"error": "You're asking a bit fast - max %d questions per minute. Give it a few seconds and try again." % limits.ASK_PER_MIN, "rate_limited": True}, 429)
 @app.post("/api/ask")
 def ask(request: Request, q: dict = Body(...)):
     question = " ".join(str(q.get("question", "")).split())[:500]
     if len(question) < 3: return JSONResponse({"error": "empty question"}, 400)
+    sid = _sid(request)
+    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[0].strip()
+    if not limits.ask_ok(sid, ip): return _rl_msg()
     prev_id = str(q.get("prev_run_id") or "")[:40]; prev = None
     if prev_id and re.fullmatch(r"[\w-]+", prev_id) and (ROOT / "runs" / prev_id / "result.json").exists():
+        if sid and sid not in _run_sessions(prev_id): return JSONResponse({"error": "follow-up refers to a run from another session"}, 403)
         prev = json.loads((ROOT / "runs" / prev_id / "result.json").read_text())
-    key = question.lower().strip(" ?.!") + ("|" + prev_id if prev else "")
+    key = re.sub(r"[^a-z0-9 ]", "", question.lower()).strip() + ("|" + prev_id if prev else "")
     dd = _recent_q.get(key)
     if dd and time.time() - dd[1] < 600 and (ROOT / "runs" / dd[0] / "result.json").exists():
-        return {"run_id": dd[0], "deduped": True}          # identical question: reuse the finished run
-    ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[0].strip()
-    if not limits.ip_ok(ip): return JSONResponse({"error": "rate limited: max %d questions/min, slow down" % limits.PER_IP_PER_MIN}, 429)
+        _add_session(dd[0], sid); return {"run_id": dd[0], "deduped": True}          # identical question: reuse the finished run
+    with _inflight_lock:
+        fl = _inflight.get(key)
+    if fl:
+        _add_session(fl, sid); return {"run_id": fl, "deduped": "inflight"}          # identical question running now: share it
     if not limits.run_lock.acquire(blocking=False): return JSONResponse({"error": "busy, try again in a few seconds"}, 429)
-    rid = time.strftime("%H%M%S-") + uuid.uuid4().hex[:6]
+    with _inflight_lock:
+        fl = _inflight.get(key)
+        if fl: limits.run_lock.release()
+        else:
+            rid = time.strftime("%H%M%S-") + uuid.uuid4().hex[:6]; _inflight[key] = rid
+    if fl: _add_session(fl, sid); return {"run_id": fl, "deduped": "inflight"}
+    _add_session(rid, sid or "anon")
     def job():
         try:
+            limits.pipeline_runs += 1
             _run_and_log(question, rid, prev)
             try: _ok = not json.loads((ROOT / "runs" / rid / "result.json").read_text()).get("provider", "").startswith("template")
             except Exception: _ok = False
             if _ok: _recent_q[key] = (rid, time.time())   # never reuse a template fallback run
-        finally: limits.run_lock.release()
+        finally:
+            with _inflight_lock: _inflight.pop(key, None)
+            limits.run_lock.release()
     threading.Thread(target=job, daemon=True).start()
     return {"run_id": rid}
 @app.get("/api/run/{rid}")
@@ -53,10 +83,13 @@ def run(rid: str):
 def seats(): return json.loads(CLAIM.read_text()) if CLAIM.exists() else {}
 @app.post("/api/tts")
 def tts(q: dict = Body(...)):
+    voice = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM"); h = _tts_key(str(q.get("text", ""))[:400], voice)
+    with _tts_lock(h): return _tts(q)
+def _tts(q):
     key = os.environ.get("ELEVENLABS_API_KEY")
     if not key: return JSONResponse({"error": "ELEVENLABS_API_KEY not set"}, 503)
     import hashlib
-    text = q["text"][:400]; f = ROOT / "cache" / "tts" / (hashlib.sha256(text.encode()).hexdigest()[:24] + ".mp3"); f.parent.mkdir(parents=True, exist_ok=True)
+    text = q["text"][:400]; f = ROOT / "cache" / "tts" / (_tts_key(text, os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")) + ".mp3"); f.parent.mkdir(parents=True, exist_ok=True)
     import stats
     if f.exists(): stats.bump("tts_cache_hits"); stats.vlog("tts", len(text), True); return Response(f.read_bytes(), media_type="audio/mpeg", headers={"X-TTS-Cache": "hit"})
     if not limits.take("elevenlabs_tts"): return JSONResponse({"error": "TTS hourly cap reached", "fallback": "browser"}, 429)
@@ -69,10 +102,13 @@ def tts(q: dict = Body(...)):
 
 @app.post("/api/tts_ts")
 def tts_ts(q: dict = Body(...)):
+    voice = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM"); h = _tts_key(str(q.get("text", ""))[:400], voice)
+    with _tts_lock(h): return _tts_ts(q)
+def _tts_ts(q):
     """TTS with character alignment (ElevenLabs /with-timestamps), cached as JSON next to the mp3 cache."""
     import hashlib, base64, json as _j, stats
     key = os.environ.get("ELEVENLABS_API_KEY")
-    text = q["text"][:400]; h = hashlib.sha256(text.encode()).hexdigest()[:24]
+    text = q["text"][:400]; h = _tts_key(text, os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM"))
     d = ROOT / "cache" / "tts"; d.mkdir(parents=True, exist_ok=True); fj = d / (h + ".align.json"); fm = d / (h + ".mp3")
     if fj.exists():
         stats.bump("tts_cache_hits"); return _j.loads(fj.read_text())
@@ -91,6 +127,13 @@ def tts_ts(q: dict = Body(...)):
         return {"audio_b64": base64.b64encode(fm.read_bytes()).decode(), "chars": [], "starts": [], "cache": "audio-only"}
     return JSONResponse({"error": "tts unavailable", "fallback": "browser"}, 429)
 
+_tts_locks = {}; _tts_ll = threading.Lock()
+def _tts_key(text, voice):
+    import hashlib
+    base = text if voice == "21m00Tcm4TlvDq8ikWAM" else text + "|" + voice
+    return hashlib.sha256(base.encode()).hexdigest()[:24]
+def _tts_lock(h):
+    with _tts_ll: return _tts_locks.setdefault(h, threading.Lock())
 def _run_and_log(question, rid, prev=None):
     r = agents.run_pipeline(question, rid, prev); sg = r["safeguard"]
     rec = acs_board.oio_record(f"run-{rid}", f"Demo run {rid}: '{question[:200]}' -> safeguard {'PASS' if sg['pass'] else 'FAIL'}; {len(sg['used'])} citations used, invalid={sg['invalid']}, unknown={sg['unknown_authorities'][:5]}, model={r['provider']}, graph={r['backend']}",
@@ -224,11 +267,13 @@ def map_page(): return (ROOT / "static" / "map.html").read_text()
 @app.get("/observability", response_class=HTMLResponse)
 def observability_page(): return (ROOT / "static" / "observability.html").read_text()
 @app.get("/api/runs")
-def runs_list(n: int = 15):
-    out = []
+def runs_list(request: Request, n: int = 15):
+    out = []; sid = _sid(request); legacy = os.environ.get("RUNS_SHOW_LEGACY") == "1"
     for d in sorted((ROOT / "runs").iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
         f = d / "result.json"
         if not f.exists() or d.name.startswith(("test","arize","exp-")): continue
+        ss = _run_sessions(d.name)
+        if not ((sid and sid in ss) or (legacy and not ss)): continue
         try: r = json.loads(f.read_text())
         except Exception: continue
         out.append({"run_id": d.name, "question": r.get("question", ""), "n": len(r.get("citations", [])), "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(f.stat().st_mtime))})
