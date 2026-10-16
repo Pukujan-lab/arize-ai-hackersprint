@@ -56,7 +56,7 @@ api.open=openDoc;
 const legend=document.createElement("div"); legend.className="absolute top-3 left-4 text-[11px] text-slate-300 space-y-0.5 pointer-events-none";
 legend.innerHTML=`<div class="uppercase tracking-widest text-slate-500">U.S. citation map · Colorado focus</div><div><span style="color:#34d399">━</span> county↔county</div><div><span style="color:#60a5fa">━</span> county → state court</div><div><span style="color:#f59e0b">━</span> case ↔ statute</div><div><span style="color:#f472b6">━</span> federal / out-of-state</div><div id="cnt" class="text-indigo-300 font-semibold"></div>`;
 host.parentElement.appendChild(legend);
-const label=document.createElement("div"); label.className="absolute top-3 right-4 text-sm text-slate-200 text-right pointer-events-none max-w-[45%]"; host.parentElement.appendChild(label);
+const label=document.createElement("div"); label.className="absolute top-3 right-4 text-sm text-slate-200 text-right pointer-events-none max-w-[45%]"; host.parentElement.appendChild(label); if(document.getElementById("fullmap")) label.style.top="44px";
 function groups(cites){ const g=new Map(); cites.forEach((c,i)=>{ const L=locate(c); c._loc=L; if(!g.has(L.key)) g.set(L.key,{...L,items:[]}); g.get(L.key).items.push(i); }); return g; }
 function arcType(a,b){ const A=a._loc.cat,B=b._loc.cat; if(A==="federal"||B==="federal") return "fed"; if(A==="statute"||B==="statute") return "st"; if(A==="county"&&B==="county") return "cc"; if((A==="county")!==(B==="county")) return "cs"; return "other"; }
 function counties(c){ return new Set(c.filter(x=>x._loc&&x._loc.cat==="county").map(x=>x._loc.key)).size; }
@@ -185,6 +185,7 @@ if(!webgl){
       d.innerHTML=(refs?`<b style="color:#a5b4fc">${refs}</b> `:`<span style="color:#94a3b8">related</span> `)+court.replace(/</g,"&lt;").slice(0,38); ov.appendChild(d); return {p,d,items:G.items}; }); }
   const _v=new THREE.Vector3();
   function overlay(){ requestAnimationFrame(overlay); const W=host.clientWidth,H=host.clientHeight; if(!W) return; const boxes=[];
+    const fm=document.getElementById("fullmap"); if(fm){ const a=fm.getBoundingClientRect(), r=host.getBoundingClientRect(); boxes.push([a.left-r.left-6,a.top-r.top-6,a.width+12,a.height+12]); } const lb=label.getBoundingClientRect(), rr=host.getBoundingClientRect(); if(lb.width) boxes.push([lb.left-rr.left,lb.top-rr.top,lb.width,lb.height]);
     const hit=(x,y,w,h)=>boxes.some(b=>x<b[0]+b[2]&&x+w>b[0]&&y<b[1]+b[3]&&y+h>b[1]);
     pTags.forEach(t=>{ _v.copy(t.p.position); _v.z+=0.09; _v.project(cam); if(_v.z>1||Math.abs(_v.x)>1.1||Math.abs(_v.y)>1.1){ t.d.style.display="none"; return; }
       let x=(_v.x+1)/2*W, y=(1-_v.y)/2*H; const w=t.d.offsetWidth||90, h=18; let k=0; while(k<5&&hit(x-w/2,y-h*1.4-k*20,w,h)) k++;
