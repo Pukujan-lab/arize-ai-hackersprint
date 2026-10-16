@@ -6,7 +6,7 @@ def _init():
     if _tracer is not None or not (os.environ.get("ARIZE_API_KEY") and os.environ.get("ARIZE_SPACE_ID")): return
     try:
         from arize.otel import register
-        tp = register(space_id=os.environ["ARIZE_SPACE_ID"], api_key=os.environ["ARIZE_API_KEY"], project_name="legal-graphrag-demo")
+        tp = register(space_id=os.environ["ARIZE_SPACE_ID"], api_key=os.environ["ARIZE_API_KEY"], project_name=os.environ.get("ARIZE_PROJECT_NAME","precedent-legal-graphrag"))
         _tracer = tp.get_tracer("legal-graphrag")
     except Exception as e:
         print("arize tracing disabled:", e); _tracer = False
