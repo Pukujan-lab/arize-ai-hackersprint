@@ -42,7 +42,9 @@ def ask(request: Request, q: dict = Body(...)):
 @app.get("/api/run/{rid}")
 def run(rid: str):
     r = Run(rid); res = r.dir / "result.json"
-    return {"events": r.events(), "result": json.loads(res.read_text()) if res.exists() else None}
+    pf = r.dir / "partial.txt"
+    return {"events": r.events(), "result": json.loads(res.read_text()) if res.exists() else None,
+            "partial": pf.read_text() if (pf.exists() and not res.exists()) else None}
 @app.get("/api/seats")
 def seats(): return json.loads(CLAIM.read_text()) if CLAIM.exists() else {}
 @app.post("/api/tts")

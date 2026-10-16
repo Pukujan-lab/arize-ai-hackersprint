@@ -91,7 +91,15 @@ def answer(run, question, ret, prior=None):
                  "### Key authorities\n- **Case or statute name** [n] - \"one short quote from its passage\"\n(3-4 bullets)\n\n"
                  "### Caveat\nOne sentence on limits (jurisdiction, facts, verify).")
         umsg = (f"Earlier question: {prior[0]}\nEarlier bottom line: {prior[1]}\nFollow-up question (answer this, using the earlier context): " if prior else "Question: ") + f"{question}\nAuthorities:\n{ctx}"
-        text, provider = complete(sys_p, umsg, 400, lambda: template_answer(question, cites))
+        _pf = run.dir / "partial.txt"
+        _t0 = time.time(); _first = []
+        def _delta(t):
+            if not _first:
+                _first.append(1); run.event(A, "first_token", f"first tokens streaming after {time.time()-_t0:.2f}s", ttft_s=round(time.time()-_t0, 2))
+            try: _pf.write_text(t)
+            except Exception: pass
+        import llm as _llm
+        text, provider = _llm.complete_stream(sys_p, umsg, 400, on_delta=_delta, fallback= lambda: template_answer(question, cites))
         tracing.oi(_sp, openinference__span__kind="LLM", llm__model_name="claude-haiku-4-5", llm__provider="anthropic", llm__system="anthropic", llm__invocation_parameters={"max_tokens": 400},
                    llm__input_messages__0__message__role="system", llm__input_messages__0__message__content=sys_p, llm__input_messages__1__message__role="user", llm__input_messages__1__message__content=f"Question: {question}\nAuthorities:\n{ctx}"[:4000],
                    llm__output_messages__0__message__role="assistant", llm__output_messages__0__message__content=text, input__value=question, output__value=text, metadata={"provider": provider},

@@ -1,10 +1,9 @@
 // Client-side research links + passage cleanup (no API calls).
 window.caseLinks=function(c,cls){ c=c||{}; const name=(c.title||"").trim(), cite=(c.citation||c.cite||"").trim(), e=encodeURIComponent;
   const st=/statute/i.test(c.type||"")||/C\.?R\.?S\.?|§/.test(name+" "+cite);
-  const L=st?[["C.R.S. text","https://www.google.com/search?q="+e((cite||name)+" Colorado Revised Statutes")]]
-   :[["Full opinion","https://www.courtlistener.com/?q="+e(cite||name)]];
-  if(c.url&&/^https?:/.test(c.url)&&!L.some(x=>x[1]===c.url)) L.push(["Open source",c.url]);
-  const seen=new Set(); for(let i=L.length-1;i>=0;i--){ if(seen.has(L[i][1])) L.splice(i,1); else seen.add(L[i][1]); }
+  const isCL=u=>/courtlistener\.com/.test(u||"");
+  const L=st?[["Read statute",(c.url&&/^https?:/.test(c.url))?c.url:"https://www.google.com/search?q="+e((cite||name)+" Colorado Revised Statutes")]]
+   :[["Full opinion",(c.url&&/^https?:/.test(c.url))?c.url:"https://www.courtlistener.com/?q="+e(cite||name)]];
   const s=cls||"display:inline-block;margin:6px 6px 0 0;padding:3px 10px;border-radius:999px;border:1px solid rgba(129,140,248,.6);color:#a5b4fc;font-size:12px;text-decoration:none";
   return L.map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener noreferrer" style="${s}">${t} ↗</a>`).join(""); };
 window.cleanPassage=function(text,q,max){ max=max||300; q=q||(document.getElementById("q")||{}).value||"";

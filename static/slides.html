@@ -1,75 +1,391 @@
-<!doctype html><html><head><meta charset="utf-8"><title>Precedent · A reliable pipeline for multi-agent AI</title><script src="/static/vendor/tailwind.js"></script><script src="/static/vendor/logos.js"></script><script src="/static/partners.js"></script>
-<style>body{background:radial-gradient(1400px 700px at 10% -10%,#1e1b4b 0,#0b1020 55%,#05070f 100%);font-family:Inter,ui-sans-serif,system-ui,sans-serif}.slide{display:none}.slide.on{display:flex}
-.shot{max-height:42vh;object-fit:contain;object-position:left top;border-radius:14px;border:1px solid rgba(255,255,255,.1);box-shadow:0 20px 60px rgba(0,0,0,.5)}.n{font-variant-numeric:tabular-nums}
-.edge{stroke:#6366f1;stroke-width:3;fill:none;stroke-dasharray:10 8;animation:f 1s linear infinite}@keyframes f{to{stroke-dashoffset:-18}}@keyframes fin{to{opacity:1}}@keyframes grow{to{width:var(--w)}}</style></head>
-<body class="text-slate-100 overflow-hidden">
-<nav class="fixed top-0 inset-x-0 z-40 backdrop-blur bg-slate-950/60 border-b border-white/5"><div class="max-w-7xl mx-auto px-6 h-11 flex items-center gap-6 text-sm"><span class="font-bold text-indigo-400">⚖ Precedent</span><a href="/" class="text-slate-300 hover:text-white">Demo</a><a href="/map" class="text-slate-300 hover:text-white">Map</a><a href="/dashboard" class="text-slate-300 hover:text-white">Dashboards</a><a href="/slides" class="text-slate-300 hover:text-white">Slides</a><a href="/guide" class="text-slate-300 hover:text-white">Guide</a></div></nav>
-<main id="deck"></main>
-<div class="fixed bottom-5 right-6 flex gap-3 items-center text-sm z-50"><span id="pg" class="text-slate-500 n"></span><button id="vo" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20">🎙 Voiceover</button></div>
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Precedent · A reliable pipeline for multi-agent AI</title>
+<script src="/static/vendor/tailwind.js"></script>
+<style>
+:root {
+  --bg: #0A0E14;
+  --surface: #151B24;
+  --ink: #E8EDF4;
+  --muted: #6B7A8F;
+  --primary: #3A7CA5;
+  --accent: #F2C94C;
+}
+
+body {
+  background: var(--bg);
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  color: var(--ink);
+}
+
+.slide {
+  display: none;
+}
+
+.slide.on {
+  display: flex;
+}
+
+.n {
+  font-variant-numeric: tabular-nums;
+}
+
+.screenshot {
+  max-height: 70vh;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 12px;
+  border: 2px solid rgba(58, 124, 165, 0.3);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+.partner-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
+}
+
+.partner-card {
+  background: var(--surface);
+  border: 1px solid rgba(58, 124, 165, 0.2);
+  border-radius: 16px;
+  padding: 2rem;
+  transition: all 0.3s ease;
+}
+
+.partner-card:hover {
+  border-color: var(--primary);
+  transform: translateY(-4px);
+}
+
+.pipeline-step {
+  background: var(--surface);
+  border: 2px solid var(--primary);
+  border-radius: 12px;
+  padding: 1.5rem;
+  position: relative;
+}
+
+.pipeline-arrow {
+  color: var(--accent);
+  font-size: 2rem;
+  font-weight: bold;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+</style>
+</head>
+<body class="overflow-hidden">
+
+<nav class="fixed top-0 inset-x-0 z-40 backdrop-blur" style="background: rgba(10, 14, 20, 0.8); border-bottom: 1px solid rgba(58, 124, 165, 0.2);">
+  <div class="max-w-7xl mx-auto px-6 h-12 flex items-center gap-6 text-sm">
+    <span class="font-bold" style="color: var(--primary);">⚖ Precedent</span>
+    <a href="/" style="color: var(--muted);" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">Demo</a>
+    <a href="/map" style="color: var(--muted);" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">Map</a>
+    <a href="/guide" style="color: var(--muted);" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">Guide</a>
+  </div>
+</nav>
+
+<main id="deck">
+
+<!-- Slide 1: Hero -->
+<section class="slide min-h-screen relative overflow-hidden">
+  <video class="absolute inset-0 w-full h-full object-cover" src="/static/slides/hero_loop.mp4" poster="/static/slides/hero_poster.jpg" autoplay muted loop playsinline></video>
+  <div class="absolute inset-0" style="background: linear-gradient(90deg, rgba(10, 14, 20, 0.95) 0%, rgba(10, 14, 20, 0.75) 50%, rgba(10, 14, 20, 0.4) 100%), linear-gradient(0deg, rgba(10, 14, 20, 0.9), transparent 50%)"></div>
+  <div class="relative z-10 flex flex-col justify-center px-20 pt-14 min-h-screen">
+    <div class="text-sm uppercase tracking-[.35em] mb-6" style="color: var(--accent);">Daytona HackSprint NYC · 2025</div>
+    <div class="text-[140px] leading-none font-extrabold tracking-tight mb-8" style="color: var(--ink);">⚖ Precedent</div>
+    <div class="text-5xl font-semibold mb-4" style="color: var(--ink); max-width: 1200px; line-height: 1.2;">A reliable pipeline for multi-agent AI.</div>
+    <div class="text-4xl" style="color: var(--muted); max-width: 1200px; line-height: 1.3;">First up: legal research for professionals.</div>
+  </div>
+</section>
+
+<!-- Slide 2: The Problem -->
+<section class="slide min-h-screen flex-col justify-center px-20 pt-14">
+  <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">The Problem</div>
+  <h1 class="text-7xl font-bold mb-16 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Multi-agent AI is unreliable in production</h1>
+  
+  <div class="space-y-10 max-w-6xl">
+    <div class="flex items-start gap-8">
+      <div class="text-8xl font-black" style="color: #E57373; min-width: 280px;">Hallucinate</div>
+      <div class="text-3xl pt-4" style="color: var(--muted); line-height: 1.4;">Agents invent citations and facts that don't exist</div>
+    </div>
+    
+    <div class="flex items-start gap-8">
+      <div class="text-8xl font-black" style="color: #FFB74D; min-width: 280px;">Collide</div>
+      <div class="text-3xl pt-4" style="color: var(--muted); line-height: 1.4;">Multiple agents duplicate work and overwrite each other</div>
+    </div>
+    
+    <div class="flex items-start gap-8">
+      <div class="text-8xl font-black" style="color: #9575CD; min-width: 280px;">Opaque</div>
+      <div class="text-3xl pt-4" style="color: var(--muted); line-height: 1.4;">No audit trail — can't trace what happened or why</div>
+    </div>
+  </div>
+  
+  <div class="mt-16 text-4xl font-semibold" style="color: var(--ink); max-width: 1200px;">Lawyers can't cite what they can't verify.</div>
+</section>
+
+<!-- Slide 3: Product Screenshot -->
+<section class="slide min-h-screen flex-col justify-center px-20 pt-14">
+  <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">What Precedent Does</div>
+  <h1 class="text-7xl font-bold mb-12 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Ask a question → get a grounded memo with verified citations</h1>
+  
+  <div class="flex items-center justify-center">
+    <img src="/static/slides/answer.png" class="screenshot" alt="Precedent answer interface" onerror="this.style.display='none'">
+  </div>
+  
+  <div class="mt-8 text-2xl text-center" style="color: var(--muted);">Every citation is verified against retrieved sources. Every claim is traceable.</div>
+</section>
+
+<!-- Slide 4: Demo Map -->
+<section class="slide min-h-screen flex-col justify-center px-20 pt-14">
+  <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">Demo Moment</div>
+  <h1 class="text-7xl font-bold mb-12 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Watch the agents walk the map</h1>
+  
+  <div class="flex items-center justify-center">
+    <img src="/static/slides/map_pins.png" class="screenshot" alt="Live map visualization" onerror="this.style.display='none'">
+  </div>
+  
+  <div class="mt-8 max-w-4xl mx-auto">
+    <div class="text-3xl font-semibold mb-6" style="color: var(--ink);">Guided map tour with spoken transcript</div>
+    <div class="text-2xl" style="color: var(--muted); line-height: 1.5;">
+      Agents retrieve authorities, expand through the citation graph, and map every case by county and court. 
+      You see the knowledge graph come alive in real time.
+    </div>
+  </div>
+</section>
+
+<!-- Slide 5: How It Works -->
+<section class="slide min-h-screen flex-col justify-center px-20 pt-14">
+  <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">How It Works</div>
+  <h1 class="text-7xl font-bold mb-12 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Pipeline: Planner → Retriever → Drafter → Safeguard</h1>
+  
+  <div class="grid grid-cols-4 gap-6 max-w-7xl mb-12">
+    <div class="pipeline-step">
+      <div class="text-3xl font-bold mb-3" style="color: var(--primary);">Planner</div>
+      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Claims seat via ACS, breaks query into research tasks</div>
+    </div>
+    
+    <div class="pipeline-step">
+      <div class="text-3xl font-bold mb-3" style="color: var(--primary);">Retriever</div>
+      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Octo passages + SurrealDB graph expansion</div>
+    </div>
+    
+    <div class="pipeline-step">
+      <div class="text-3xl font-bold mb-3" style="color: var(--primary);">Drafter</div>
+      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Anthropic Haiku writes memo from retrieved authorities</div>
+    </div>
+    
+    <div class="pipeline-step">
+      <div class="text-3xl font-bold mb-3" style="color: var(--primary);">Safeguard</div>
+      <div class="text-lg" style="color: var(--muted); line-height: 1.5;">Verifies every citation against retrieved set</div>
+    </div>
+  </div>
+  
+  <div class="grid grid-cols-4 gap-8 max-w-5xl">
+    <div class="text-center">
+      <div class="text-6xl font-black n mb-2" style="color: var(--accent);">80</div>
+      <div class="text-xl" style="color: var(--muted);">runs completed</div>
+    </div>
+    
+    <div class="text-center">
+      <div class="text-6xl font-black n mb-2" style="color: var(--accent);">21</div>
+      <div class="text-xl" style="color: var(--muted);">model calls (rest cached)</div>
+    </div>
+    
+    <div class="text-center">
+      <div class="text-6xl font-black n mb-2" style="color: var(--accent);">~1.9s</div>
+      <div class="text-xl" style="color: var(--muted);">pipeline on cache</div>
+    </div>
+    
+    <div class="text-center">
+      <div class="text-6xl font-black n mb-2" style="color: var(--accent);">5/5</div>
+      <div class="text-xl" style="color: var(--muted);">references matched</div>
+    </div>
+  </div>
+  
+  <div class="mt-10 text-2xl text-center" style="color: var(--muted);">Coordinated via ACS task claims · Traced in Arize · Isolated in Daytona sandbox</div>
+</section>
+
+<!-- Slide 6: Trust -->
+<section class="slide min-h-screen flex-col justify-center px-20 pt-14">
+  <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">Trust & Verification</div>
+  <h1 class="text-7xl font-bold mb-16 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Every reference is checked. Every limit is enforced.</h1>
+  
+  <div class="space-y-10 max-w-6xl">
+    <div class="flex items-start gap-8">
+      <div class="text-7xl font-black" style="color: #4CAF50; min-width: 320px;">Safeguard</div>
+      <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Checks every reference against retrieved sources — no hallucinated citations</div>
+    </div>
+    
+    <div class="flex items-start gap-8">
+      <div class="text-7xl font-black" style="color: var(--primary); min-width: 320px;">Guardrails</div>
+      <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Rate limits, cost caps, model fallback — safe by construction</div>
+    </div>
+    
+    <div class="flex items-start gap-8">
+      <div class="text-7xl font-black" style="color: var(--accent); min-width: 320px;">Honest</div>
+      <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Labels: "checks references, not legal accuracy" · "cached answer"</div>
+    </div>
+  </div>
+  
+  <div class="mt-16 p-8 rounded-2xl" style="background: var(--surface); border: 2px solid rgba(242, 201, 76, 0.3); max-width: 1200px;">
+    <div class="text-3xl font-semibold" style="color: var(--ink);">⚠️ Checks references, not legal accuracy. Not legal advice.</div>
+  </div>
+</section>
+
+<!-- Slide 7: Partners -->
+<section class="slide min-h-screen flex-col justify-center px-20 pt-14">
+  <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">Made Possible By</div>
+  <h1 class="text-7xl font-bold mb-16 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Seven partners, one reliable pipeline</h1>
+  
+  <div class="partner-grid max-w-7xl">
+    <div class="partner-card">
+      <div class="text-4xl font-bold mb-4" style="color: #00D4AA;">Daytona</div>
+      <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
+        <strong style="color: var(--ink);">Made it possible:</strong> Isolated sandboxes for safe agent execution. 96 vCPUs, zero infra work.
+      </div>
+    </div>
+    
+    <div class="partner-card">
+      <div class="text-4xl font-bold mb-4" style="color: #FF00A0;">SurrealDB</div>
+      <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
+        <strong style="color: var(--ink);">Made it possible:</strong> Grounded graph memory. 119,770 authorities, 160,793 citation edges.
+      </div>
+    </div>
+    
+    <div class="partner-card">
+      <div class="text-4xl font-bold mb-4" style="color: #FF6B35;">Octo</div>
+      <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
+        <strong style="color: var(--ink);">Made it faster:</strong> 804k passages indexed and ready. Instant semantic search.
+      </div>
+    </div>
+    
+    <div class="partner-card">
+      <div class="text-4xl font-bold mb-4" style="color: #A78BFA;">Arize</div>
+      <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
+        <strong style="color: var(--ink);">Made it faster:</strong> Traces & evals without building our own. Live in 30 minutes.
+      </div>
+    </div>
+    
+    <div class="partner-card">
+      <div class="text-4xl font-bold mb-4" style="color: #E8E8E8;">ElevenLabs</div>
+      <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
+        <strong style="color: var(--ink);">Made it faster:</strong> Voice in and out, each one API call. Hands-free research.
+      </div>
+    </div>
+    
+    <div class="partner-card">
+      <div class="text-4xl font-bold mb-4" style="color: #38BDF8;">ACS</div>
+      <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
+        <strong style="color: var(--ink);">Made it possible:</strong> Agent coordination via task claims. No collisions, full audit trail.
+      </div>
+    </div>
+    
+    <div class="partner-card">
+      <div class="text-4xl font-bold mb-4" style="color: #D97757;">Anthropic</div>
+      <div class="text-xl" style="color: var(--muted); line-height: 1.5;">
+        <strong style="color: var(--ink);">Made it faster:</strong> Haiku for drafts, prompt caching, guardrails. Fast and safe.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Slide 8: Thank You -->
+<section class="slide min-h-screen flex-col justify-center items-center px-20 pt-14 text-center">
+  <div class="text-9xl font-black mb-12" style="color: var(--ink);">Thank you</div>
+  
+  <div class="text-4xl mb-16" style="color: var(--muted); max-width: 1000px; line-height: 1.4;">
+    A reliable pipeline for multi-agent AI — built in 7 days with 7 partners
+  </div>
+  
+  <div class="flex flex-col gap-6 items-center">
+    <a href="/" class="inline-block text-3xl px-12 py-6 rounded-2xl font-bold transition-all" style="background: var(--primary); color: var(--ink);" onmouseover="this.style.background='var(--accent)'; this.style.color='var(--bg)'" onmouseout="this.style.background='var(--primary)'; this.style.color='var(--ink)'">
+      Open live demo →
+    </a>
+    
+    <div class="flex gap-6 mt-4">
+      <a href="/map" class="text-2xl px-8 py-4 rounded-xl border-2 transition-all" style="border-color: var(--primary); color: var(--primary);" onmouseover="this.style.background='var(--primary)'; this.style.color='var(--ink)'" onmouseout="this.style.background='transparent'; this.style.color='var(--primary)'">
+        Explore map
+      </a>
+      <a href="/guide" class="text-2xl px-8 py-4 rounded-xl border-2 transition-all" style="border-color: var(--primary); color: var(--primary);" onmouseover="this.style.background='var(--primary)'; this.style.color='var(--ink)'" onmouseout="this.style.background='transparent'; this.style.color='var(--primary)'">
+        Read guide
+      </a>
+    </div>
+  </div>
+  
+  <div class="mt-16 text-xl" style="color: var(--muted);">
+    Daytona HackSprint NYC · 2025
+  </div>
+</section>
+
+</main>
+
+<div class="fixed bottom-6 right-6 flex gap-4 items-center text-sm z-50">
+  <span id="pg" class="n" style="color: var(--muted);"></span>
+</div>
+
 <script>
-const esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
-const big=(v,l,c="text-indigo-300")=>`<div><div class="text-5xl font-bold n ${c}">${esc(v)}</div><div class="text-sm text-slate-400 mt-1">${l}</div></div>`;
-const S=(kicker,title,body)=>`<section class="slide min-h-screen flex-col justify-center px-20 pt-14"><div class="text-sm uppercase tracking-[.3em] text-indigo-400 mb-3">${kicker}</div><h1 class="text-6xl font-bold mb-8 tracking-tight">${title}</h1>${body}</section>`;
-const CAP={"dash_Daytona.png":"Live sandbox: 96 vCPUs, uptime, pipeline latency per run","dash_SurrealDB.png":"A run's subgraph: retrieved authorities and citation edges, mapped by county and court","dash_Arize.png":"Arize connected: OpenInference spans and citation_guard/groundedness evals, with deep links","dash_ElevenLabs.png":"Voice usage against hourly caps; clips cached by text hash","dash_ACS.png":"ACS audit records, events and safeguard pass rate across recent runs","map_sidebar.png":"Cases grouped by county; cited [n] vs related"};
-const img=(f,cls="")=>`<figure class="${cls}"><img src="/static/slides/${f}?v=2" class="shot w-full" onerror="this.style.display='none'">${CAP[f]?`<figcaption class="text-base text-slate-400 mt-3">${CAP[f]}</figcaption>`:""}</figure>`;
-const wall=()=>`<div class="flex flex-wrap items-center gap-x-16 gap-y-8 mt-12">${["daytona","surrealdb","arize","elevenlabs"].map(k=>partnerMark(k,72)).join("")}</div><div class="flex flex-wrap items-center gap-x-12 gap-y-6 mt-8 opacity-90">${["anthropic","octo","acs"].map(k=>partnerMark(k,48)).join("")}</div>`;
-const stmt=(items)=>`<div class="space-y-5 mt-2">${items.map(([k,c,t])=>`<div class="flex items-baseline gap-8"><span class="text-6xl font-extrabold tracking-tight w-[420px] shrink-0" style="color:${c}">${k}</span><span class="text-3xl text-slate-300">${t}</span></div>`).join("")}</div>`;
-const two=(a,b)=>`<div class="grid grid-cols-2 gap-16 mt-8 max-w-7xl"><div><div class="text-base uppercase tracking-[.25em] text-slate-500 mb-2">Made it possible</div><div class="text-2xl text-slate-200 leading-snug">${a}</div></div><div><div class="text-base uppercase tracking-[.25em] text-emerald-400 mb-2">Made us faster</div><div class="text-2xl text-white font-semibold leading-snug">${b}</div></div></div>`;
-const P=(k,fix,body,a,b)=>`<section class="slide min-h-screen flex-col justify-center px-20 pt-14"><div class="text-sm uppercase tracking-[.3em] text-slate-400 mb-3">Fix: ${fix}</div><div class="mb-4">${partnerMark(k,88)}</div>${body}${two(a,b)}</section>`;
-async function build(){let d={};try{d=await (await fetch("/api/stack")).json()}catch(e){}
- const D=d.daytona||{},SU=d.surrealdb||{},O=d.octo||{},M=d.model||{},E=d.elevenlabs||{},A=d.acs||{},Z=d.arize||{},L=(d.limits||{caps:{}}),C=L.caps||{};
- const runs=d.runs||[],pass=runs.filter(r=>r.pass).length, AZ="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjo1MjM0Mjo2cVRj/spaces/U3BhY2U6NTY4Nzk6MHhDRQ==";
- const node=(x,y,w,t,s,c)=>`<g><rect x="${x}" y="${y}" width="${w}" height="74" rx="14" fill="#0f172a" stroke="${c}" stroke-width="2.5"/><text x="${x+w/2}" y="${y+32}" fill="${c}" font-size="22" font-weight="800" text-anchor="middle">${t}</text><text x="${x+w/2}" y="${y+56}" fill="#94a3b8" font-size="14" text-anchor="middle">${s}</text></g>`;
- const row=(i,t,p)=>`<div class="flex items-baseline gap-6 py-3 border-b border-white/10"><span class="text-2xl text-slate-400 w-[520px]">${i}</span><span class="text-3xl font-bold">${t}</span><span class="ml-auto text-2xl">${p}</span></div>`;
- const slides=[
-`<section class="slide min-h-screen relative overflow-hidden"><video class="absolute inset-0 w-full h-full object-cover" src="/static/slides/hero_loop.mp4" poster="/static/slides/hero_poster.jpg" autoplay muted loop playsinline></video>
- <div class="absolute inset-0" style="background:linear-gradient(90deg,rgba(5,7,15,.92) 0%,rgba(5,7,15,.7) 45%,rgba(5,7,15,.25) 100%),linear-gradient(0deg,rgba(5,7,15,.85),transparent 40%)"></div>
- <div class="relative z-10 flex flex-col justify-center px-20 pt-14 min-h-screen"><div class="text-sm uppercase tracking-[.35em] text-indigo-300 mb-4">Daytona HackSprint NYC · 2026</div>
- <div class="text-[128px] leading-none font-extrabold tracking-tight">⚖ Precedent</div>
- <div class="text-4xl text-slate-200 mt-6 max-w-4xl leading-snug">A reliable pipeline for multi-agent AI.<br><span class="text-slate-400">First up: legal research for professionals.</span></div>
- <div class="flex flex-wrap items-center gap-x-12 gap-y-6 mt-14">${["daytona","surrealdb","octo","arize","elevenlabs","acs"].map(k=>partnerMark(k,52)).join("")}</div></div></section>`,
- S("The problem","Multi-agent AI breaks in production",`${stmt([["Collide","#f472b6","agents duplicate and overwrite work"],["Unverified","#f59e0b","they act on output nobody checked"],["Unsafe","#f87171","they touch real systems directly"],["Untraceable","#a78bfa","nobody can say what happened"]])}<div class="text-3xl text-slate-400 mt-12">Precedent fixes each one. First use case: <b class="text-white">verified legal research memos</b>.</div>`),
- S("Our pipeline","Every fix is a partner",`<div class="max-w-6xl">${row("Isolation: sandboxed agents, safe real-tool use",partnerMark("daytona",34),"")}${row("Grounded memory: knowledge graph + passages",partnerMark("surrealdb",34),partnerMark("octo",28))}${row("Observability + evals",partnerMark("arize",34),"")}${row("Voice interface",partnerMark("elevenlabs",34),"")}${row("Coordination: claim file, audit log, teammates' agents",partnerMark("acs",34),"")}${row("Verification: safeguard agent","Safeguard","")}${row("Guardrails: rate limits, cost caps, model fallback",partnerMark("anthropic",34),"")}</div>`),
- S("Architecture","One query through the pipeline",`<svg viewBox="0 0 1240 330" class="w-full max-w-6xl">
-  <path class="edge" d="M150,165 H200"/><path class="edge" d="M360,165 C390,165 390,80 420,80"/><path class="edge" d="M360,165 C390,165 390,250 420,250"/><path class="edge" d="M600,80 C630,80 630,165 660,165"/><path class="edge" d="M600,250 C630,250 630,165 660,165"/><path class="edge" d="M840,165 H870"/><path class="edge" d="M1030,165 H1060"/>
-  ${node(10,128,140,"Query","voice or text","#e2e8f0")}${node(200,128,160,"ACS","planner claims seats","#38bdf8")}${node(420,43,180,"Octo","passages","#f59e0b")}${node(420,213,180,"SurrealDB","graph expansion","#ff00a0")}
-  ${node(660,128,180,"Anthropic","Haiku memo","#d97757")}${node(870,128,160,"Safeguard","verify citations","#34d399")}${node(1060,128,170,"ElevenLabs","read aloud","#f5f5f4")}
-  <rect x="190" y="18" width="860" height="290" rx="24" fill="none" stroke="#22d3a6" stroke-dasharray="6 6" opacity=".7"/><text x="210" y="300" fill="#22d3a6" font-size="18" font-weight="700">DAYTONA SANDBOX</text><text x="1040" y="300" fill="#a78bfa" font-size="18" font-weight="700" text-anchor="end">ARIZE: a span + evals for every step</text></svg>`),
- S("Live retrieval dataflow · a real recent run","Planner → retriever → answer → safeguard → voice",`<div id="dfq" class="text-xl text-slate-400 mb-6"></div><div id="df" class="grid grid-cols-5 gap-4 max-w-7xl"></div><div id="dft" class="text-lg text-slate-400 mt-6"></div>`),
- S("ACS in action","Agents claim, hand off and release, all logged",`<div class="text-xl text-slate-400 mb-4" id="acsq"></div><div id="lanes" class="max-w-7xl space-y-3"></div><div class="text-sm uppercase tracking-widest text-sky-300 mt-8 mb-2">Recent team task claims · events.jsonl</div><div id="tasks2" class="max-w-7xl space-y-1 text-lg"></div>`),
- S("Live demo","Query → live agents → map → verified memo",`<div class="grid grid-cols-5 gap-6 items-start">${img("dash_SurrealDB.png","col-span-3 w-full")}<div class="col-span-2 space-y-4">${img("map_sidebar.png","w-full")}<div class="text-xl text-slate-300">Authorities mapped by county and court; every citation verified; Listen reads the short answer.</div></div></div>`),
- P("daytona","Isolation",`<div class="grid grid-cols-5 gap-8 items-center">${img("dash_Daytona.png","col-span-3 w-full")}<div class="col-span-2 grid grid-cols-2 gap-8">${big(D.cpus||"-","vCPUs","text-emerald-300")}${big((D.ram_gb||"-")+" GB","RAM","text-emerald-300")}${big(D.uptime_h||"-","hours uptime","text-emerald-300")}${big("1","sandbox for everything","text-emerald-300")}</div></div>`,
-  "Agents, SurrealDB, CI and the web app run inside one isolated sandbox, so agents can use real tools without touching our machines.","We got a ready "+(D.cpus||96)+"-CPU sandbox in minutes, with zero infra work and a public preview URL for free."),
- P("surrealdb","Grounded memory",`<div class="grid grid-cols-5 gap-8 items-center">${img("dash_SurrealDB.png","col-span-3 w-full")}<div class="col-span-2 grid grid-cols-2 gap-8">${big((SU.nodes||119770).toLocaleString(),"authorities","text-pink-300")}${big((SU.edges||160793).toLocaleString(),"citation edges","text-pink-300")}${big((SU.avg_ms||"-")+" ms","avg graph query","text-pink-300")}${big("804k","Octo passages","text-amber-300")}</div></div>`,
-  "Retrieved passages from Octo are expanded through a citation graph (RELATE edges), so memos rest on authorities that cite each other.","The "+(SU.nodes||119770).toLocaleString()+"-node graph loads in 23.6 s, and graph expansion is a single query."),
- P("arize","Observability + evals",`<div class="grid grid-cols-5 gap-8 items-center">${img("dash_Arize.png","col-span-3 w-full")}<div class="col-span-2 space-y-4"><div class="text-xl text-slate-300">OpenInference spans: RETRIEVER (documents), LLM (messages, tokens), GUARDRAIL. Span evals: <b>citation_guard</b> and <b>groundedness</b>. Project precedent-legal-graphrag.</div><div class="text-lg ${Z.connected?"text-emerald-300":"text-amber-300"}">${esc(Z.status||"")}</div><div class="flex flex-wrap gap-3">${["Home","Evaluators","Datasets","Experiments","Monitors"].map(x=>`<a target="_blank" rel="noopener" href="${AZ}/${x.toLowerCase()}" class="px-4 py-2 rounded-full border border-violet-400/50 text-violet-300 hover:bg-violet-500/20">${x} ↗</a>`).join("")}</div></div></div>`,
-  "Every agent step is a trace you can inspect, with evals attached, so a failed answer can be traced to the exact retrieval or draft.","We got tracing and evals without building our own: register() plus span attributes, live in under 30 minutes."),
- P("elevenlabs","Voice interface",`<div class="grid grid-cols-5 gap-8 items-center">${img("dash_ElevenLabs.png","col-span-3 w-full")}<div class="col-span-2 grid grid-cols-2 gap-8">${big(E.cached_files??0,"cached clips")}${big((C.elevenlabs_tts||{}).cap_per_hour||30,"TTS cap / hour")}</div></div>`,
-  "Hands-free loop: speak a query, agents run, and the short answer is read back (eleven_flash_v2_5, scribe_v1 for speech-to-text).","Voice in and out each took one API call, with no audio pipeline to build."),
- P("acs","Coordination",`<div class="grid grid-cols-5 gap-8 items-center">${img("dash_ACS.png","col-span-3 w-full")}<div class="col-span-2 grid grid-cols-2 gap-8">${big(A.issue_logs??"-","audit records","text-sky-300")}${big(A.events??"-","agent events","text-sky-300")}${big(A.tasks??"-","claimable tasks","text-sky-300")}${big(pass+"/"+runs.length,"runs passed safeguard","text-emerald-300")}</div></div>`,
-  "A claim file gives one owner per task; every handoff and run is a schema-valid audit record, and teammates' agents can claim tasks remotely.","Parallel agents and teammates worked without collisions. Claim, branch, merge."),
- S("Verification + guardrails","Safe by construction",`${stmt([["Verified","#34d399","every cited authority must be in the retrieved set"],["Capped","#d97757","1 run in flight · 6 q/min/IP · Haiku "+((C.anthropic||{}).cap_per_hour||40)+"/h · TTS "+((C.elevenlabs_tts||{}).cap_per_hour||30)+"/h"],["Fallback","#f59e0b","Haiku → labeled template · ElevenLabs → browser voice"],["Cheap","#38bdf8",(M.real_calls?M.real_calls.anthropic:"-")+" Haiku calls across "+(M.runs||"-")+" runs (prompt cache)"]])}<div class="text-2xl text-slate-500 mt-10">Checks references, not legal accuracy. Not legal advice.</div>`),
- S("Thank you to our partners","A reliable pipeline for multi-agent AI",`${wall()}<a href="/" class="inline-block text-2xl px-8 py-4 mt-12 rounded-2xl bg-indigo-500 hover:bg-indigo-400 font-semibold w-max">Open live demo ↗</a>`)];
- document.getElementById("deck").innerHTML=slides.join("");go(0);live().catch(e=>console.log(e))}
-const etT=ts=>new Date(ts).toLocaleTimeString("en-US",{timeZone:"America/New_York",hour:"numeric",minute:"2-digit",second:"2-digit"})+" ET";
-async function live(){ const R=await (await fetch("/api/runs?n=30")).json(); let run=null,ev=[];
- for(const x of R){ const d=await (await fetch("/api/run/"+x.run_id)).json(); if(d.result&&!/template/i.test(d.result.provider||"")){ run=d.result; ev=d.events; break; } }
- if(!run){ const d=await (await fetch("/api/run/"+R[0].run_id)).json(); run=d.result; ev=d.events; }
- const m=(a,re)=>ev.filter(e=>e.agent===a&&(!re||re.test(e.kind))).map(e=>e.msg);
- const ST=[["Planner","#38bdf8",m("planner",/plan|handoff/)],["Retriever","#f59e0b",m("retriever",/passage|seed|expand|rank/)],["Answer","#d97757",m("answer",/draft|release/)],["Safeguard","#34d399",m("safeguard",/check|release/)],["Voice","#f5f5f4",["ElevenLabs eleven_flash_v2_5 reads the short answer (on Listen / hands-free)"]]];
- document.getElementById("dfq").innerHTML=`Run <b class="text-slate-200">${run.run_id}</b> · “${esc(run.question)}” · ${esc(run.provider)}`;
- document.getElementById("df").innerHTML=ST.map(([n,c,ms],i)=>`<div class="rounded-2xl p-5 bg-white/5 border-2" style="border-color:${c};opacity:0;animation:fin .5s ${0.4+i*0.7}s forwards"><div class="text-3xl font-extrabold" style="color:${c}">${n}</div><ul class="mt-3 space-y-2 text-base text-slate-200">${ms.slice(0,4).map(t=>`<li>${esc(t)}</li>`).join("")}</ul></div>`).join("");
- const sg=run.safeguard||{}; document.getElementById("dft").innerHTML=`<b class="text-slate-200">${run.citations.length}</b> authorities · <b class="text-slate-200">${(sg.used||[]).length}</b> references checked against retrieved set · <b class="text-slate-200">${run.elapsed_s}s</b> end-to-end · corpus: Octo snapshot 327,407 passages + SurrealDB 119,770 nodes / 160,793 edges`;
- const lanes=["planner","retriever","answer","safeguard"], t0=Math.min(...ev.map(e=>e.t||1e12)), t1=Math.max(...ev.map(e=>e.t||0)), span=Math.max(0.001,t1-t0), col={planner:"#38bdf8",retriever:"#f59e0b",answer:"#d97757",safeguard:"#34d399"};
- document.getElementById("acsq").innerHTML=`Run ${run.run_id}: seat claims and releases from the ACS claim file (${(span*1000).toFixed(0)} ms total)`;
- document.getElementById("lanes").innerHTML=lanes.map((a,i)=>{ const c=ev.find(e=>e.agent===a&&e.kind==="claim"), r=[...ev].reverse().find(e=>e.agent===a&&["release","handoff","done"].includes(e.kind)); if(!c) return "";
-  const L=((c.t-t0)/span*100), W=Math.max(2,((r?r.t:t1)-c.t)/span*100);
-  return `<div class="flex items-center gap-4"><div class="w-40 text-2xl font-bold" style="color:${col[a]}">${a}</div><div class="relative flex-1 h-12 rounded-xl bg-white/5"><div class="absolute top-0 h-12 rounded-xl flex items-center px-3 text-base font-semibold text-slate-900 whitespace-nowrap overflow-hidden min-w-[6px]" style="left:${L}%;width:0;background:${col[a]};animation:grow .6s ${0.3+i*0.6}s forwards;--w:${W}%">${esc((c.msg||"").replace(/ claimed seat/,""))}</div></div><div class="w-72 text-base text-slate-300 truncate"><b>${(((r?r.t:t1)-c.t)*1000).toFixed(0)} ms</b> · ${r?esc(r.msg).slice(0,34):""}</div></div>`; }).join("");
- const all=await (await fetch("/api/acs/events?n=600")).json(); const tk=all.filter(e=>e.source!=="demo-run"&&/claim|release|task|done/.test(e.kind||"")).slice(-6).reverse();
- document.getElementById("tasks2").innerHTML=tk.map(e=>`<div class="flex gap-4"><span class="w-36 text-slate-500">${etT(e.ts)}</span><b class="w-48 text-sky-300">${esc(e.agent||"")}</b><span class="w-24 text-slate-400">${esc(e.kind)}</span><span class="text-slate-200">${esc((e.task?e.task+" · ":"")+(e.msg||"")).slice(0,90)}</span></div>`).join("")||'<div class="text-slate-500">no task claims logged yet</div>'; }
-let i=0;function go(k){const S=[...document.querySelectorAll(".slide")];i=Math.max(0,Math.min(S.length-1,k));S.forEach((s,j)=>s.classList.toggle("on",j===i));document.getElementById("pg").textContent=`${i+1} / ${S.length}`}
-addEventListener("keydown",e=>{if(["ArrowRight"," ","PageDown"].includes(e.key))go(i+1);if(["ArrowLeft","PageUp"].includes(e.key))go(i-1)});
-addEventListener("click",e=>{if(e.target.closest("a,button,nav"))return;go(i+(e.clientX>innerWidth/3?1:-1))});
-let vo=null;document.getElementById("vo").onclick=e=>{e.stopPropagation();if(vo&&!vo.paused){vo.pause();return}vo=vo||new Audio("/static/voiceover.mp3");vo.play()};
-build();
-</script></body></html>
+let currentSlide = 0;
+
+function goToSlide(index) {
+  const slides = [...document.querySelectorAll('.slide')];
+  currentSlide = Math.max(0, Math.min(slides.length - 1, index));
+  
+  slides.forEach((slide, i) => {
+    slide.classList.toggle('on', i === currentSlide);
+  });
+  
+  document.getElementById('pg').textContent = `${currentSlide + 1} / ${slides.length}`;
+}
+
+// Keyboard navigation
+addEventListener('keydown', (e) => {
+  if (['ArrowRight', ' ', 'PageDown'].includes(e.key)) {
+    e.preventDefault();
+    goToSlide(currentSlide + 1);
+  }
+  if (['ArrowLeft', 'PageUp'].includes(e.key)) {
+    e.preventDefault();
+    goToSlide(currentSlide - 1);
+  }
+  if (e.key === 'Home') {
+    e.preventDefault();
+    goToSlide(0);
+  }
+  if (e.key === 'End') {
+    e.preventDefault();
+    goToSlide(document.querySelectorAll('.slide').length - 1);
+  }
+});
+
+// Click navigation (left/right side of screen)
+addEventListener('click', (e) => {
+  // Don't navigate if clicking on links or buttons
+  if (e.target.closest('a, button, nav')) return;
+  
+  const clickX = e.clientX;
+  const screenWidth = window.innerWidth;
+  
+  if (clickX < screenWidth / 3) {
+    goToSlide(currentSlide - 1);
+  } else if (clickX > screenWidth * 2 / 3) {
+    goToSlide(currentSlide + 1);
+  }
+});
+
+// Initialize
+goToSlide(0);
+</script>
+
+</body>
+</html>

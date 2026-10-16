@@ -43,7 +43,7 @@ function locate(c){ const t=(c.type||"").toLowerCase(), court=(c.court||""), lc=
 const proj=d3.geoAlbersUsa().scale(1300).translate([487.5,305]), U=0.01;
 const xy=([la,lo])=>{ const p=proj([lo,la])||proj([-104.98,39.74]); return [(p[0]-487.5)*U,-(p[1]-305)*U]; };
 const COL={county:0x34d399,state:0x818cf8,statute:0xf59e0b,federal:0xf472b6}, ARC={cc:0x34d399,cs:0x60a5fa,st:0xf59e0b,fed:0xf472b6,other:0x94a3b8};
-const panel=document.createElement("div"); panel.className="absolute left-4 bottom-4 w-[340px] hidden [perspective:1000px] z-30"; host.parentElement.appendChild(panel);
+const panel=document.createElement("div"); panel.id="docpanel"; panel.className="absolute left-4 bottom-4 w-[340px] hidden [perspective:1000px] z-30"; panel.addEventListener("pointerdown",e=>e.stopPropagation()); panel.addEventListener("click",e=>e.stopPropagation()); host.parentElement.appendChild(panel);
 function openDoc(c){ panel.classList.remove("hidden"); const E=t=>String(t||"").replace(/</g,"&lt;"); const q=window.cleanPassage?cleanPassage(c.passage):(c.passage||"").slice(0,300);
  panel.innerHTML=`<div id="pg" class="w-full max-h-[50vh] overflow-auto rounded-xl p-4 text-slate-100 origin-left transition-transform duration-500 border border-white/10 shadow-2xl" style="transform:rotateY(-95deg);background:rgba(15,18,30,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)">
  <button class="float-right text-slate-400 hover:text-white" onclick="this.closest('.absolute').classList.add('hidden')">✕</button>
@@ -158,24 +158,27 @@ if(!webgl){
       label.innerHTML=`<b class="text-indigo-300">${cites[k].ref||"retrieved"}</b> ${cites[k].title.replace(/</g,"&lt;")}<br><span class="text-slate-400">${cites[k]._loc.label}</span>`;
       const cat=p.userData.G.cat, far=cat==="federal", d=far?2.6:(cat==="county"?0.75:1.0); lookT.copy(p.position); camT.set(p.position.x,p.position.y-d*0.25,d); if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ cam.position.copy(camT); look.copy(lookT); } },
     order(){ return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0]).filter(x=>x[1]>0).sort((a,b)=>a[1]-b[1]).map(x=>x[0]); },
-    tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; tbtn.textContent="❚❚ Pause";
-      if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.textContent="▶ Tour"; return; }
-      const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.textContent="▶ Tour"; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,a?600:Math.max(2600,ms+1200)); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
+    tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; tbtn.innerHTML=(window.ICON?ICON("pause",16):"")+" Pause";
+      if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.innerHTML=TOURH; return; }
+      const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.innerHTML=TOURH; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,a?600:Math.max(2600,ms+1200)); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
     replay(){ if(cur>=0) typeOut(cur); },
-    stopTour(){ touring=false; clearTimeout(tour); try{curAudio&&curAudio.pause();}catch(e){} tbtn.textContent="▶ Tour"; },
+    stopTour(){ touring=false; clearTimeout(tour); try{curAudio&&curAudio.pause();}catch(e){} tbtn.innerHTML=TOURH; },
     fit(){ const fed=pins.some(p=>p.userData.G.cat==="federal"); if(fed){ camT.copy(homeCam); lookT.copy(homeLook); } else coView(); },
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
   R.domElement.addEventListener("click",ev=>{ const r=R.domElement.getBoundingClientRect(); mouse.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
     ray.setFromCamera(mouse,cam); ray.params.Line.threshold=0.01; const hit=ray.intersectObjects(pins.flatMap(p=>[p.userData.head,p.children[0]]),false)[0];
     R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.focus(k); openDoc(cites[k]); } } });
   let touring=false, tpos=0; const tbar=document.createElement("div"); tbar.className="absolute bottom-10 right-4 z-20 flex gap-1 text-xs";
-  const mk=(t,f)=>{ const b=document.createElement("button"); b.textContent=t; b.className="px-2.5 py-1 rounded-full bg-slate-900/70 border border-indigo-400/40 text-slate-200 hover:bg-indigo-600/60"; b.onclick=e=>{e.stopPropagation();f();}; tbar.appendChild(b); return b; };
+  const SV={"◀":'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>',"▶":'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>'};
+  const mk=(t,f)=>{ const b=document.createElement("button"); b.dataset.tourctl="1"; if(SV[t]){ b.innerHTML=SV[t]; b.setAttribute("aria-label",t==="◀"?"Previous stop":"Next stop"); b.title=b.getAttribute("aria-label"); } else b.textContent=t; b.className="abtn"; b.onclick=e=>{e.stopPropagation();f();}; tbar.appendChild(b); return b; };
   mk("◀",()=>{ api.stopTour(); const O=api.order(); tpos=Math.max(0,tpos-1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
-  if(window.AudioMgr&&AudioMgr.isMuted()) api.voice=false; const vbtn=mk(api.voice?"🔊":"🔇",()=>{ const on=!api.voice; if(window.AudioMgr) AudioMgr.setMuted(!on); else { try{curAudio&&curAudio.pause();}catch(e){} } api.voice=on; vbtn.textContent=on?"🔊":"🔇"; vbtn.title=on?"Mute (Esc stops audio)":"Unmute"; }); document.addEventListener("precedent:mute",e=>{ api.voice=!e.detail; vbtn.textContent=api.voice?"🔊":"🔇"; }); vbtn.title="Speak tour stops (ElevenLabs, cached)";
-  const tbtn=mk("▶ Tour",()=>{ touring?api.stopTour():api.tour(0); });
+  if(window.AudioMgr&&AudioMgr.isMuted()) api.voice=false; const vbtn=mk("",()=>{ const on=!api.voice; if(window.AudioMgr) AudioMgr.setMuted(!on); else { try{curAudio&&curAudio.pause();}catch(e){} } api.voice=on; }); vbtn.dataset.abtn="mute"; document.addEventListener("precedent:mute",e=>{ api.voice=!e.detail; });
+  const TOURH='<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg> Tour'; const tbtn=mk("",()=>{ touring?api.stopTour():api.tour(0); });
   mk("▶",()=>{ api.stopTour(); const O=api.order(); tpos=Math.min(O.length-1,tpos+1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
-  host.parentElement.appendChild(tbar);
-  ["wheel","pointerdown"].forEach(ev=>R.domElement.addEventListener(ev,()=>{ if(touring) api.stopTour(); },{passive:true}));
+  tbtn.innerHTML=TOURH; tbtn.setAttribute("aria-label","Play or pause the guided tour"); tbar.addEventListener("pointerdown",e=>e.stopPropagation()); host.parentElement.appendChild(tbar);
+  let _pd=null; R.domElement.addEventListener("pointerdown",e=>{ _pd=[e.clientX,e.clientY]; },{passive:true}); addEventListener("pointerup",()=>{ _pd=null; });
+  R.domElement.addEventListener("pointermove",e=>{ if(_pd&&e.buttons&&Math.hypot(e.clientX-_pd[0],e.clientY-_pd[1])>5){ _pd=null; if(touring) api.stopTour(); } },{passive:true});
+  R.domElement.addEventListener("wheel",()=>{ if(touring) api.stopTour(); },{passive:true});
   // --- HTML overlay: county names + always-on pin tags with greedy collision avoidance ---
   const ov=document.createElement("div"); ov.className="absolute inset-0 pointer-events-none z-[15] overflow-hidden"; host.parentElement.appendChild(ov);
   const cLab=coCounties.map(C=>{ const d=document.createElement("div"); d.textContent=C.name; d.style.cssText="position:absolute;left:0;top:0;font-size:10px;letter-spacing:.04em;white-space:nowrap;transform:translate(-50%,-50%);color:rgba(203,213,225,.55);text-shadow:0 1px 2px #000"; ov.appendChild(d);
@@ -199,18 +202,30 @@ if(!webgl){
       boxes.push([x-w/2,y-h/2,w,h]); L.d.style.display=""; L.d.style.left=x+"px"; L.d.style.top=y+"px"; L.d.style.color=o&&o.n?"#6ee7b7":"rgba(203,213,225,.6)"; L.d.style.fontWeight=o&&o.n?"700":"400"; }); }
   overlay();
   // --- Tour transcript (derived from answer text + retrieved passage; no extra model call) ---
-  const tr=document.createElement("div"); tr.className="absolute left-1/2 -translate-x-1/2 bottom-16 z-20 hidden rounded-xl px-4 py-3 text-[13px] leading-relaxed text-slate-100 border border-white/10 shadow-2xl"; tr.style.cssText="width:min(560px,60%);background:rgba(15,18,30,.6);backdrop-filter:blur(10px)"; host.parentElement.appendChild(tr);
+  const tr=document.createElement("div"); tr.id="transcript"; tr.className="absolute bottom-14 z-20 hidden rounded-xl px-3 py-2 text-[13px] leading-snug text-slate-100 border border-white/10 shadow-xl"; tr.style.cssText="left:50%;transform:translateX(-50%);width:min(440px,44%);max-height:30%;overflow:auto;background:rgba(15,18,30,.55);backdrop-filter:blur(8px)"; tr.addEventListener("pointerdown",e=>e.stopPropagation()); host.parentElement.appendChild(tr);
   let trT=null;
+  const CITE_RE=/\b\d+\s+(U\.S\.|P\.\s?\d?d|Colo\.(\s?App\.)?|S\.\s?Ct\.|F\.\s?\d?d|L\.\s?Ed\.)\s+\d+|\bv\.\s+[A-Z][\w.]*,\s+\d+/;
+  function sentences(t){ return String(t||"").replace(/\s+/g," ").split(/(?<=[.!?])\s+(?=[A-Z“"(])/).map(x=>x.trim()).filter(Boolean); }
+  function holding(c,q){ const S=sentences(c.passage).filter(x=>x.length>=50&&x.length<=320&&!CITE_RE.test(x)&&!/^\W|^\d|\|/.test(x)&&/[.!?]$/.test(x));
+    if(!S.length) return ""; const stop=new Set("the a an of to in for and or on is be by with under from that this what when can does".split(" "));
+    const terms=String(q||"").toLowerCase().split(/\W+/).filter(w=>w.length>2&&!stop.has(w));
+    let best=S[0],bs=-1; S.forEach((x,i)=>{ const l=x.toLowerCase(); const sc=terms.reduce((a,t)=>a+(l.includes(t)?1:0),0)+(/\b(held|hold|must|may|requires?|shall|is not|are not)\b/.test(l)?0.5:0)-i*0.01; if(sc>bs){bs=sc;best=x;} });
+    return best; }
   function explain(k){ const c=cites[k]||{}, ctx=api.ctx||{}, ref=c.ref||""; const yr=(String(c.date||"").match(/\d{4}/)||[""])[0];
     const where=[c.court, c._loc&&c._loc.cat==="county"?c._loc.label.split("→")[0].trim():""].filter(Boolean).join(", ");
-    const ex=window.cleanPassage?cleanPassage(c.passage,ctx.question,180):(c.passage||"").slice(0,180);
-    const sum=`${c.title||"Authority"}${where?" ("+where+(yr?", "+yr:"")+")":(yr?" ("+yr+")":"")}: ${ex||"graph-linked authority; no passage text retrieved."}`;
+    const ex=holding(c,ctx.question);
+    const sum=`${c.title||"Authority"}${where?" ("+where+(yr?", "+yr:"")+")":(yr?" ("+yr+")":"")}: ${ex||"Linked in the citation graph; no passage text was retrieved for this authority."}`;
     let rel=""; if(ref&&ctx.answer){ const lines=String(ctx.answer).split("\n").filter(l=>l.includes(ref)); const l=lines.find(x=>/^\s*[-*•]/.test(x))||lines[0];
-      if(l) rel=l.replace(/\*\*|[*#>`]/g,"").replace(/\[\d+\]/g,"").replace(/^\s*[-•]\s*/,"").replace(/^short answer:?/i,"").replace(/\s+/g," ").trim(); }
-    return {sum, rel: rel?"Relevant because: "+rel:""}; }
+      if(l){ let t=l.replace(/\*\*|[*#>`]/g,"").replace(/\s*\[\d+\]/g,"").replace(/^\s*[-•]\s*/,"").replace(/^short answer:?\s*/i,"").replace(/\s+/g," ").trim();
+        const q=t.match(/[“"]([^”"]{20,})[”"]/); const nm=t.split(/\s+[-–—]\s+/)[0];
+        if(q&&nm&&nm.length<90) t=`The memo relies on ${nm} for the point that ${q[1].replace(/[.\s]+$/,"")}.`;
+        else { const S=sentences(t); t=S[0]||t; if(!/[.!?]$/.test(t)) t+="."; t="In the memo: "+t; }
+        rel=t; } }
+    return {sum, rel}; }
+  api.explainText=k=>{ const {sum,rel}=explain(k); return sum+(rel?" "+rel:""); }
   let curAudio=null; api.voice=(()=>{ try{ return localStorage.getItem("mapVoice")==="1"; }catch(e){ return false; } })();
   let sync=null; // {a:Audio, starts:[...]} for the stop currently speaking
-  function sayTTS(text){ if(!api.voice||(window.AudioMgr&&AudioMgr.isMuted())) return null;
+  function sayTTS(text){ if(!api.voice||api.holdVoice||(window.AudioMgr&&AudioMgr.isMuted())) return null;
     const S={a:null,starts:[],dead:false}; sync=S;
     S.done=fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.ok&&r.status!==204?r.json():null).then(j=>{ if(!j||!j.audio_b64||S.dead) return;
       try{curAudio&&curAudio.pause();}catch(e){}
@@ -218,7 +233,7 @@ if(!webgl){
       curAudio=new Audio(URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"}))); S.a=curAudio; S.starts=j.starts||[];
       return new Promise(res=>{ curAudio.onended=res; curAudio.onerror=res; curAudio.play().catch(res); }); }).catch(()=>{}).finally(()=>{ S.ended=true; });
     return S; }
-  function typeOut(k){ clearInterval(trT); cancelAnimationFrame(api._raf||0); if(sync) sync.dead=true; const {sum,rel}=explain(k); const full=`<button title="Replay" onclick="Docs3D.replay()" style="float:right;margin-left:8px;color:#a5b4fc">↻</button><b style="color:#a5b4fc">${(cites[k]||{}).ref||""}</b> `; const txt=sum+(rel?"\n"+rel:"");
+  function typeOut(k){ clearInterval(trT); cancelAnimationFrame(api._raf||0); if(sync) sync.dead=true; const {sum,rel}=explain(k); const full=`<button title="Replay this stop" aria-label="Replay this stop" onclick="Docs3D.replay()" style="float:right;margin-left:8px;color:#a5b4fc"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button><b style="color:#a5b4fc">${(cites[k]||{}).ref||""}</b> `; const txt=sum+(rel?"\n"+rel:"");
     tr.classList.remove("hidden"); const esc=t=>t.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;");
     const paint=n=>{ tr.innerHTML=full+esc(txt.slice(0,n)).replace("\n","<br><span style='color:#6ee7b7'>")+(n<txt.length?"<span class='animate-pulse'>▍</span>":""); };
     const S=sayTTS(txt.replace("\n"," "));

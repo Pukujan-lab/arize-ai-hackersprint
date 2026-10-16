@@ -20,7 +20,7 @@
 <div class="grid grid-cols-12 gap-6">
  <div class="col-span-8 space-y-6">
   <div class="glass rounded-2xl p-6"><div class="flex items-center justify-between mb-3"><h2 class="font-semibold text-slate-300">Answer</h2>
-   <div class="flex gap-2 items-center"><span id="sg"></span><label class="text-xs text-slate-400 flex items-center gap-1 mr-1"><input id="hf" type="checkbox" class="accent-indigo-500"> Hands-free</label><button id="play" class="hidden text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg">🔊 Listen</button></div></div>
+   <div class="flex gap-2 items-center"><span id="sg"></span><label class="text-xs text-slate-400 flex items-center gap-1 mr-1"><input id="hf" type="checkbox" class="accent-indigo-500"> Hands-free</label><button id="play" data-abtn="play" data-label="Listen" data-tip="Listen to the memo" aria-label="Listen to the memo" class="abtn"></button></div></div>
    <div id="answer" class="leading-relaxed text-slate-100 text-[15px] max-w-none">Ask a question to start the agent pipeline.</div>
    <div id="meta" class="text-xs text-slate-500 mt-4"></div><div id="disc" class="text-xs text-amber-300/80 mt-2"></div></div>
 
@@ -58,9 +58,9 @@ function feedDrain(){if(FEED.busy||!FEED.q.length)return;FEED.busy=true;const [e
  const txt=e.msg+(e.to?" → "+e.to:""),tw=el.querySelector(".tw");let n=0;const step=Math.max(1,Math.ceil(txt.length/18));const ty=setInterval(()=>{n+=step;tw.textContent=txt.slice(0,n);if(n>=txt.length)clearInterval(ty)},22);
  const st=stageOf(e);if(st)feedStage(st);FEED.last=el;
  const hand=["release","handoff","done"].includes(e.kind)||(FEED.prevAgent&&FEED.prevAgent!==e.agent);FEED.prevAgent=e.agent;
- setTimeout(()=>{FEED.busy=false;feedDrain()},hand?1200:600+Math.random()*300);}
+ setTimeout(()=>{FEED.busy=false;feedDrain()},FEED.fast?120:(hand?1200:600+Math.random()*300));}
 let running=false,lastAskT=0,resultWaiters=[];
-async function ask(){const q=$("q").value.trim();if(!q||running||Date.now()-lastAskT<800)return null;lastAskT=Date.now();running=true;$("go").disabled=true;$("go").classList.add("opacity-50");
+async function ask(){const q=$("q").value.trim();if(!q||running||Date.now()-lastAskT<800)return null;window.__askT=performance.now();window.__ttft=0;if(window.Docs3D)Docs3D.holdVoice=true;lastAskT=Date.now();running=true;$("go").disabled=true;$("go").classList.add("opacity-50");
  $("answer").innerHTML='<span class="live text-slate-400">Agents working…</span>';$("events").innerHTML="";$("sg").innerHTML="";$("cites").innerHTML="";$("play").classList.add("hidden");seats({});window.Docs3D&&Docs3D.busy();
  const done=()=>{running=false;$("go").disabled=false;$("go").classList.remove("opacity-50")};
  const resp=await fetch("/api/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(window.FOLLOW?FOLLOW.body(q):{question:q})});const j=await resp.json().catch(()=>({}));
@@ -68,12 +68,14 @@ async function ask(){const q=$("q").value.trim();if(!q||running||Date.now()-last
  const run_id=j.run_id;return await new Promise(res=>{let shown=0;const poll=async()=>{const d=await (await fetch("/api/run/"+run_id)).json();const st={};
   d.events.forEach(e=>{if(e.kind=="claim")st[e.agent]="on";if(["release","handoff"].includes(e.kind))st[e.agent]="done"});seats(st);
   d.events.slice(shown).forEach(e=>FEED.q.push([e,run_id]));shown=d.events.length;feedDrain();
-  if(d.result){const fin=()=>{if(FEED.q.length||FEED.busy)return setTimeout(fin,150);feedFinish();render(d.result);done();res(d.result)};fin()}else setTimeout(poll,300)};poll()})}
+  if(d.partial&&!d.result){window.__ttft=window.__ttft||performance.now()-window.__askT;$("answer").innerHTML=md(d.partial,{})+'<span class="live text-indigo-300">▍</span>';}
+  if(d.result){window.__total=performance.now()-window.__askT;FEED.fast=true;render(d.result);done();res(d.result);const fin=()=>{if(FEED.q.length||FEED.busy)return setTimeout(fin,150);feedFinish();FEED.fast=false};fin()}else setTimeout(poll,d.partial?150:250)};poll()})}
 function render(r){setTimeout(()=>window.FOLLOW&&FOLLOW.onResult(r),0);lastAnswer=r.answer;const byRef={};r.citations.forEach(c=>byRef[c.ref]=c);
  $("answer").innerHTML=md(r.answer,byRef);[...$("answer").children].forEach((el,i)=>{el.style.opacity=0;el.style.transform="translateY(4px)";el.style.transition="opacity .35s,transform .35s";setTimeout(()=>{el.style.opacity=1;el.style.transform="none"},250+i*260)});
  const s=r.safeguard;$("sg").innerHTML=`<span class="px-3 py-1 rounded-full text-xs font-bold ${s.pass?'bg-emerald-500/20 text-emerald-300':'bg-red-500/20 text-red-300'}">🛡 ${s.pass?`${s.used.length} references matched retrieved sources`:`${s.invalid.length+s.unknown_authorities.length} reference(s) not in retrieved sources`}</span><span class="ml-2 text-[11px] text-slate-400">checks references, not legal accuracy</span>${/template/i.test(r.provider||"")?`<span class="ml-2 px-2 py-0.5 rounded-full text-[11px] bg-amber-500/20 text-amber-300">template answer (offline, no model)</span>`:/cached/i.test(r.provider||"")?`<span class="ml-2 px-2 py-0.5 rounded-full text-[11px] bg-slate-700 text-slate-300">cached answer</span>`:""}`;
  $("disc").textContent="⚠ "+s.disclaimer;$("meta").textContent=`run ${r.run_id} · model: ${r.provider} · passages: ${r.passage_source||"none (graph-only)"} · graph: ${r.backend} · ${r.elapsed_s}s`+(s.unsupported_claims.length?` · ${s.unsupported_claims.length} sentence(s) without citation flagged`:"");
  if(tts)$("play").classList.remove("hidden");
+ if(window.Docs3D){Docs3D.holdVoice=false;if(Docs3D.voice&&!(window.AudioMgr&&AudioMgr.isMuted())){const go=()=>{if(!Docs3D.tour)return setTimeout(go,200);Docs3D.stopTour();AudioMgr.say(shortLine(r.answer),$("play")).then(()=>Docs3D.tour(0));};setTimeout(go,300);}}
  if(window.Docs3D)Docs3D.ctx={answer:r.answer||"",question:r.question||""};if(window.__early!==r.run_id){lastCites=r.citations;window.Docs3D&&Docs3D.show(r.citations,r.edges,r.documents||[]);}else{lastCites=Docs3D._c||r.citations;}
  $("docnav").innerHTML=r.citations.slice(0,12).map((c,i)=>`<button onclick="Docs3D.focus(${i});Docs3D.open&&Docs3D.open(lastCites[${i}])" class="w-5 h-5 rounded-full text-[10px] bg-indigo-500/30 hover:bg-indigo-500/70">${i+1}</button>`).join("");
  if(tts&&$("hf").checked&&!(window.PrecedentVoice&&PrecedentVoice.state()!=="idle"))setTimeout(()=>speak(),400);
@@ -86,14 +88,14 @@ function render(r){setTimeout(()=>window.FOLLOW&&FOLLOW.onResult(r),0);lastAnswe
  new vis.Network($("net"),{nodes,edges:r.edges.map(e=>({from:e.src,to:e.dst,arrows:"to",color:{color:"#64748b"}}))},{physics:{stabilization:true},interaction:{hover:true}})}
 $("go").onclick=ask;$("q").onkeydown=e=>{if(e.key=="Enter")ask()};
 let lastCites=[],actx=null;
-async function speak(){const text=shortLine(lastAnswer);if(!text)return;if(window.AudioMgr&&AudioMgr.isMuted())return;$("play").textContent="⏳";
+async function speak(){const text=shortLine(lastAnswer);if(!text)return;if(window.AudioMgr&&AudioMgr.isMuted())return;$("play").dataset.loading="1";$("play").dataset.owner="1";
  try{const r=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
  if(!r.ok){ if("speechSynthesis" in window){ $("meta").textContent+=" · voice: browser TTS (ElevenLabs hourly cap reached)"; await new Promise(res=>{const u=new SpeechSynthesisUtterance(text);u.onend=res;u.onerror=res;speechSynthesis.speak(u)}); } return }
  const a=new Audio(URL.createObjectURL(await r.blob()));
  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const src=actx.createMediaElementSource(a),an=actx.createAnalyser();an.fftSize=256;src.connect(an);an.connect(actx.destination);
   const buf=new Uint8Array(an.frequencyBinCount);const tick=()=>{if(a.paused||a.ended){window.__ttsLevel=0;window.Docs3D&&Docs3D.pulse(0);return}an.getByteFrequencyData(buf);let s=0;for(const v of buf)s+=v;const l=s/buf.length/255;window.__ttsLevel=l;window.Docs3D&&Docs3D.pulse(l);requestAnimationFrame(tick)};a.onplay=tick}catch(e){}
  const n=Math.min(lastCites.length,5);a.ontimeupdate=()=>{if(a.duration&&n)window.Docs3D&&Docs3D.focus(Math.min(n-1,Math.floor(a.currentTime/a.duration*n)))};
- await new Promise(res=>{a.onended=res;a.onerror=res;$("play").textContent="⏹ Stop";a.play().catch(res)})}finally{$("play").textContent="🔊 Listen"}}
+ await new Promise(res=>{a.onended=res;a.onerror=res;$("play").dataset.loading="0";$("play").dataset.owner="1";a.play().catch(res)})}finally{$("play").dataset.loading="0";$("play").dataset.owner="0"}}
 $("play").onclick=()=>{ if(window.AudioMgr&&AudioMgr.playing()){ AudioMgr.stopAll(); return; } speak(); };
 
 
