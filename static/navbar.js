@@ -361,6 +361,7 @@
       nav b:first-of-type, nav .nav-brand{font-weight:800!important;color:#fff!important;letter-spacing:-.01em;padding-right:20px;border-right:1px solid rgba(148,163,184,.2);white-space:nowrap}
       nav a.nav-link{font-size:14.5px!important;font-weight:500!important;color:#94a3b8!important;position:relative;white-space:nowrap;transition:color .15s;padding:15px 0}
       nav a.nav-link:hover{color:#e2e8f0!important}
+      @media (max-width:1000px){#partner-strip{display:none!important} nav b:first-of-type{white-space:nowrap!important}}
       @media (max-width:900px){nav, nav .max-w-7xl{gap:14px!important} nav b:first-of-type{padding-right:14px} nav form{min-width:0;flex:1 1 160px!important;width:auto!important}}
       nav a.nav-link.nav-active{color:#fff!important}
       nav a.nav-link.nav-active::after{content:"";position:absolute;left:0;right:0;bottom:8px;height:2px;border-radius:2px;background:#818cf8}
