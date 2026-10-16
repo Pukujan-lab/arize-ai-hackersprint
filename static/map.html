@@ -1,0 +1,34 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Precedent · Citation map</title>
+<script src="/static/vendor/tailwind.js"></script><script src="/static/links.js"></script>
+<style>body{background:#070b1a}.glass{background:rgba(15,23,42,.72);border:1px solid rgba(99,102,241,.25);backdrop-filter:blur(8px)}</style></head>
+<body class="text-slate-200 h-screen flex flex-col overflow-hidden">
+<nav class="flex items-center gap-5 px-5 py-2 border-b border-indigo-500/20 text-sm"><b class="text-white">⚖ Precedent</b><a href="/" class="text-slate-300 hover:text-white">Demo</a><a href="/map" class="text-white font-semibold">Map</a><a href="/dashboard" class="text-slate-300 hover:text-white">Dashboards</a><a href="/slides" class="text-slate-300 hover:text-white">Slides</a>
+<form id="f" class="ml-auto flex gap-2 w-[min(560px,50%)]"><input id="q" class="flex-1 rounded-lg bg-slate-900 border border-indigo-500/30 px-3 py-1.5" placeholder="Ask a Colorado legal question…"><button class="rounded-lg bg-indigo-600 px-3">Ask</button></form></nav>
+<div class="flex-1 flex min-h-0">
+ <div class="relative flex-1"><div id="docs3d" class="absolute inset-0"></div>
+  <div class="absolute bottom-3 left-4 z-10 flex gap-2 text-xs"><button data-v="us" class="v glass rounded-full px-3 py-1">United States</button><button data-v="co" class="v glass rounded-full px-3 py-1">Colorado counties</button></div></div>
+ <aside class="w-[360px] glass border-l border-indigo-500/20 flex flex-col min-h-0">
+  <div class="p-3 border-b border-indigo-500/20"><label class="text-[11px] uppercase tracking-widest text-slate-500">Run</label><select id="runs" class="w-full mt-1 rounded bg-slate-900 border border-indigo-500/30 p-1.5 text-sm"></select>
+   <div id="stat" class="mt-2 text-sm text-indigo-300"></div><div id="st2" class="text-xs text-slate-500"></div></div>
+  <div id="side" class="flex-1 overflow-auto p-3 space-y-3 text-sm"></div></aside></div>
+<script>
+const $=id=>document.getElementById(id), esc=t=>String(t||"").replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;");
+let cur=null;
+function side(r){ const c=(window.Docs3D&&Docs3D._c)||r.citations; const g={};
+ c.forEach((x,i)=>{ const L=x._loc||{}; const k=L.cat==="county"?L.key.replace(/\b\w/g,m=>m.toUpperCase())+" County":(L.label||"Other"); (g[k]=g[k]||[]).push(i); });
+ const ks=Object.keys(g).sort((a,b)=>g[b].length-g[a].length); const nc=ks.filter(k=>k.endsWith(" County")).length;
+ $("stat").textContent=`${nc} counties linked · ${ks.length} locations · ${c.length} documents`; $("st2").textContent=(r.question||"")+(r.provider?" · "+r.provider:"");
+ $("side").innerHTML=ks.map(k=>`<div><div class="flex justify-between text-xs uppercase tracking-wider text-slate-400"><span>${esc(k)}</span><span class="text-emerald-300">${g[k].length}</span></div>`+
+  g[k].map(i=>`<div class="mt-1 rounded-lg bg-slate-900/60 p-2 hover:bg-slate-800 cursor-pointer" onclick="Docs3D.focus(${i});Docs3D.open(Docs3D._c[${i}])"><b class="text-indigo-300">${esc(c[i].ref||"")}</b> ${esc(c[i].title)}<div class="text-[11px] text-slate-500">${esc(c[i].court)} ${esc(c[i].date)}</div></div>`).join("")+`</div>`).join(""); }
+function show(r){ cur=r; const go=()=>{ if(!window.Docs3D||!Docs3D.view){ return setTimeout(go,200);} Docs3D.show(r.citations||[],r.edges||[],r.documents||[]); side(r); }; go(); }
+async function load(id){ const d=await (await fetch("/api/run/"+id)).json(); if(d.result) show(d.result); }
+async function runs(sel){ const L=await (await fetch("/api/runs")).json(); $("runs").innerHTML=L.map(x=>`<option value="${x.run_id}">${esc(x.run_id)} · ${esc((x.question||"").slice(0,40))} (${x.n})</option>`).join(""); if(sel) $("runs").value=sel; if(L.length) load(sel||L[0].run_id); }
+$("runs").onchange=e=>load(e.target.value);
+document.querySelectorAll(".v").forEach(b=>b.onclick=()=>window.Docs3D&&Docs3D.view&&Docs3D.view(b.dataset.v));
+$("f").onsubmit=async e=>{ e.preventDefault(); const q=$("q").value.trim(); if(!q) return; window.Docs3D&&Docs3D.busy(); $("stat").textContent="Agents working…";
+ const resp=await fetch("/api/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q})}); const j=await resp.json().catch(()=>({}));
+ if(!resp.ok){ $("stat").textContent="⏳ "+(j.error||"busy"); return; }
+ const poll=async()=>{ const d=await (await fetch("/api/run/"+j.run_id)).json(); if(d.result){ runs(j.run_id); } else setTimeout(poll,400); }; poll(); };
+const qs=new URLSearchParams(location.search); runs(qs.get("run"));
+</script>
+<script src="/static/vendor/d3-array.min.js"></script><script src="/static/vendor/d3-geo.min.js"></script><script type="module" src="/static/map3d.js"></script></body></html>
