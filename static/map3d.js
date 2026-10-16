@@ -163,11 +163,11 @@ if(!webgl){
     R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.focus(k); openDoc(cites[k]); } } });
   coView(); cam.position.copy(camT); look.copy(lookT); cam.lookAt(look);
   R.domElement.style.cursor="pointer";
-  R.domElement.addEventListener("mousemove",ev=>{ const now=performance.now(); if(now-hovT<40) return; hovT=now; const esc=t=>String(t||"").replace(/</g,"&lt;"); const r0=host.parentElement.getBoundingClientRect();
+  R.domElement.addEventListener("mousemove",ev=>{ const now=performance.now(); if(now-hovT<40) return; hovT=now; const _co=countyAt(ev); const esc=t=>String(t||"").replace(/</g,"&lt;"); const r0=host.parentElement.getBoundingClientRect();
     ray.params.Line.threshold=0.01; const ph=ray.intersectObjects(pins.flatMap(p=>[p.userData.head,p.children[0]]),false)[0];
     if(ph){ const G=ph.object.parent.userData.G; tip.style.left=(ev.clientX-r0.left+14)+"px"; tip.style.top=(ev.clientY-r0.top+14)+"px"; tip.classList.remove("hidden");
       tip.innerHTML=`<b class="text-emerald-300">${esc(G.label)}</b><div class="mt-1 text-slate-400">${G.items.length} document${G.items.length>1?"s":""} · click to open</div><ul class="mt-1 list-disc pl-4">${G.items.slice(0,6).map(i=>`<li><b class="text-indigo-300">${esc(cites[i].ref||"")}</b> ${esc(cites[i].title).slice(0,70)}</li>`).join("")}</ul>`; return; }
-    const o=countyAt(ev); if(!o){ tip.classList.add("hidden"); return; }
+    const o=_co; if(!o){ tip.classList.add("hidden"); return; }
     const r=host.parentElement.getBoundingClientRect(); tip.style.left=(ev.clientX-r.left+14)+"px"; tip.style.top=(ev.clientY-r.top+14)+"px"; tip.classList.remove("hidden");
     const esc=t=>String(t||"").replace(/</g,"&lt;"); tip.innerHTML=`<b class="text-emerald-300">${esc(o.C.name)} County</b> <span class="text-slate-400">FIPS ${o.C.fips}</span>`+(o.n?`<div class="mt-1 text-slate-400">${o.n} retrieved case${o.n>1?"s":""} · click to open</div><ul class="mt-1 list-disc pl-4">${o.items.slice(0,6).map(i=>`<li>${esc(cites[i].title).slice(0,70)}</li>`).join("")}</ul>`:'<div class="text-slate-500">no retrieved cases</div>'); });
   R.domElement.addEventListener("mouseleave",()=>tip.classList.add("hidden"));
