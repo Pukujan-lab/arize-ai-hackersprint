@@ -6,7 +6,7 @@ orb.innerHTML=`<div id="vcap" class="hidden fixed bottom-32 right-8 max-w-sm gla
 <button id="vorb" aria-label="Tap to talk" title="Tap to talk (or hold Space)" class="fixed bottom-8 right-8 w-20 h-20 rounded-full z-50 flex items-center justify-center shadow-[0_0_40px_rgba(99,102,241,.6)] transition-all"
  style="background:radial-gradient(circle at 35% 30%,#a5b4fc,#6366f1 45%,#312e81)"><canvas id="vwave" width="80" height="80" class="absolute inset-0 rounded-full pointer-events-none"></canvas><span id="vicon" class="relative text-white"></span></button>
 <div id="vstate" class="fixed bottom-2 right-8 w-20 text-center text-[10px] uppercase tracking-widest text-slate-400 z-50">tap to talk</div>`;
-document.body.appendChild(orb); setTimeout(()=>{ try{ document.getElementById("vicon").innerHTML=window.ICON?ICON("mic",30):""; }catch(e){} },0);
+document.body.appendChild(orb); setTimeout(()=>{ try{ document.getElementById("vicon").innerHTML=window.ICON?window.ICON("mic",30):""; }catch(e){} },0);
 const $=id=>document.getElementById(id), cap=$("vcap"), btn=$("vorb"), st=$("vstate"), cv=$("vwave"), g=cv.getContext("2d");
 let gen=0, state="idle", conv=false, rec=null, finalTxt="", interim="", silenceT=null, micStream=null, an=null, buf=null, resubmits=0, wake=false, ptt=false, cooldownUntil=0;
 const ICON={paused:"⏸",idle:"🎙",listening:"👂",thinking:"💭",speaking:"🔊",cooldown:"⏳",wake:"✨"};

@@ -20,7 +20,7 @@ def page(browser, path, storage=None, w=1440, h=900):
     pg.goto(BASE + path, wait_until="load"); pg.errs = errs; return pg
 
 def ask_home(pg, q=CACHED_Q):
-    pg.fill("#q", q); pg.click("#go"); pg.wait_for_function("document.getElementById('answer').innerText.includes('Short answer')", timeout=45000)
+    pg.fill("#q", q); pg.click("#go"); pg.wait_for_function("window.__total>0 && document.getElementById('cites').children.length>0", timeout=60000)
 
 def wait_map(pg):
     pg.wait_for_function("window.Docs3D && Docs3D._c && Docs3D._c.length>0", timeout=30000)

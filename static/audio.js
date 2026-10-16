@@ -18,7 +18,7 @@ window.fetch=function(u,o){ const url=String(u&&u.url||u);
   return of.apply(this,arguments); };
 if("speechSynthesis" in window){ const sp=speechSynthesis.speak.bind(speechSynthesis);
   speechSynthesis.speak=u=>{ if(muted){ setTimeout(()=>u.onend&&u.onend(),0); return; } sp(u); }; }
-function stopAll(fromVoice){
+function stopAll(fromVoice){ if(!fromVoice) window.AudioMgr&&(AudioMgr.gen=(AudioMgr.gen||0)+1);
   all.forEach(a=>{ try{ a.pause(); a.currentTime=0; a.dispatchEvent(new Event("ended")); }catch(e){} });
   document.querySelectorAll("audio").forEach(a=>{ try{a.pause();a.currentTime=0;}catch(e){} });
   ctrls.forEach(c=>{ try{c.abort();}catch(e){} }); ctrls.clear();
@@ -29,7 +29,7 @@ function stopAll(fromVoice){
 function setMuted(m){ muted=!!m; try{ localStorage.setItem(KEY,muted?"1":"0"); localStorage.setItem("mapVoice",muted?"0":"1"); }catch(e){}
   if(window.Docs3D) Docs3D.voice=!muted; if(muted) stopAll(); document.dispatchEvent(new CustomEvent("precedent:mute",{detail:muted})); }
 function playing(){ return [...all].some(a=>!a.paused&&!a.ended) || ("speechSynthesis" in window && speechSynthesis.speaking); }
-addEventListener("keydown",e=>{ if(e.key==="Escape") stopAll(); });
+addEventListener("keydown",e=>{ if(e.key==="Escape"){ try{ window.Docs3D&&Docs3D.stopTour&&Docs3D.stopTour(); }catch(_){} stopAll(); } });
 window.AudioMgr={stopAll,setMuted,isMuted:()=>muted,playing,instances:()=>[...all]};
 })();
 
