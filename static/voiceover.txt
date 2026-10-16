@@ -1,1 +1,7 @@
-Multi-agent AI breaks in production. Agents collide, act on unverified output, touch real systems unsafely, and leave no trace. Precedent is a pipeline that fixes each of these, and every fix is a partner. Daytona isolates the agents in a sandbox. SurrealDB and Octo give them grounded memory. Arize traces and evaluates every step. ElevenLabs gives it a voice. ACS coordinates the agents and audits every run, and a safeguard verifies every citation. Our first use case is verified legal research memos for professionals.
+Precedent is a reliable pipeline for multi-agent AI. First up: legal research for professionals.
+Multi-agent AI is unreliable in production. Agents hallucinate, collide, and can't be audited. And lawyers can't cite what they can't verify.
+Ask Precedent a question, and you get a grounded research memo with verified citations, on a live map.
+Watch the agents walk the map: a guided tour of every authority, with a spoken transcript.
+Under the hood, a planner, retriever, drafter and safeguard claim tasks through ACS. Eighty runs so far, most answers served from cache.
+Every reference is checked against retrieved sources, with caps, fallbacks and honest labels.
+Built with Daytona, SurrealDB, Octo, Arize, ElevenLabs, ACS and Anthropic. Thank you. Open the live demo.

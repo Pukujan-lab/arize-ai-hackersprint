@@ -23,4 +23,4 @@ Click the mic → ask the chip question "Automobile exception: probable cause st
 ## 5. Safeguards (20s)
 No unretrieved citation survives; quotes are verbatim; rate limits and hourly caps; a "not legal advice" disclaimer.
 ## 6. Close (20s)
-Partner wall slide (/slides, last slide). "Verified memos, auditable agents, built on Daytona, SurrealDB, Arize and ElevenLabs."
+Slides (/slides, 8 big-statement slides): hero → problem → what Precedent does → demo moment (map tour + transcript) → how it works (pipeline + ACS, real numbers) → trust → one partners slide → thank you / Open live demo. Voiceover: static/voiceover.mp3 (regenerated for the 8-slide deck).

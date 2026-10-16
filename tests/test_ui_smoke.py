@@ -137,3 +137,22 @@ def test_tour_controls_consistent_style(browser):
     pg = page(browser, "/map"); wait_map(pg)
     cls = pg.evaluate("[...document.querySelectorAll('[data-tourctl]')].map(b=>b.className)")
     assert len(cls) >= 4 and len(set(cls)) == 1, cls
+
+# ---------- navbar logos + examples dropdown (Alex 13:32) ----------
+@pytest.mark.parametrize("path", ["/", "/map", "/dashboard", "/slides", "/guide"])
+def test_navbar_logo_strip(browser, path):
+    pg = page(browser, path); pg.wait_for_timeout(1500)
+    links = pg.evaluate("[...document.querySelectorAll('#logoStrip a')].map(a=>({t:a.target, l:a.getAttribute('aria-label')||'', img:!!a.querySelector('img,svg')}))")
+    assert len(links) == 6 and all(x["t"] == "_blank" and "dashboard" in x["l"] for x in links), links
+
+def test_no_green_pills_in_hero(browser):
+    pg = page(browser, "/"); pg.wait_for_timeout(1500)
+    assert pg.evaluate("!document.getElementById('badges') || document.getElementById('badges').offsetParent===null || document.getElementById('badges').innerText.trim()===''")
+
+@pytest.mark.parametrize("path", ["/", "/map"])
+def test_examples_dropdown(browser, path):
+    pg = page(browser, path); pg.wait_for_timeout(1500)
+    pg.click("#exBtn"); assert pg.get_attribute("#exBtn", "aria-expanded") == "true"
+    pg.keyboard.press("Escape"); assert pg.get_attribute("#exBtn", "aria-expanded") == "false"
+    pg.click("#exBtn"); pg.click("#exMenu [role=menuitem] >> nth=3")
+    assert "Water rights" in pg.input_value("#q") and not pg.is_visible("#exMenu")
