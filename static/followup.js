@@ -20,10 +20,11 @@ function ui(){ const c=F.cfg; if(!c) return; const inp=c.input();
   th.style.display=n>1?"":"none";
   th.innerHTML=`<summary class="cursor-pointer px-3 py-2 text-xs uppercase tracking-widest text-indigo-300">Research thread · ${n} question${n>1?"s":""}</summary><ol class="px-4 pb-3 space-y-2">`+F.thread.slice(0,-1).map(x=>`<li><b class="text-slate-100">${esc(x.q)}</b><div class="text-slate-400 text-sm">${esc(x.a)}</div></li>`).join("")+"</ol>";
   ch.innerHTML=n?`<span class="text-xs text-slate-400 self-center">Follow up:</span>`+chips(F.last).map(t=>`<button type="button" class="fuc rounded-full border border-indigo-400/40 bg-indigo-500/10 px-3 py-1 text-sm text-indigo-200 hover:bg-indigo-500/25">${esc(t)}</button>`).join(""):"";
-  ch.querySelectorAll(".fuc").forEach(b=>b.onclick=()=>{ inp.value=b.textContent; c.submit(); });
+  ch.querySelectorAll(".fuc").forEach(b=>b.onclick=()=>{ F.chip=true; inp.value=b.textContent; c.submit(); });
   if(inp){ if(n){ inp.placeholder="Ask a follow-up…"; inp.value=""; } else inp.placeholder=c.placeholder||inp.placeholder; } }
 F.init=cfg=>{ F.cfg=cfg; };
-F.body=q=>F.prev?{question:q,prev_run_id:F.prev}:{question:q};
+F.isFollow=q=>/^(and|but|so|also|what if|what about|how about|then|does (that|this|it)|can (they|i still)|is (that|this|it))\b/i.test(q.trim())||/\b(this|that|it|they|them|those|here|above)\b[?.!]*$/i.test(q.trim());
+F.body=q=>{ const f=F.prev&&(F.chip||F.isFollow(q)); F.chip=false; return f?{question:q,prev_run_id:F.prev}:{question:q}; };
 F.onResult=r=>{ if(!r||!r.run_id||r.run_id===F.prev) return; F.prev=r.run_id; F.last=r; F.thread.push({q:r.question,a:bottom(r.answer)}); ui(); };
 F.reset=()=>{ F.prev=null; F.thread=[]; F.last=null; try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){}
   try{ const D=window.Docs3D; if(D){ D.stopTour&&D.stopTour(); D.closeDoc&&D.closeDoc(); D.show&&D.show([],[],[]); } }catch(e){}
