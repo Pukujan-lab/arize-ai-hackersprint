@@ -52,7 +52,7 @@ function openDoc(c){ panel.classList.remove("hidden"); const E=t=>String(t||"").
  ${q?`<blockquote class="mt-3 text-[13px] leading-relaxed text-slate-200 border-l-2 border-indigo-400/70 pl-3 italic">${E(q)}</blockquote>`:`<div class="mt-3 text-xs text-slate-400">Graph-linked authority (no passage retrieved).</div>`}
  <div class="mt-2">${window.caseLinks?caseLinks(c):""}</div>${c.url?`<a href="${c.url}" target="_blank" rel="noopener" class="text-indigo-300 text-xs underline mt-2 inline-block">Open source ↗</a>`:""}</div>`;
  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const p=document.getElementById("pg"); if(p) p.style.transform="rotateY(0)"; })); }
-api.open=openDoc;
+api.open=openDoc; api.closeDoc=()=>{ panel.classList.add("hidden"); }; addEventListener("keydown",e=>{ if(e.key==="Escape") panel.classList.add("hidden"); });
 const legend=document.createElement("div"); legend.className="absolute top-3 left-4 text-[11px] text-slate-300 space-y-0.5 pointer-events-none";
 legend.innerHTML=`<div class="uppercase tracking-widest text-slate-500">U.S. citation map · Colorado focus</div><div><span style="color:#34d399">━</span> county↔county</div><div><span style="color:#60a5fa">━</span> county → state court</div><div><span style="color:#f59e0b">━</span> case ↔ statute</div><div><span style="color:#f472b6">━</span> federal / out-of-state</div><div id="cnt" class="text-indigo-300 font-semibold"></div>`;
 host.parentElement.appendChild(legend);
@@ -139,7 +139,7 @@ if(!webgl){
     const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:ARC[type],transparent:true,opacity:0.95})); arcGroup.add(line); return {line,n:pts.length,t:0}; }
   const coView=()=>{ lookT.copy(coC); camT.set(coC.x,coC.y-0.28,(host.clientWidth/Math.max(1,host.clientHeight)>1.7?1.25:1.6)); };
   Object.assign(api,{
-    busy(){ mode="busy"; clear(); clearTimeout(tour); label.textContent="Agents retrieving across U.S. and Colorado courts…"; document.getElementById("cnt").textContent="";
+    busy(){ mode="busy"; panel.classList.add("hidden"); panel.innerHTML=""; try{ tip.classList.add("hidden"); api.stopTour&&api.stopTour(); }catch(e){} clear(); clearTimeout(tour); label.textContent="Agents retrieving across U.S. and Colorado courts…"; document.getElementById("cnt").textContent="";
       busyRing=new THREE.Mesh(new THREE.RingGeometry(0.03,0.04,48),new THREE.MeshBasicMaterial({color:0x818cf8,transparent:true,opacity:0.8,side:THREE.DoubleSide}));
       const [x,y]=xy(DENVER); busyRing.position.set(x,y,Z0+0.002); pinGroup.add(busyRing); coView(); },
     show(c0,edges=[],docs=[]){ mode="show"; clear(); const c=c0.concat(docs); cites=c; api._c=c; const g=groups(c); heatCounties(c); const where={}; let seq=0;
