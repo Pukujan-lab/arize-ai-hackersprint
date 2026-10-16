@@ -5,39 +5,39 @@
     "planner": {
       "role": "orchestrator",
       "status": "done",
-      "run_id": "arize-test-164722",
-      "claimed_at": "2026-10-16T16:47:22Z",
-      "released_at": "2026-10-16T16:47:22Z",
+      "run_id": "arize-oi-164801",
+      "claimed_at": "2026-10-16T16:48:01Z",
+      "released_at": "2026-10-16T16:48:01Z",
       "handoff_to": "retriever",
       "summary": "dispatched retriever"
     },
     "retriever": {
       "role": "graph retrieval",
       "status": "done",
-      "run_id": "arize-test-164722",
-      "claimed_at": "2026-10-16T16:47:22Z",
-      "released_at": "2026-10-16T16:47:25Z",
+      "run_id": "arize-oi-164801",
+      "claimed_at": "2026-10-16T16:48:01Z",
+      "released_at": "2026-10-16T16:48:04Z",
       "handoff_to": "answer",
       "summary": "ranked top 8 authorities by citation-weighted PageRank"
     },
     "answer": {
       "role": "cited answer",
       "status": "done",
-      "run_id": "arize-test-164722",
-      "claimed_at": "2026-10-16T16:47:25Z",
-      "released_at": "2026-10-16T16:47:25Z",
+      "run_id": "arize-oi-164801",
+      "claimed_at": "2026-10-16T16:48:04Z",
+      "released_at": "2026-10-16T16:48:04Z",
       "handoff_to": "safeguard",
-      "summary": "answer drafted (225 words)"
+      "summary": "answer drafted (180 words)"
     },
     "safeguard": {
       "role": "eval + citation guard",
       "status": "pass",
-      "run_id": "arize-test-164722",
-      "claimed_at": "2026-10-16T16:47:25Z",
-      "released_at": "2026-10-16T16:47:25Z",
+      "run_id": "arize-oi-164801",
+      "claimed_at": "2026-10-16T16:48:04Z",
+      "released_at": "2026-10-16T16:48:04Z",
       "handoff_to": null,
       "summary": "PASS"
     }
   },
-  "updated_at": "2026-10-16T16:47:25Z"
+  "updated_at": "2026-10-16T16:48:04Z"
 }

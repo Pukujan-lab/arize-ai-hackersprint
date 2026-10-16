@@ -14,7 +14,7 @@ DISCLAIMER = "This is an AI-generated research summary, not legal advice. Verify
 
 def retriever(run, question):
     A = "retriever"; run.claim(A, "graph retrieval")
-    with tracing.span("retriever", question=question):
+    with tracing.span("retriever", question=question) as _sp:
         g = graph(); seeds, qt = g.seeds(question, k=10)
         cases = [s for s in seeds if g.info(s)["type"] == "caselaw"][:3]
         seeds = (cases + [s for s in seeds if s not in cases])[:6]
@@ -59,6 +59,10 @@ def retriever(run, question):
         except Exception: docs = []
         keep = set(top) | set(seeds)
         sub = [{"src": a, "dst": b} for a, b in edges if a in keep and b in keep]
+        tracing.oi(_sp, openinference__span__kind="RETRIEVER", input__value=question, output__value=f"{len(cites)} authorities, {len(sub)} graph edges, passages={psrc}")
+        for _i, _c in enumerate(cites[:10]):
+            tracing.oi(_sp, **{f"retrieval__documents__{_i}__document__id": str(_c.get("id")), f"retrieval__documents__{_i}__document__content": (_c.get("title","") + " — " + (_c.get("passage") or ""))[:1500],
+                              f"retrieval__documents__{_i}__document__score": float(_c.get("score") or (10 - _i)), f"retrieval__documents__{_i}__document__metadata": {"ref": _c.get("ref"), "court": _c.get("court"), "date": _c.get("date"), "type": _c.get("type")}})
         run.release(A, handoff_to="answer", summary=f"ranked top {len(cites)} authorities by citation-weighted PageRank")
     return {"citations": cites, "edges": sub, "seeds": seeds, "passage_source": psrc, "documents": docs}
 
@@ -76,7 +80,7 @@ def template_answer(question, cites):
 
 def answer(run, question, ret):
     A = "answer"; run.claim(A, "cited answer")
-    with tracing.span("answer"):
+    with tracing.span("answer") as _sp:
         cites = ret["citations"]
         ctx = "\n".join(f"{c['ref']} {c['title']} ({c['type']}, {c['court']} {c['date']}, cited by {c['cited_by']})" + (f"\n   passage: {_clip(c['passage'], 350)}" if c.get("passage") else "") for c in cites)
         sys_p = ("You are a legal research associate writing a brief internal research memo for attorneys. Professional memo tone; state holdings precisely and note jurisdiction. Use ONLY the numbered authorities given; cite them as [n]; never cite anything else. "
@@ -84,13 +88,17 @@ def answer(run, question, ret):
                  "### Key authorities\n- **Case or statute name** [n] - \"one short quote from its passage\"\n(3-4 bullets)\n\n"
                  "### Caveat\nOne sentence on limits (jurisdiction, facts, verify).")
         text, provider = complete(sys_p, f"Question: {question}\nAuthorities:\n{ctx}", 400, lambda: template_answer(question, cites))
+        tracing.oi(_sp, openinference__span__kind="LLM", llm__model_name="claude-haiku-4-5", llm__provider="anthropic", llm__system="anthropic", llm__invocation_parameters={"max_tokens": 400},
+                   llm__input_messages__0__message__role="system", llm__input_messages__0__message__content=sys_p, llm__input_messages__1__message__role="user", llm__input_messages__1__message__content=f"Question: {question}\nAuthorities:\n{ctx}"[:4000],
+                   llm__output_messages__0__message__role="assistant", llm__output_messages__0__message__content=text, input__value=question, output__value=text, metadata={"provider": provider},
+                   llm__token_count__prompt=int(len((sys_p+ctx+question).split())*1.3), llm__token_count__completion=int(len(text.split())*1.3))
         run.event(A, "draft", f"drafted answer via {provider}", provider=provider)
         run.release(A, handoff_to="safeguard", summary=f"answer drafted ({len(text.split())} words)")
     return {"text": text, "provider": provider}
 
 def safeguard(run, question, ret, ans):
     A = "safeguard"; run.claim(A, "eval + citation guard")
-    with tracing.span("safeguard"):
+    with tracing.span("safeguard") as _sp:
         cites = ret["citations"]; valid = {c["ref"] for c in cites}; text = ans["text"]
         def check_refs():
             used = set(re.findall(r"\[\d+\]", text)); bad = sorted(used - valid); return used, bad
@@ -111,6 +119,12 @@ def safeguard(run, question, ret, ans):
         passed = not bad and not unknown and bool(used)
         run.event(A, "checks", f"{len(used)} citations used, {len(bad)} invalid refs, {len(unknown)} unknown authorities, {len(unsupported)} uncited claims",
                   used=sorted(used), invalid=bad, unknown=unknown, unsupported=unsupported)
+        _sent = max(1, len([x for x in text.replace("\n", " ").split(". ") if len(x.split()) > 4])); _g = round(max(0.0, 1 - len(unsupported) / _sent), 3)
+        tracing.oi(_sp, openinference__span__kind="GUARDRAIL", input__value=text, output__value="PASS" if passed else "FAIL",
+                   eval__citation_guard__label="pass" if passed else "fail", eval__citation_guard__score=1.0 if passed else 0.0,
+                   eval__citation_guard__explanation=f"{len(used)} cites used; invalid={bad}; unknown={unknown}",
+                   eval__groundedness__label="grounded" if _g >= 0.7 else "partially_grounded", eval__groundedness__score=_g,
+                   eval__groundedness__explanation=f"{len(unsupported)} of ~{_sent} sentences lack a retrieved citation (heuristic, no LLM call)")
         run.release(A, status="pass" if passed else "fail", summary="PASS" if passed else "FAIL")
     return {"pass": passed, "used": sorted(used), "invalid": bad, "unknown_authorities": unknown,
             "unsupported_claims": unsupported, "disclaimer": DISCLAIMER}
@@ -119,8 +133,9 @@ def run_pipeline(question, run_id=None):
     run = Run(run_id or time.strftime("%H%M%S-") + uuid.uuid4().hex[:6]); t0 = time.time()
     run.claim("planner", "orchestrator"); run.event("planner", "plan", "plan: retrieve -> answer -> safeguard", question=question)
     run.release("planner", handoff_to="retriever", summary="dispatched retriever")
-    with tracing.span("pipeline", question=question):
+    with tracing.span("pipeline", question=question) as _sp:
         ret = retriever(run, question); ans = answer(run, question, ret); sg = safeguard(run, question, ret, ans)
+        tracing.oi(_sp, input__value=question, output__value=ans["text"], session__id=run.id, metadata={"run_id": run.id, "safeguard": "PASS" if sg["pass"] else "FAIL", "provider": ans["provider"]})
     res = {"run_id": run.id, "question": question, "answer": ans["text"], "provider": ans["provider"], "safeguard": sg,
            "citations": ret["citations"], "edges": ret["edges"], "seeds": ret["seeds"], "backend": graph().backend,
            "elapsed_s": round(time.time() - t0, 2), "passage_source": ret.get("passage_source"), "documents": ret.get("documents", [])}

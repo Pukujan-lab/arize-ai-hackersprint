@@ -21,3 +21,10 @@ def span(name, **attrs):
         s.set_attribute("openinference.span.kind", "AGENT" if name != "pipeline" else "CHAIN")
         for k, v in attrs.items(): s.set_attribute(k, str(v))
         yield s
+def oi(s, **kv):
+    """Set OpenInference attributes on a span (no-op when tracing is off). Keys use __ for dots."""
+    if not s: return
+    import json as _j
+    for k, v in kv.items():
+        try: s.set_attribute(k.replace("__", "."), v if isinstance(v, (int, float, bool, str)) else _j.dumps(v)[:4000])
+        except Exception: pass
