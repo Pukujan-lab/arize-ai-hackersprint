@@ -1,0 +1,58 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Precedent · Observability</title>
+<script src="/static/vendor/logos.js"></script><script src="/static/partners.js"></script>
+<style>*{box-sizing:border-box}body{margin:0;background:#0a0a0b;color:#ededed;font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:15px;line-height:1.5}
+a{color:inherit;text-decoration:none}.nav{position:sticky;top:0;z-index:5;display:flex;gap:28px;align-items:center;height:56px;padding:0 40px;border-bottom:1px solid #1f1f22;background:rgba(10,10,11,.85);backdrop-filter:blur(8px)}.nav a{color:#a1a1aa;font-size:14px}.nav a.on,.nav a:hover{color:#fff}
+.wrap{max-width:1200px;margin:0 auto;padding:32px 40px}h1{font-size:38px;letter-spacing:-.03em;margin:0 0 6px}h2{font-size:20px;margin:0 0 12px}.s{color:#8f8f95;font-size:13px}
+.card{background:#111113;border:1px solid #1f1f22;border-radius:16px;padding:22px;margin-top:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:20px}.kpi{background:#111113;border:1px solid #1f1f22;border-radius:14px;padding:16px}.kpi b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
+table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:8px 6px;border-top:1px solid #1f1f22;text-align:left;vertical-align:top}th{color:#8f8f95;font-weight:500}
+tr.r{cursor:pointer}tr.r:hover{background:#16161a}.bar{height:8px;border-radius:4px;background:#222;width:90px;overflow:hidden;margin-top:3px}.bar i{display:block;height:100%}
+.ex{display:none;background:#0d0d10}.ex.open{display:table-row}.ex div{margin:4px 0;color:#c4c4c8}
+.wf{position:relative}.wrow{display:grid;grid-template-columns:260px 1fr;gap:10px;align-items:center;font-size:12px;padding:3px 0}.track{position:relative;height:18px;background:#141417;border-radius:4px}.track i{position:absolute;top:2px;height:14px;border-radius:3px;min-width:2px}
+select{background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8px;padding:6px;max-width:100%}
+.lbl{font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid #2a2a2e}</style></head><body>
+<nav class="nav"><b>⚖ Precedent</b><a href="/">Demo</a><a href="/map">Map</a><a href="/dashboard">Dashboards</a><a href="/slides">Slides</a><a href="/guide">Guide</a><a href="/observability" class="on">Observability</a></nav>
+<div class="wrap"><div class="s" style="text-transform:uppercase;letter-spacing:.08em">Arize snapshot · project <span id="proj"></span></div><h1>Observability</h1>
+<div class="s">Traces, LLM-as-judge evals and experiments exported from Arize, embedded here so you can inspect them without an account.</div>
+<div class="kpis" id="kpis"></div>
+<div class="card"><h2>Judge evals per trace</h2><div class="s" style="margin-bottom:8px">Click a row for the judge's explanations.</div><table id="ev"></table></div>
+<div class="card"><h2>Trace waterfall</h2><select id="sel"></select><div class="wf" id="wf" style="margin-top:14px"></div></div>
+<div class="card" id="dx"></div>
+<div class="s" id="foot" style="margin:24px 0"></div></div>
+<script>
+const J=["groundedness","hallucination","citation_relevance","legal_safety"];
+const el=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k=="style")e.style.cssText=a[k];else if(k=="class")e.className=a[k];else e[k]=a[k];}c.forEach(x=>e.append(x instanceof Node?x:document.createTextNode(x??"")));return e;};
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null, p95=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.ceil(.95*s.length)-1)];};
+const f=(x,d=2)=>x==null?"–":(+x).toFixed(d), ms=x=>x==null?"–":(x>=1000?(x/1000).toFixed(2)+" s":Math.round(x)+" ms");
+const good=(j,e)=>e&&e.label?(j=="hallucination"?e.label!="hallucinated":["grounded","relevant","safe","factual"].includes(e.label)):null;
+const col={LLM:"#d97757",RETRIEVER:"#ff00a0",CHAIN:"#6366f1",TOOL:"#f59e0b",AGENT:"#22d3a6",GUARDRAIL:"#22d3a6"};
+Promise.all([fetch("/static/data/observability.json").then(r=>r.json()),fetch("/api/runs").then(r=>r.json()).catch(()=>null)]).then(([d,runs])=>{
+ document.getElementById("proj").textContent=d.project;
+ let R=Array.isArray(runs)?runs:(runs&&(runs.runs||runs.items))||[];
+ const lat=R.map(r=>r.latency_ms??(r.latency_s!=null?r.latency_s*1000:(r.latency!=null?r.latency*1000:null))).filter(x=>x!=null&&!isNaN(x));
+ const sg=R.map(r=>r.safeguard??r.citation_pass??r.safeguard_pass).filter(x=>x!=null).map(x=>typeof x=="object"?!!(x.pass??x.ok??x.passed):!!x);
+ const T=d.traces, tl=T.map(t=>t.latency_ms).filter(x=>x);
+ const L=lat.length?lat:tl, src=lat.length?"app /api/runs":"Arize traces";
+ const tsg=T.map(t=>t.safeguard).filter(x=>x!=null); const S=sg.length?sg:tsg;
+ const k=[["Runs (app)",R.length||"–"],["Traces in snapshot",T.length],["Safeguard pass",S.length?Math.round(100*S.filter(Boolean).length/S.length)+"%":"–"],["Avg latency",ms(avg(L))],["p95 latency",ms(p95(L))]];
+ J.forEach(j=>k.push(["Avg "+j.replace("_"," "),f(avg(T.map(t=>t.evals[j]?.score).filter(x=>x!=null)))]));
+ const K=document.getElementById("kpis");k.forEach(([a,b])=>K.append(el("div",{class:"kpi"},el("span",{class:"s"},a),el("b",{},String(b)))));
+ K.append(el("div",{class:"s",style:"grid-column:1/-1"},"Latency source: "+src+". Hallucination score: 1 = hallucinated (lower is better)."));
+ const E=document.getElementById("ev");E.append(el("tr",{},el("th",{},"Question"),el("th",{},"Latency"),...J.map(j=>el("th",{},j.replace("_"," ")))));
+ T.forEach((t,i)=>{const tr=el("tr",{class:"r"},el("td",{},t.question||t.trace_id),el("td",{},ms(t.latency_ms)));
+  J.forEach(j=>{const e=t.evals[j]||{},g=good(j,e),c=g==null?"#555":g?"#22d3a6":"#f87171";tr.append(el("td",{},el("span",{class:"lbl",style:"color:"+c+";border-color:"+c},e.label||"n/a")," ",f(e.score),el("div",{class:"bar"},el("i",{style:"width:"+(100*(e.score||0))+"%;background:"+c}))));});
+  const ex=el("tr",{class:"ex"},el("td",{colSpan:6},...J.map(j=>el("div",{},el("b",{},j+": "),(t.evals[j]||{}).explanation||"—")),el("div",{class:"s"},"trace "+t.trace_id+" · model "+(t.model||"–")+" · tokens "+(t.tokens||"–"))));
+  tr.onclick=()=>ex.classList.toggle("open");E.append(tr,ex);});
+ const sel=document.getElementById("sel");T.forEach((t,i)=>sel.append(el("option",{value:i},(t.start_time||"").slice(11,19)+" UTC · "+(t.question||t.trace_id).slice(0,90))));
+ const draw=()=>{const t=T[sel.value],W=document.getElementById("wf");W.replaceChildren();const sp=t.spans,end=Math.max(1,...sp.map(s=>s.start_ms+s.dur_ms));
+  const depth={};const byId=Object.fromEntries(sp.map(s=>[s.id,s]));const dep=s=>{let n=0,p=s.parent;while(p&&byId[p]&&n<8){n++;p=byId[p].parent;}return n;};
+  sp.forEach(s=>{const c=col[s.kind]||"#8f8f95";W.append(el("div",{class:"wrow"},el("div",{style:"padding-left:"+dep(s)*12+"px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"},el("b",{},s.name)," ",el("span",{class:"s"},[s.kind,s.model,s.tokens?s.tokens+" tok":null,ms(s.dur_ms)].filter(Boolean).join(" · "))),
+   el("div",{class:"track"},el("i",{style:"left:"+(100*s.start_ms/end)+"%;width:"+(100*s.dur_ms/end)+"%;background:"+c}))));});};
+ sel.onchange=draw;if(T.length)draw();
+ const ds=d.dataset||{},xp=d.experiment||{},D=document.getElementById("dx");D.append(el("h2",{},"Dataset & experiment"),
+  el("div",{},el("b",{},"Dataset: "),ds.name+" · "+(ds.rows??"?")+" rows · columns: "+(ds.columns||[]).join(", ")),
+  el("div",{style:"margin-top:6px"},el("b",{},"Experiment: "),xp.name+(xp.examples?" · "+xp.examples+" runs · metric "+xp.metric:"")));
+ if(xp.by_setting){const tb=el("table",{style:"margin-top:8px;max-width:500px"},el("tr",{},el("th",{},"Setting"),el("th",{},"Avg "+xp.metric)));Object.entries(xp.by_setting).forEach(([a,b])=>tb.append(el("tr",{},el("td",{},a),el("td",{},f(b,3)))));D.append(tb);}
+ document.getElementById("foot").textContent="Snapshot from Arize at "+new Date(d.generated_at).toLocaleString("en-US",{timeZone:"America/New_York"})+" ET; evaluator: deepseek-v4.1-flash via InferHub.";
+}).catch(e=>document.getElementById("kpis").textContent="Failed to load snapshot: "+e);
+</script><script src="/static/navbar.js"></script></body></html>

@@ -221,6 +221,8 @@ def sponsor():
 
 @app.get("/map", response_class=HTMLResponse)
 def map_page(): return (ROOT / "static" / "map.html").read_text()
+@app.get("/observability", response_class=HTMLResponse)
+def observability_page(): return (ROOT / "static" / "observability.html").read_text()
 @app.get("/api/runs")
 def runs_list(n: int = 15):
     out = []

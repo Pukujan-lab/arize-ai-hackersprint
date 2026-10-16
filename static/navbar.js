@@ -365,6 +365,10 @@
       return;
     }
 
+    // Observability link
+    const nv=document.querySelector('nav');
+    if(nv && !nv.querySelector('a[href="/observability"]')){const g=nv.querySelector('a[href="/guide"]');const o=document.createElement('a');o.href='/observability';o.textContent='Observability';if(location.pathname==='/observability')o.className='on';g?g.after(o):nv.appendChild(o);}
+
     // Fix navbar layout
     fixNavbarLayout();
 
