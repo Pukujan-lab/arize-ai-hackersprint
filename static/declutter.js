@@ -127,6 +127,25 @@
     return details;
   }
 
+  // Newest first, collapse duplicate questions (keep newest), cap 20
+  function normalizeRuns(runs) {
+    if (!Array.isArray(runs)) return [];
+    const sorted = runs.slice().sort((a, b) => String(b.ts || '').localeCompare(String(a.ts || '')));
+    const seen = new Set(), out = [];
+    for (const r of sorted) {
+      const k = (r.question || '').trim().toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k); out.push(r);
+      if (out.length >= 20) break;
+    }
+    return out;
+  }
+  if (!document.getElementById('run-history-style')) {
+    const st = document.createElement('style'); st.id = 'run-history-style';
+    st.textContent = '.run-history-list{max-height:50vh;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:#334155 transparent}.run-history-list::-webkit-scrollbar{width:6px}.run-history-list::-webkit-scrollbar-track{background:transparent}.run-history-list::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}.run-history-list::-webkit-scrollbar-thumb:hover{background:#475569}';
+    document.head.appendChild(st);
+  }
+
   // Fetch and render run history
   async function createRunHistory() {
     const container = document.createElement('div');
@@ -134,26 +153,24 @@
     container.innerHTML = '<div class="text-slate-400 text-center py-2">Loading…</div>';
 
     try {
-      const resp = await fetch('/api/runs?n=10');
+      const resp = await fetch('/api/runs?n=60');
       if (!resp.ok) throw new Error('Failed to fetch runs');
-      const runs = await resp.json();
+      const runs = normalizeRuns(await resp.json());
 
       if (!runs || runs.length === 0) {
         container.innerHTML = '<div class="text-slate-500 text-center py-2">No runs yet</div>';
         return container;
       }
 
-      container.innerHTML = runs.map(run => {
-        const ts = run.ts ? new Date(run.ts).toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }) : '';
+      container.className = 'run-history-list space-y-2 text-xs';
+      container.innerHTML = runs.map((run, i) => {
+        const id = run.run_id || run.id || '';
+        const ts = run.ts ? new Date(run.ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+        const label = id ? String(id).split('-').pop() : (ts || String(i + 1));
         const question = (run.question || 'Untitled').slice(0, 60);
         return `
-          <a href="/map?run=${run.id}" class="block glass rounded-lg p-2 hover:bg-white/10 transition-colors">
-            <div class="text-indigo-300 font-mono">#${run.id}</div>
+          <a href="/map${id ? `?run=${encodeURIComponent(id)}` : ''}" class="block glass rounded-lg p-2 hover:bg-white/10 transition-colors">
+            <div class="text-indigo-300 font-mono">#${escapeHtml(label)}</div>
             <div class="text-slate-300 mt-1">${escapeHtml(question)}</div>
             ${ts ? `<div class="text-slate-500 mt-1">${ts}</div>` : ''}
           </a>
