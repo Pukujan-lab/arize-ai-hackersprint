@@ -12,12 +12,13 @@ def graph():
     return _G
 DISCLAIMER = "This is an AI-generated research summary, not legal advice. Verify all authorities and consult a licensed attorney."
 
-def retriever(run, question):
+def retriever(run, question, extra_seeds=None):
     A = "retriever"; run.claim(A, "graph retrieval")
     with tracing.span("retriever", question=question) as _sp:
         g = graph(); seeds, qt = g.seeds(question, k=10)
         cases = [s for s in seeds if g.info(s)["type"] == "caselaw"][:3]
         seeds = (cases + [s for s in seeds if s not in cases])[:6]
+        if extra_seeds: seeds = seeds[:5] + [x for x in extra_seeds if x not in seeds][:2]   # follow-up: reuse prior authorities
         passages, psrc = ([], None)
         if os.environ.get("USE_OCTO", "1") == "1":
             try:
@@ -80,7 +81,7 @@ def template_answer(question, cites):
     out += ["", "### Caveat", "Template summary (offline mode) built only from retrieved authorities; verify against the full opinions."]
     return "\n".join(out)
 
-def answer(run, question, ret):
+def answer(run, question, ret, prior=None):
     A = "answer"; run.claim(A, "cited answer")
     with tracing.span("answer") as _sp:
         cites = ret["citations"]
@@ -89,7 +90,8 @@ def answer(run, question, ret):
                  "Reply in short Markdown, <=150 words, exactly this shape:\n**Short answer:** one or two sentences with [n] cites.\n\n"
                  "### Key authorities\n- **Case or statute name** [n] - \"one short quote from its passage\"\n(3-4 bullets)\n\n"
                  "### Caveat\nOne sentence on limits (jurisdiction, facts, verify).")
-        text, provider = complete(sys_p, f"Question: {question}\nAuthorities:\n{ctx}", 400, lambda: template_answer(question, cites))
+        umsg = (f"Earlier question: {prior[0]}\nEarlier bottom line: {prior[1]}\nFollow-up question (answer this, using the earlier context): " if prior else "Question: ") + f"{question}\nAuthorities:\n{ctx}"
+        text, provider = complete(sys_p, umsg, 400, lambda: template_answer(question, cites))
         tracing.oi(_sp, openinference__span__kind="LLM", llm__model_name="claude-haiku-4-5", llm__provider="anthropic", llm__system="anthropic", llm__invocation_parameters={"max_tokens": 400},
                    llm__input_messages__0__message__role="system", llm__input_messages__0__message__content=sys_p, llm__input_messages__1__message__role="user", llm__input_messages__1__message__content=f"Question: {question}\nAuthorities:\n{ctx}"[:4000],
                    llm__output_messages__0__message__role="assistant", llm__output_messages__0__message__content=text, input__value=question, output__value=text, metadata={"provider": provider},
@@ -131,14 +133,26 @@ def safeguard(run, question, ret, ans):
     return {"pass": passed, "used": sorted(used), "invalid": bad, "unknown_authorities": unknown,
             "unsupported_claims": unsupported, "disclaimer": DISCLAIMER}
 
-def run_pipeline(question, run_id=None):
+def _bottom_line(a):
+    import re as _re
+    m = _re.search(r"(?:short answer|bottom line)[:*\s]*(.+)", a or "", _re.I)
+    t = (m.group(1) if m else (a or ""))
+    return _re.sub(r"\*\*|\[\d+\]|[*#>`]", "", t).strip()[:300]
+
+def run_pipeline(question, run_id=None, prev=None):
     run = Run(run_id or time.strftime("%H%M%S-") + uuid.uuid4().hex[:6]); t0 = time.time()
     run.claim("planner", "orchestrator"); run.event("planner", "plan", "plan: retrieve -> answer -> safeguard", question=question)
+    prior = None; query = question; session = run.id; extra = None
+    if prev:
+        prior = (prev.get("question", ""), _bottom_line(prev.get("answer", ""))); session = prev.get("session_id") or prev.get("run_id") or run.id
+        query = f"{question} — in context of: {prior[0]}"; extra = [c.get("id") or c.get("node") for c in prev.get("citations", []) if c.get("ref")] or prev.get("seeds", [])
+        extra = [x for x in extra if x]
+        run.event("planner", "rewrite", f"follow-up rewritten to standalone query: {query[:160]}", question=query)
     run.release("planner", handoff_to="retriever", summary="dispatched retriever")
     with tracing.span("pipeline", question=question) as _sp:
-        ret = retriever(run, question); ans = answer(run, question, ret); sg = safeguard(run, question, ret, ans)
-        tracing.oi(_sp, input__value=question, output__value=ans["text"], session__id=run.id, metadata={"run_id": run.id, "safeguard": "PASS" if sg["pass"] else "FAIL", "provider": ans["provider"]})
-    res = {"run_id": run.id, "question": question, "answer": ans["text"], "provider": ans["provider"], "safeguard": sg,
+        ret = retriever(run, query, extra); ans = answer(run, question, ret, prior); sg = safeguard(run, question, ret, ans)
+        tracing.oi(_sp, input__value=question, output__value=ans["text"], session__id=session, metadata={"run_id": run.id, "prev_run_id": (prev or {}).get("run_id"), "followup": bool(prev), "safeguard": "PASS" if sg["pass"] else "FAIL", "provider": ans["provider"]})
+    res = {"run_id": run.id, "question": question, "session_id": session, "prev_run_id": (prev or {}).get("run_id"), "standalone_query": query if prev else None, "answer": ans["text"], "provider": ans["provider"], "safeguard": sg,
            "citations": ret["citations"], "edges": ret["edges"], "seeds": ret["seeds"], "backend": graph().backend,
            "elapsed_s": round(time.time() - t0, 2), "passage_source": ret.get("passage_source"), "documents": ret.get("documents", [])}
     (run.dir / "result.json").write_text(json.dumps(res, indent=2))

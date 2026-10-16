@@ -160,7 +160,7 @@ if(!webgl){
     order(){ return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0]).filter(x=>x[1]>0).sort((a,b)=>a[1]-b[1]).map(x=>x[0]); },
     tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; tbtn.textContent="❚❚ Pause";
       if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.textContent="▶ Tour"; return; }
-      const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.textContent="▶ Tour"; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,Math.max(2600,ms+1200)); }),a]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
+      const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.textContent="▶ Tour"; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,a?600:Math.max(2600,ms+1200)); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
     replay(){ if(cur>=0) typeOut(cur); },
     stopTour(){ touring=false; clearTimeout(tour); try{curAudio&&curAudio.pause();}catch(e){} tbtn.textContent="▶ Tour"; },
     fit(){ const fed=pins.some(p=>p.userData.G.cat==="federal"); if(fed){ camT.copy(homeCam); lookT.copy(homeLook); } else coView(); },
@@ -171,7 +171,7 @@ if(!webgl){
   let touring=false, tpos=0; const tbar=document.createElement("div"); tbar.className="absolute bottom-10 right-4 z-20 flex gap-1 text-xs";
   const mk=(t,f)=>{ const b=document.createElement("button"); b.textContent=t; b.className="px-2.5 py-1 rounded-full bg-slate-900/70 border border-indigo-400/40 text-slate-200 hover:bg-indigo-600/60"; b.onclick=e=>{e.stopPropagation();f();}; tbar.appendChild(b); return b; };
   mk("◀",()=>{ api.stopTour(); const O=api.order(); tpos=Math.max(0,tpos-1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
-  const vbtn=mk(api.voice?"🔊":"🔇",()=>{ api.voice=!api.voice; try{localStorage.setItem("mapVoice",api.voice?"1":"0");}catch(e){} vbtn.textContent=api.voice?"🔊":"🔇"; if(!api.voice&&curAudio) curAudio.pause(); }); vbtn.title="Speak tour stops (ElevenLabs, cached)";
+  if(window.AudioMgr&&AudioMgr.isMuted()) api.voice=false; const vbtn=mk(api.voice?"🔊":"🔇",()=>{ const on=!api.voice; if(window.AudioMgr) AudioMgr.setMuted(!on); else { try{curAudio&&curAudio.pause();}catch(e){} } api.voice=on; vbtn.textContent=on?"🔊":"🔇"; vbtn.title=on?"Mute (Esc stops audio)":"Unmute"; }); document.addEventListener("precedent:mute",e=>{ api.voice=!e.detail; vbtn.textContent=api.voice?"🔊":"🔇"; }); vbtn.title="Speak tour stops (ElevenLabs, cached)";
   const tbtn=mk("▶ Tour",()=>{ touring?api.stopTour():api.tour(0); });
   mk("▶",()=>{ api.stopTour(); const O=api.order(); tpos=Math.min(O.length-1,tpos+1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
   host.parentElement.appendChild(tbar);
@@ -209,11 +209,26 @@ if(!webgl){
       if(l) rel=l.replace(/\*\*|[*#>`]/g,"").replace(/\[\d+\]/g,"").replace(/^\s*[-•]\s*/,"").replace(/^short answer:?/i,"").replace(/\s+/g," ").trim(); }
     return {sum, rel: rel?"Relevant because: "+rel:""}; }
   let curAudio=null; api.voice=(()=>{ try{ return localStorage.getItem("mapVoice")==="1"; }catch(e){ return false; } })();
-  function sayTTS(text){ if(!api.voice) return Promise.resolve(); return fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.ok?r.blob():null).then(b=>{ if(!b) return; try{curAudio&&curAudio.pause();}catch(e){} curAudio=new Audio(URL.createObjectURL(b)); return new Promise(res=>{ curAudio.onended=res; curAudio.onerror=res; curAudio.play().catch(res); }); }).catch(()=>{}); }
-  function typeOut(k){ clearInterval(trT); const {sum,rel}=explain(k); const full=`<button title="Replay" onclick="Docs3D.replay()" style="float:right;margin-left:8px;color:#a5b4fc">↻</button><b style="color:#a5b4fc">${(cites[k]||{}).ref||""}</b> `; const txt=sum+(rel?"\n"+rel:""); api._audio=sayTTS(txt.replace("\n"," "));
-    tr.classList.remove("hidden"); let n=0; const esc=t=>t.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;");
-    trT=setInterval(()=>{ n+=1; tr.innerHTML=full+esc(txt.slice(0,n)).replace("\n","<br><span style='color:#6ee7b7'>")+(n<txt.length?"<span class='animate-pulse'>▍</span>":""); if(n>=txt.length) clearInterval(trT); },30);
-    return txt.length*30; }
+  let sync=null; // {a:Audio, starts:[...]} for the stop currently speaking
+  function sayTTS(text){ if(!api.voice||(window.AudioMgr&&AudioMgr.isMuted())) return null;
+    const S={a:null,starts:[],dead:false}; sync=S;
+    S.done=fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.ok&&r.status!==204?r.json():null).then(j=>{ if(!j||!j.audio_b64||S.dead) return;
+      try{curAudio&&curAudio.pause();}catch(e){}
+      const bin=atob(j.audio_b64), u8=new Uint8Array(bin.length); for(let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
+      curAudio=new Audio(URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"}))); S.a=curAudio; S.starts=j.starts||[];
+      return new Promise(res=>{ curAudio.onended=res; curAudio.onerror=res; curAudio.play().catch(res); }); }).catch(()=>{}).finally(()=>{ S.ended=true; });
+    return S; }
+  function typeOut(k){ clearInterval(trT); cancelAnimationFrame(api._raf||0); if(sync) sync.dead=true; const {sum,rel}=explain(k); const full=`<button title="Replay" onclick="Docs3D.replay()" style="float:right;margin-left:8px;color:#a5b4fc">↻</button><b style="color:#a5b4fc">${(cites[k]||{}).ref||""}</b> `; const txt=sum+(rel?"\n"+rel:"");
+    tr.classList.remove("hidden"); const esc=t=>t.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;");
+    const paint=n=>{ tr.innerHTML=full+esc(txt.slice(0,n)).replace("\n","<br><span style='color:#6ee7b7'>")+(n<txt.length?"<span class='animate-pulse'>▍</span>":""); };
+    const S=sayTTS(txt.replace("\n"," "));
+    if(!S){ api._audio=null; let n=0; trT=setInterval(()=>{ n+=1; paint(n); if(n>=txt.length) clearInterval(trT); },30); return txt.length*30; }
+    api._audio=S.done; api._sync=S; let last=-1;
+    const tick=()=>{ if(S.dead) return; let n=0; const a=S.a;
+      if(S.ended) n=txt.length;
+      else if(a&&a.duration){ const t=a.currentTime; if(S.starts.length){ while(n<S.starts.length&&S.starts[n]<=t) n++; if(n>=S.starts.length&&a.ended) n=txt.length; } else n=Math.round(t/a.duration*txt.length); }
+      if(n!==last){ paint(n); last=n; } if(n<txt.length) api._raf=requestAnimationFrame(tick); };
+    tick(); return 0; }
   coView(); cam.position.copy(camT); look.copy(lookT); cam.lookAt(look);
   R.domElement.style.cursor="pointer";
   R.domElement.addEventListener("mousemove",ev=>{ const now=performance.now(); if(now-hovT<40) return; hovT=now; const _co=countyAt(ev); const esc=t=>String(t||"").replace(/</g,"&lt;"); const r0=host.parentElement.getBoundingClientRect();

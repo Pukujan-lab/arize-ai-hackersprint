@@ -1,3 +1,4 @@
+import re, json
 import os, json, time, uuid, threading, pathlib, httpx
 from fastapi import FastAPI, Body
 from fastapi.responses import HTMLResponse, Response, JSONResponse
@@ -22,16 +23,19 @@ _recent_q = {}
 def ask(request: Request, q: dict = Body(...)):
     question = " ".join(str(q.get("question", "")).split())[:500]
     if len(question) < 3: return JSONResponse({"error": "empty question"}, 400)
-    key = question.lower().strip(" ?.!")
-    prev = _recent_q.get(key)
-    if prev and time.time() - prev[1] < 600 and (ROOT / "runs" / prev[0] / "result.json").exists():
-        return {"run_id": prev[0], "deduped": True}          # identical question: reuse the finished run
+    prev_id = str(q.get("prev_run_id") or "")[:40]; prev = None
+    if prev_id and re.fullmatch(r"[\w-]+", prev_id) and (ROOT / "runs" / prev_id / "result.json").exists():
+        prev = json.loads((ROOT / "runs" / prev_id / "result.json").read_text())
+    key = question.lower().strip(" ?.!") + ("|" + prev_id if prev else "")
+    dd = _recent_q.get(key)
+    if dd and time.time() - dd[1] < 600 and (ROOT / "runs" / dd[0] / "result.json").exists():
+        return {"run_id": dd[0], "deduped": True}          # identical question: reuse the finished run
     ip = request.headers.get("x-forwarded-for", request.client.host if request.client else "?").split(",")[0].strip()
     if not limits.ip_ok(ip): return JSONResponse({"error": "rate limited: max %d questions/min, slow down" % limits.PER_IP_PER_MIN}, 429)
     if not limits.run_lock.acquire(blocking=False): return JSONResponse({"error": "busy, try again in a few seconds"}, 429)
     rid = time.strftime("%H%M%S-") + uuid.uuid4().hex[:6]
     def job():
-        try: _run_and_log(question, rid); _recent_q[key] = (rid, time.time())
+        try: _run_and_log(question, rid, prev); _recent_q[key] = (rid, time.time())
         finally: limits.run_lock.release()
     threading.Thread(target=job, daemon=True).start()
     return {"run_id": rid}
@@ -57,8 +61,32 @@ def tts(q: dict = Body(...)):
     if r.status_code != 200: return JSONResponse({"error": r.text[:200]}, 502)
     f.write_bytes(r.content); return Response(r.content, media_type="audio/mpeg", headers={"X-TTS-Cache": "miss"})
 
-def _run_and_log(question, rid):
-    r = agents.run_pipeline(question, rid); sg = r["safeguard"]
+@app.post("/api/tts_ts")
+def tts_ts(q: dict = Body(...)):
+    """TTS with character alignment (ElevenLabs /with-timestamps), cached as JSON next to the mp3 cache."""
+    import hashlib, base64, json as _j, stats
+    key = os.environ.get("ELEVENLABS_API_KEY")
+    text = q["text"][:400]; h = hashlib.sha256(text.encode()).hexdigest()[:24]
+    d = ROOT / "cache" / "tts"; d.mkdir(parents=True, exist_ok=True); fj = d / (h + ".align.json"); fm = d / (h + ".mp3")
+    if fj.exists():
+        stats.bump("tts_cache_hits"); return _j.loads(fj.read_text())
+    if key and limits.take("elevenlabs_tts"):
+        voice = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
+        try:
+            r = httpx.post(f"https://api.elevenlabs.io/v1/text-to-speech/{voice}/with-timestamps", timeout=60, headers={"xi-api-key": key},
+                           json={"text": text, "model_id": "eleven_flash_v2_5"})
+            if r.status_code == 200:
+                j = r.json(); al = j.get("alignment") or {}
+                out = {"audio_b64": j["audio_base64"], "chars": al.get("characters", []), "starts": al.get("character_start_times_seconds", []), "cache": "miss"}
+                stats.bump("tts_calls"); fm.write_bytes(base64.b64decode(j["audio_base64"]))
+                fj.write_text(_j.dumps(dict(out, cache="hit"))); return out
+        except Exception: pass
+    if fm.exists():   # cached audio without alignment -> client paces by currentTime/duration
+        return {"audio_b64": base64.b64encode(fm.read_bytes()).decode(), "chars": [], "starts": [], "cache": "audio-only"}
+    return JSONResponse({"error": "tts unavailable", "fallback": "browser"}, 429)
+
+def _run_and_log(question, rid, prev=None):
+    r = agents.run_pipeline(question, rid, prev); sg = r["safeguard"]
     rec = acs_board.oio_record(f"run-{rid}", f"Demo run {rid}: '{question[:200]}' -> safeguard {'PASS' if sg['pass'] else 'FAIL'}; {len(sg['used'])} citations used, invalid={sg['invalid']}, unknown={sg['unknown_authorities'][:5]}, model={r['provider']}, graph={r['backend']}",
         ["legal-graphrag-demo pipeline"], impact_band="informational" if sg["pass"] else "moderate", evidence="confirmed", extra_session=f"runs/{rid}/events.jsonl")
     acs_board.event({"agent": "planner", "kind": "run_logged", "run_id": rid, "msg": f"run {rid} logged to ACS ({rec.name})"})

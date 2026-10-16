@@ -8,9 +8,10 @@ orb.innerHTML=`<div id="vcap" class="hidden fixed bottom-32 right-8 max-w-sm gla
 <div id="vstate" class="fixed bottom-2 right-8 w-20 text-center text-[10px] uppercase tracking-widest text-slate-400 z-50">tap to talk</div>`;
 document.body.appendChild(orb);
 const $=id=>document.getElementById(id), cap=$("vcap"), btn=$("vorb"), st=$("vstate"), cv=$("vwave"), g=cv.getContext("2d");
-let state="idle", conv=false, rec=null, finalTxt="", interim="", silenceT=null, micStream=null, an=null, buf=null, resubmits=0, wake=false, ptt=false, cooldownUntil=0;
-const ICON={idle:"🎙",listening:"👂",thinking:"💭",speaking:"🔊",cooldown:"⏳",wake:"✨"};
-function setState(s,msg){ state=s; $("vicon").textContent=ICON[s]||"🎙"; st.textContent=msg||s; btn.style.transform=s==="listening"?"scale(1.08)":s==="thinking"?"scale(.95)":"scale(1)"; }
+let gen=0, state="idle", conv=false, rec=null, finalTxt="", interim="", silenceT=null, micStream=null, an=null, buf=null, resubmits=0, wake=false, ptt=false, cooldownUntil=0;
+const ICON={paused:"⏸",idle:"🎙",listening:"👂",thinking:"💭",speaking:"🔊",cooldown:"⏳",wake:"✨"};
+const LBL={idle:"Tap to talk",listening:"Listening… tap to pause",paused:"Paused, tap to resume",thinking:"Thinking… tap to stop",speaking:"Speaking… tap to stop",cooldown:"tap to pause"};
+function setState(s,msg){ state=s; $("vicon").textContent=ICON[s]||"🎙"; st.textContent=(s==="listening"?"Listening… tap to pause":s==="paused"?"Paused, tap to resume":msg||s); btn.title=LBL[s]||"Tap to talk"; btn.setAttribute("aria-pressed",String(s!=="idle"&&s!=="paused")); btn.style.background=s==="paused"?"radial-gradient(circle at 35% 30%,#cbd5e1,#64748b 45%,#1e293b)":s==="listening"?"radial-gradient(circle at 35% 30%,#fca5a5,#ef4444 45%,#7f1d1d)":"radial-gradient(circle at 35% 30%,#a5b4fc,#6366f1 45%,#312e81)"; btn.style.transform=s==="listening"?"scale(1.08)":s==="thinking"?"scale(.95)":"scale(1)"; }
 function caption(t,dim){ if(!t){cap.classList.add("hidden");return} cap.classList.remove("hidden"); cap.innerHTML=dim?`<span class="text-slate-400">${t}</span>`:t; }
 async function ensureMic(){ if(an) return true; try{ micStream=await navigator.mediaDevices.getUserMedia({audio:true}); const ac=new (window.AudioContext||window.webkitAudioContext)();
   an=ac.createAnalyser(); an.fftSize=512; ac.createMediaStreamSource(micStream).connect(an); buf=new Uint8Array(an.fftSize); return true; }catch(e){ caption("🎙 Microphone blocked — allow mic access in the browser (lock icon → Microphone)."); setState("idle","mic blocked"); return false; } }
@@ -36,21 +37,21 @@ function pauseRec(){ clearTimeout(silenceT); if(rec){ const r=rec; rec=null; try
 let mr=null;
 async function fallbackRecord(){ if(!(await ensureMic())) return; if(mr&&mr.state==="recording") return; const chunks=[]; mr=new MediaRecorder(micStream);
   mr.ondataavailable=e=>chunks.push(e.data); setState("listening","recording"); caption("Recording… (stops after 1.2s silence)",true);
-  mr.onstop=async()=>{ setState("thinking","transcribing"); const fd=new FormData(); fd.append("file",new Blob(chunks,{type:"audio/webm"}),"q.webm");
+  const myGen=gen; mr.onstop=async()=>{ if(myGen!==gen) return; setState("thinking","transcribing"); const fd=new FormData(); fd.append("file",new Blob(chunks,{type:"audio/webm"}),"q.webm");
     const r=await fetch("/api/stt",{method:"POST",body:fd}); const d=await r.json().catch(()=>({})); if(d.text) submit(d.text); else { caption("Couldn't transcribe: "+(d.error||"")); if(conv) setTimeout(listen,3000); } };
   mr.start(); let quiet=0; const iv=setInterval(()=>{ an.getByteTimeDomainData(buf); let s=0; for(const v of buf){const d=(v-128)/128;s+=d*d} const lvl=Math.sqrt(s/buf.length);
     quiet=lvl<0.02?quiet+100:0; if(quiet>1200||!conv&&!ptt){ clearInterval(iv); if(mr.state==="recording") mr.stop(); } },100); setTimeout(()=>{ clearInterval(iv); if(mr.state==="recording") mr.stop(); },15000); }
-async function submit(text){ clearTimeout(silenceT); text=(text||"").trim(); pauseRec();
+async function submit(text){ const myGen=gen; clearTimeout(silenceT); text=(text||"").trim(); pauseRec();
   if(text.split(/\s+/).length<3){ caption(`“${text}” — too short, ask a full question.`,true); if(conv) return setTimeout(listen,800); return setState("idle","tap to talk"); }
   setState("thinking","thinking"); caption("“"+text+"”");
-  const res=await window.PRECEDENT.ask(text);
+  const res=await window.PRECEDENT.ask(text); if(myGen!==gen) return;
   if(!res){ if(resubmits<1){ resubmits++; caption("Busy — retrying once…",true); await new Promise(r=>setTimeout(r,3000)); return submit(text); } resubmits=0; caption("Server busy — try again in a moment."); return conv?setTimeout(listen,3000):setState("idle"); }
-  resubmits=0; setState("speaking","speaking"); await window.PRECEDENT.speak();
+  resubmits=0; setState("speaking","speaking"); await window.PRECEDENT.speak(); if(myGen!==gen) return;
   cooldownUntil=Date.now()+3000; setState("cooldown","cooldown"); caption("");
-  setTimeout(()=>{ if(conv) listen(); else setState("idle","tap to talk"); },3000); }
-async function listen(){ if(Date.now()<cooldownUntil) return setTimeout(listen,cooldownUntil-Date.now()); if(!(await ensureMic())) return; startRec(); }
-function stop(){ conv=false; wake=false; pauseRec(); if(mr&&mr.state==="recording") mr.stop(); setState("idle","tap to talk"); caption(""); }
-btn.onclick=()=>{ if(conv||state==="listening") return stop(); conv=true; wake=false; listen(); };
+  setTimeout(()=>{ if(myGen!==gen) return; if(conv) listen(); else setState("idle","tap to talk"); },3000); }
+async function listen(){ const myGen=gen; if(Date.now()<cooldownUntil) return setTimeout(()=>{ if(myGen===gen) listen(); },cooldownUntil-Date.now()); if(!(await ensureMic())) return; startRec(); }
+function stop(paused){ gen++; conv=false; wake=false; ptt=false; pauseRec(); if(mr&&mr.state==="recording") try{mr.stop()}catch(e){} try{ window.AudioMgr&&AudioMgr.stopAll(true); }catch(e){} setState(paused?"paused":"idle","tap to talk"); caption(""); }
+btn.onclick=()=>{ if(state!=="idle"&&state!=="paused") return stop(true); conv=true; wake=false; listen(); };
 btn.oncontextmenu=e=>{ e.preventDefault(); if(conv) stop(); conv=true; wake=true; listen(); caption("✨ Wake mode: say “Hey Precedent, …”",true); };
 // Space = push-to-talk (when not typing)
 addEventListener("keydown",e=>{ if(e.code!=="Space"||e.repeat||/INPUT|TEXTAREA/.test(document.activeElement.tagName)) return; e.preventDefault(); if(state==="thinking"||state==="speaking") return; ptt=true; listen(); });
