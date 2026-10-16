@@ -156,3 +156,20 @@ def test_examples_dropdown(browser, path):
     pg.keyboard.press("Escape"); assert pg.get_attribute("#exBtn", "aria-expanded") == "false"
     pg.click("#exBtn"); pg.click("#exMenu [role=menuitem] >> nth=3")
     assert "Water rights" in pg.input_value("#q") and not pg.is_visible("#exMenu")
+
+@pytest.mark.parametrize("path", ["/", "/map"])
+def test_examples_menu_in_viewport_and_on_top(browser, path):
+    pg = page(browser, path); pg.wait_for_timeout(1500); pg.click("#exBtn"); pg.wait_for_timeout(200)
+    r = pg.evaluate("""(()=>{const m=document.getElementById('exMenu').getBoundingClientRect(); const it=document.querySelector('#exMenu [role=menuitem]').getBoundingClientRect();
+      const top=document.elementFromPoint(it.left+it.width/2, it.top+it.height/2); return {right:m.right<=innerWidth+1, left:m.left>=0, onTop:!!(top&&top.closest('#exMenu'))}})()""")
+    assert r == {"right": True, "left": True, "onTop": True}, r
+
+@pytest.mark.parametrize("path", ["/", "/map"])
+def test_never_two_audios_playing(browser, path):
+    pg = page(browser, path, {"precedent.mute": "0", "mapVoice": "1"})
+    pg.add_init_script("window.__maxPlay=0; setInterval(()=>{ try{ const n=AudioMgr.instances().filter(a=>!a.paused&&!a.ended).length; window.__maxPlay=Math.max(window.__maxPlay,n);}catch(e){} },50);")
+    pg.reload(wait_until="load"); pg.wait_for_timeout(1500)
+    if path == "/": ask_home(pg)
+    else: wait_map(pg)
+    pg.wait_for_timeout(12000)
+    assert pg.evaluate("window.__maxPlay") <= 1

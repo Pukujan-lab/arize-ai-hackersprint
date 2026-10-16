@@ -22,6 +22,10 @@ def _anthropic(system, prompt, mt):
         json={"model": "claude-haiku-4-5", "max_tokens": mt, "system": system, "messages": [{"role": "user", "content": prompt}]})
     r.raise_for_status(); _bump("anthropic"); return r.json()["content"][0]["text"]
 class CapReached(Exception): pass
+LAST_ERR = {}
+def _err(name, e):
+    code = getattr(getattr(e, "response", None), "status_code", None)
+    LAST_ERR[name] = f"{type(e).__name__}{' '+str(code) if code else ''}"   # no message text: never leak keys/urls
 
 def complete(system, prompt, max_tokens=500, fallback=None):
     """Returns (text, provider). LLM_MODE=fake skips network entirely."""
@@ -39,8 +43,8 @@ def complete(system, prompt, max_tokens=500, fallback=None):
                     f.write_text(json.dumps({"text": t, "provider": name})); return t, name
             except CapReached:
                 capped = True
-            except Exception:
-                continue
+            except Exception as e:
+                _err(name, e); continue
     return (fallback() if fallback else ""), ("template (hourly model cap reached - rate limited)" if capped else "template (offline)")
 
 
@@ -77,6 +81,6 @@ def complete_stream(system, prompt, max_tokens=400, fallback=None, on_delta=None
             if t:
                 f.write_text(json.dumps({"text": t, "provider": "anthropic/claude-haiku-4-5"})); return t, "anthropic/claude-haiku-4-5 (streamed)"
         except CapReached: capped = True
-        except Exception: pass
+        except Exception as e: _err("anthropic-stream", e)
     if capped: return (fallback() if fallback else ""), "template (hourly model cap reached - rate limited)"
     return complete(system, prompt, max_tokens, fallback)

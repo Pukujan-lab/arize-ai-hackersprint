@@ -54,6 +54,7 @@
     aside.id = 'sidebar';
     aside.className = 'fixed top-11 left-0 bottom-0 w-[360px] z-30 glass border-r border-white/5 overflow-y-auto transition-transform duration-300';
     aside.style.transform = 'translateX(-100%)';
+    aside.style.padding = '8px';
     
     document.body.appendChild(aside);
     return aside;
@@ -88,11 +89,13 @@
 
     const details = document.createElement('details');
     details.className = 'border-b border-white/5';
+    details.style.marginBottom = '8px';
     details.open = isOpen;
     details.dataset.key = key;
 
     const summary = document.createElement('summary');
     summary.className = 'flex items-center justify-between px-4 py-3 cursor-pointer text-sm font-semibold text-slate-300 hover:text-white transition-colors select-none';
+    summary.style.cssText = 'position:sticky;top:0;background:#0f172a;z-index:10;';
     summary.innerHTML = `
       <span>${title}</span>
       <svg class="chevron w-4 h-4 transition-transform" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -102,6 +105,7 @@
 
     const contentDiv = document.createElement('div');
     contentDiv.className = 'px-4 pb-4';
+    contentDiv.style.paddingTop = '4px';
     if (content) {
       contentDiv.appendChild(content);
     }
@@ -127,6 +131,25 @@
     return details;
   }
 
+  // Newest first, collapse duplicate questions (keep newest), cap 20
+  function normalizeRuns(runs) {
+    if (!Array.isArray(runs)) return [];
+    const sorted = runs.slice().sort((a, b) => String(b.ts || '').localeCompare(String(a.ts || '')));
+    const seen = new Set(), out = [];
+    for (const r of sorted) {
+      const k = (r.question || '').trim().toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k); out.push(r);
+      if (out.length >= 20) break;
+    }
+    return out;
+  }
+  if (!document.getElementById('run-history-style')) {
+    const st = document.createElement('style'); st.id = 'run-history-style';
+    st.textContent = '.run-history-list{max-height:50vh;overflow-y:auto;padding-right:4px;scrollbar-width:thin;scrollbar-color:#334155 transparent}.run-history-list::-webkit-scrollbar{width:6px}.run-history-list::-webkit-scrollbar-track{background:transparent}.run-history-list::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}.run-history-list::-webkit-scrollbar-thumb:hover{background:#475569}';
+    document.head.appendChild(st);
+  }
+
   // Fetch and render run history
   async function createRunHistory() {
     const container = document.createElement('div');
@@ -134,26 +157,24 @@
     container.innerHTML = '<div class="text-slate-400 text-center py-2">Loading…</div>';
 
     try {
-      const resp = await fetch('/api/runs?n=10');
+      const resp = await fetch('/api/runs?n=60');
       if (!resp.ok) throw new Error('Failed to fetch runs');
-      const runs = await resp.json();
+      const runs = normalizeRuns(await resp.json());
 
       if (!runs || runs.length === 0) {
         container.innerHTML = '<div class="text-slate-500 text-center py-2">No runs yet</div>';
         return container;
       }
 
-      container.innerHTML = runs.map(run => {
-        const ts = run.ts ? new Date(run.ts).toLocaleString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
-          hour: '2-digit', 
-          minute: '2-digit' 
-        }) : '';
+      container.className = 'run-history-list space-y-2 text-xs';
+      container.innerHTML = runs.map((run, i) => {
+        const id = run.run_id || run.id || '';
+        const ts = run.ts ? new Date(run.ts).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '';
+        const label = id ? String(id).split('-').pop() : (ts || String(i + 1));
         const question = (run.question || 'Untitled').slice(0, 60);
         return `
-          <a href="/map?run=${run.id}" class="block glass rounded-lg p-2 hover:bg-white/10 transition-colors">
-            <div class="text-indigo-300 font-mono">#${run.id}</div>
+          <a href="/map${id ? `?run=${encodeURIComponent(id)}` : ''}" class="block glass rounded-lg p-2 hover:bg-white/10 transition-colors">
+            <div class="text-indigo-300 font-mono">#${escapeHtml(label)}</div>
             <div class="text-slate-300 mt-1">${escapeHtml(question)}</div>
             ${ts ? `<div class="text-slate-500 mt-1">${ts}</div>` : ''}
           </a>
@@ -368,6 +389,37 @@
       }
       
       if (eventsDiv) {
+        eventsDiv.style.cssText = 'max-height:45vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#334155 transparent;display:flex;flex-direction:column;gap:6px;';
+        eventsDiv.className = 'text-xs font-mono activity-list';
+        
+        // Add webkit scrollbar styles
+        if (!document.getElementById('activity-scrollbar-style')) {
+          const st = document.createElement('style');
+          st.id = 'activity-scrollbar-style';
+          st.textContent = '.activity-list::-webkit-scrollbar{width:6px}.activity-list::-webkit-scrollbar-track{background:transparent}.activity-list::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}.activity-list::-webkit-scrollbar-thumb:hover{background:#475569}.activity-list>*{scroll-margin-top:52px;padding:6px 8px!important;margin:0!important;overflow-wrap:anywhere;word-break:break-word;min-width:0}';
+          document.head.appendChild(st);
+        }
+        
+        // Auto-scroll to newest item
+        let wasNearBottom = true;
+        const observer = new MutationObserver(() => {
+          const scrollThreshold = 50;
+          const isNearBottom = eventsDiv.scrollHeight - eventsDiv.scrollTop - eventsDiv.clientHeight < scrollThreshold;
+          
+          if (wasNearBottom || isNearBottom) {
+            eventsDiv.scrollTop = eventsDiv.scrollHeight;
+          }
+          
+          wasNearBottom = isNearBottom;
+        });
+        
+        eventsDiv.addEventListener('scroll', () => {
+          const scrollThreshold = 50;
+          wasNearBottom = eventsDiv.scrollHeight - eventsDiv.scrollTop - eventsDiv.clientHeight < scrollThreshold;
+        });
+        
+        observer.observe(eventsDiv, { childList: true });
+        
         content.appendChild(eventsDiv);
       }
       
@@ -387,6 +439,17 @@
       const citesDiv = $('cites');
       const content = document.createElement('div');
       if (citesDiv) {
+        citesDiv.style.cssText = 'max-height:45vh;overflow-y:auto;scrollbar-width:thin;scrollbar-color:#334155 transparent;display:flex;flex-direction:column;gap:6px;';
+        citesDiv.className = 'text-xs sources-list';
+        
+        // Add webkit scrollbar styles for sources
+        if (!document.getElementById('sources-scrollbar-style')) {
+          const st = document.createElement('style');
+          st.id = 'sources-scrollbar-style';
+          st.textContent = '.sources-list::-webkit-scrollbar{width:6px}.sources-list::-webkit-scrollbar-track{background:transparent}.sources-list::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}.sources-list::-webkit-scrollbar-thumb:hover{background:#475569}.sources-list>*{scroll-margin-top:52px;overflow-wrap:anywhere;word-break:break-word;min-width:0}';
+          document.head.appendChild(st);
+        }
+        
         content.appendChild(citesDiv);
       }
       
@@ -492,20 +555,20 @@
     const side=document.getElementById('sidebar'), btn=document.getElementById('sideToggle');
     if(!side||!btn) return setTimeout(go,150);
     const css=document.createElement('style'); css.textContent=`
-      #sidebar{width:300px!important;top:var(--navh,56px)!important;height:calc(100vh - var(--navh,56px))!important;padding-top:8px;font-size:15.5px;line-height:1.5;z-index:45;overflow-y:auto;overscroll-behavior:contain;transition:transform .28s ease!important;background:rgba(10,14,30,.96)}
+      #sidebar{width:300px!important;top:var(--navh,56px)!important;height:calc(100vh - var(--navh,56px))!important;padding:8px!important;font-size:15.5px;line-height:1.5;z-index:45;overflow-y:auto;overscroll-behavior:contain;transition:transform .28s ease!important;background:rgba(10,14,30,.96)}
       #sidebar summary{min-height:48px;display:flex;align-items:center;padding:12px 16px;font-size:16px;font-weight:600;cursor:pointer;color:#e2e8f0}
       #sidebar summary:hover{background:rgba(99,102,241,.12)}
       #sidebar details>*:not(summary){padding:0 16px 14px}
-      #sideToggle{position:fixed!important;top:8px;left:10px;z-index:60;width:auto!important;height:40px!important;min-width:40px;padding:0 14px 0 10px!important;gap:8px;border-radius:10px;background:rgba(49,46,129,.85);border:1px solid rgba(165,180,252,.45);color:#fff!important;font-size:15px;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.35)}
+      #sidebar details{margin-bottom:8px!important}
+      #sideToggle{width:auto!important;height:32px!important;min-width:32px;padding:0 12px 0 8px!important;gap:6px;border-radius:8px;background:rgba(49,46,129,.85);border:1px solid rgba(165,180,252,.45);color:#fff!important;font-size:14px;font-weight:600;box-shadow:0 2px 8px rgba(0,0,0,.25);flex-shrink:0!important}
       #sideToggle:hover{background:rgba(79,70,229,.95)}
       #sideClose{display:none!important;position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:10px;font-size:22px;color:#cbd5e1;background:rgba(30,41,59,.8)}
       #sideClose:hover{color:#fff;background:rgba(71,85,105,.9)}
       #sideBack{position:fixed;inset:var(--navh,56px) 0 0 0;background:rgba(2,6,23,.55);z-index:44;opacity:0;pointer-events:none;transition:opacity .25s}
-      #sideBack.on{opacity:1;pointer-events:auto}
-      nav .max-w-7xl{padding-left:150px!important}`;
+      #sideBack.on{opacity:1;pointer-events:auto}`;
     document.head.appendChild(css);
     if(!btn.querySelector('.lbl')){ const l=document.createElement('span'); l.className='lbl'; l.textContent='Menu'; btn.appendChild(l); }
-    btn.style.display='flex'; btn.style.alignItems='center'; document.body.appendChild(btn);
+    btn.style.display='flex'; btn.style.alignItems='center'; (document.querySelector('nav .max-w-7xl')||document.body).prepend(btn);
     const x=document.createElement('button'); x.id='sideClose'; x.setAttribute('aria-label','Close menu'); x.textContent='✕'; side.prepend(x);
     const back=document.createElement('div'); back.id='sideBack'; document.body.appendChild(back);
     const isOpen=()=>side.style.transform==='translateX(0px)'||side.style.transform==='translateX(0)';

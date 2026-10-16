@@ -33,7 +33,7 @@ body {
 }
 
 .screenshot {
-  max-height: 70vh;
+  max-height: 756px;
   object-fit: contain;
   object-position: center;
   border-radius: 12px;
@@ -84,6 +84,14 @@ body {
 .fade-in {
   animation: fadeIn 0.6s ease-out forwards;
 }
+
+/* fixed 16:9 stage, scaled to fit (letterboxed) */
+html,body{height:100%;margin:0}
+#deck{position:fixed;left:0;top:0;width:1920px;height:1080px;transform-origin:0 0}
+#deck .slide{width:1920px;height:1080px;min-height:0!important;box-sizing:border-box;overflow:visible}
+#deck .slide>.min-h-screen{min-height:0!important;height:100%}
+#deck .slide *{line-height:normal}
+.site-link{color:#3A7CA5;text-decoration:underline;font-weight:700}
 </style>
 </head>
 <body class="overflow-hidden">
@@ -109,7 +117,7 @@ body {
     <div class="text-5xl font-semibold mb-4" style="color: var(--ink); max-width: 1200px; line-height: 1.2;">A reliable pipeline for multi-agent AI.</div>
     <div class="text-4xl" style="color: var(--muted); max-width: 1200px; line-height: 1.3;">First up: legal research for professionals.</div>
   </div>
-  <div class="absolute z-20 text-center" style="right:48px;bottom:48px;background:#fff;border-radius:14px;padding:10px 10px 8px;"><img src="/static/vendor/qr_demo.svg" alt="QR code" style="width:150px;height:150px;display:block"><div style="color:#0A0E14;font-weight:700;font-size:14px;margin-top:4px">Scan to try Precedent</div><div style="color:#0A0E14;font-size:12px">arize.design-bakery.com</div></div>
+  <div class="absolute z-20 text-center" style="right:48px;bottom:48px;background:#fff;border-radius:14px;padding:10px 10px 8px;"><img src="/static/vendor/qr_demo.svg" alt="QR code" style="width:150px;height:150px;display:block"><div style="color:#0A0E14;font-weight:700;font-size:14px;margin-top:4px">Scan to try Precedent</div><a class="site-link" href="https://arize.design-bakery.com" style="font-size:16px;display:block">arize.design-bakery.com</a></div>
 </section>
 
 <!-- Slide 2: The Problem -->
@@ -117,19 +125,19 @@ body {
   <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">The Problem</div>
   <h1 class="text-7xl font-bold mb-16 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Multi-agent AI is unreliable in production</h1>
   
-  <div class="space-y-8 max-w-6xl">
+  <div class="space-y-8" style="max-width:1700px">
     <div class="flex items-start gap-8">
-      <div class="text-8xl font-black" style="color: #E57373; min-width: 480px;">Hallucinate</div>
+      <div class="text-8xl font-black" style="color: #E57373; width:640px;flex-shrink:0;line-height:1.1;">Hallucinate</div>
       <div class="text-3xl pt-4" style="color: var(--muted); line-height: 1.4;">Agents invent citations and facts that don't exist</div>
     </div>
     
     <div class="flex items-start gap-8">
-      <div class="text-8xl font-black" style="color: #FFB74D; min-width: 480px;">Collide</div>
+      <div class="text-8xl font-black" style="color: #FFB74D; width:640px;flex-shrink:0;line-height:1.1;">Collide</div>
       <div class="text-3xl pt-4" style="color: var(--muted); line-height: 1.4;">Multiple agents duplicate work and overwrite each other</div>
     </div>
     
     <div class="flex items-start gap-8">
-      <div class="text-8xl font-black" style="color: #9575CD; min-width: 480px;">Opaque</div>
+      <div class="text-8xl font-black" style="color: #9575CD; width:640px;flex-shrink:0;line-height:1.1;">Opaque</div>
       <div class="text-3xl pt-4" style="color: var(--muted); line-height: 1.4;">No audit trail — can't trace what happened or why</div>
     </div>
   </div>
@@ -143,7 +151,7 @@ body {
   <h1 class="text-7xl font-bold mb-12 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Ask. Get a cited memo. Tour it on the map. Hear it.</h1>
   
   <div class="flex items-center justify-center">
-    <img src="/static/slides/answer_v2.png" class="screenshot" style="max-height:56vh;width:auto" alt="Precedent answer interface" onerror="this.style.display='none'">
+    <img src="/static/slides/answer_v2.png" class="screenshot" style="max-height:600px;width:auto" alt="Precedent answer interface" onerror="this.style.display='none'">
   </div>
   
   <div class="mt-8 text-2xl text-center" style="color: var(--muted);">Cited memo · county map tour · voice in and out · for legal professionals</div>
@@ -155,7 +163,7 @@ body {
   <h1 class="text-7xl font-bold mb-12 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Watch the agents walk the map</h1>
   
   <div class="flex items-center justify-center">
-    <img src="/static/slides/map_tour_v2.png" class="screenshot" style="max-height:50vh;width:auto" alt="Live map visualization" onerror="this.style.display='none'">
+    <img src="/static/slides/map_tour_v2.png" class="screenshot" style="max-height:540px;width:auto" alt="Live map visualization" onerror="this.style.display='none'">
   </div>
   
   <div class="mt-8 max-w-4xl mx-auto">
@@ -223,29 +231,52 @@ body {
   <div class="mt-10 text-2xl text-center" style="color: var(--muted);">Each agent claims a seat through ACS · every handoff audited · every run traced in Arize</div>
 </section>
 
-<!-- Slide 6: Trust -->
+<!-- Slide 6: Live Demo — Ask, then follow up -->
+<section class="slide min-h-screen flex-col justify-center px-20 pt-14">
+  <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">Live Demo</div>
+  <h1 class="text-7xl font-bold mb-10 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Ask, then follow up</h1>
+  <div class="flex flex-col gap-4" style="max-width:1500px">
+      <div class="pipeline-step" style="border-color:#E57373;padding:1.5rem 1.75rem">
+        <div class="flex justify-end mb-3"><div class="text-2xl font-semibold" style="background:var(--primary);color:var(--ink);border-radius:18px 18px 4px 18px;padding:.6rem 1.2rem;line-height:1.35">Can police search my car without a warrant in Colorado?</div></div>
+        <div class="text-2xl" style="color:var(--ink);line-height:1.45"><b style="color:var(--accent)">Yes, with probable cause:</b> the automobile exception allows a warrantless search if police have probable cause the car holds contraband <span style="color:var(--primary)">[People v. McMillan; People v. Barton]</span>.</div>
+      </div>
+      <div class="text-xl uppercase tracking-[.3em] pl-2" style="color:var(--muted)">↳ follow-up</div>
+      <div class="pipeline-step" style="border-color:#FFB74D;padding:1.5rem 1.75rem">
+        <div class="flex justify-end mb-3"><div class="text-2xl font-semibold" style="background:var(--primary);color:var(--ink);border-radius:18px 18px 4px 18px;padding:.6rem 1.2rem;line-height:1.35">Can I refuse a search?</div></div>
+        <div class="text-2xl" style="color:var(--ink);line-height:1.45">You may refuse a consent search, but police with probable cause can search without your permission <span style="color:var(--primary)">[1][4]</span>. Refusal does not prevent a lawful warrantless search based on probable cause or other recognized exceptions.</div>
+      </div>
+      <div class="text-xl uppercase tracking-[.3em] pl-2" style="color:var(--muted)">↳ follow-up</div>
+      <div class="pipeline-step" style="border-color:#9575CD;padding:1.5rem 1.75rem">
+        <div class="flex justify-end mb-3"><div class="text-2xl font-semibold" style="background:var(--primary);color:var(--ink);border-radius:18px 18px 4px 18px;padding:.6rem 1.2rem;line-height:1.35">What if they find evidence?</div></div>
+        <div class="text-2xl" style="color:var(--ink);line-height:1.45">Evidence obtained from an unlawful search may be suppressed through a motion to suppress <span style="color:var(--primary)">[1][2]</span>. <span style="color:var(--muted)">— People v. Warner; People v. Williams</span></div>
+      </div>
+  </div>
+  <div class="mt-8 flex items-center gap-4"><span class="text-lg font-semibold" style="border:1px solid #66BB6A;color:#66BB6A;border-radius:999px;padding:.3rem 1rem">✓ Safeguard PASS</span><span class="text-lg font-semibold" style="border:1px solid #66BB6A;color:#66BB6A;border-radius:999px;padding:.3rem 1rem">✓ refs verified</span><span class="text-lg ml-4" style="color:var(--muted)">Research summary, not legal advice.</span></div>
+</section>
+
+<!-- Slide 7: Trust -->
 <section class="slide min-h-screen flex-col justify-center px-20 pt-14">
   <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">Trust & Verification</div>
   <h1 class="text-7xl font-bold mb-16 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Every reference is checked. Every limit is enforced.</h1>
   
-  <div class="space-y-10 max-w-6xl">
+  <div class="space-y-10" style="max-width:1700px">
     <div class="flex items-start gap-8">
-      <div class="text-7xl font-black" style="color: #4CAF50; min-width: 420px;">Safeguard</div>
+      <div class="text-7xl font-black" style="color: #4CAF50; width:560px;flex-shrink:0;line-height:1.1;">Safeguard</div>
       <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Checks references, not legal accuracy</div>
     </div>
     
     <div class="flex items-start gap-8">
-      <div class="text-7xl font-black" style="color: var(--primary); min-width: 420px;">Guardrails</div>
+      <div class="text-7xl font-black" style="color: var(--primary); width:560px;flex-shrink:0;line-height:1.1;">Guardrails</div>
       <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Rate limits, hourly caps, labeled fallbacks</div>
     </div>
     
     <div class="flex items-start gap-8">
-      <div class="text-7xl font-black" style="color: #FF4F8B; min-width: 420px;">Arize</div>
+      <div class="text-7xl font-black" style="color: #FF4F8B; width:560px;flex-shrink:0;line-height:1.1;">Arize</div>
       <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Groundedness, hallucination and citation-relevance evals on every trace</div>
     </div>
 
     <div class="flex items-start gap-8">
-      <div class="text-7xl font-black" style="color: var(--accent); min-width: 420px;">Honest</div>
+      <div class="text-7xl font-black" style="color: var(--accent); width:560px;flex-shrink:0;line-height:1.1;">Honest</div>
       <div class="text-3xl pt-3" style="color: var(--muted); line-height: 1.4;">Labels: "checks references, not legal accuracy" · "cached answer"</div>
     </div>
   </div>
@@ -255,7 +286,7 @@ body {
   </div>
 </section>
 
-<!-- Slide 7: Partners -->
+<!-- Slide 8: Partners -->
 <section class="slide min-h-screen flex-col justify-center px-20 pt-14">
   <div class="text-sm uppercase tracking-[.3em] mb-6" style="color: var(--accent);">Made possible · made faster</div>
   <h1 class="text-7xl font-bold mb-16 tracking-tight" style="color: var(--ink); max-width: 1400px; line-height: 1.1;">Built with</h1>
@@ -312,16 +343,16 @@ body {
   </div>
 </section>
 
-<!-- Slide 8: Thank You -->
+<!-- Slide 9: Thank You -->
 <section class="slide min-h-screen flex-col justify-center items-center px-20 pt-14 text-center">
-  <div class="text-9xl font-black mb-12" style="color: var(--ink);">Thank you</div>
+  <div class="text-9xl font-black mb-8" style="color: var(--ink);">Thank you</div>
   
-  <div class="text-4xl mb-10" style="color: var(--muted); max-width: 1000px; line-height: 1.4;">
+  <div class="text-4xl mb-8" style="color: var(--muted); max-width: 1000px; line-height: 1.4;">
     A reliable pipeline for multi-agent AI — built today at Daytona HackSprint NYC
   </div>
   
   <div class="flex items-center gap-16">
-  <div class="text-center" style="background:#fff;border-radius:20px;padding:18px 18px 12px;"><img src="/static/vendor/qr_demo.svg" alt="QR code to the live demo" style="width:min(340px,32vh);height:min(340px,32vh);display:block"><div style="color:#0A0E14;font-weight:800;font-size:24px;margin-top:6px">Scan to try Precedent</div><div style="color:#0A0E14;font-size:20px">https://arize.design-bakery.com</div></div>
+  <div class="text-center" style="background:#fff;border-radius:20px;padding:18px 18px 12px;"><img src="/static/vendor/qr_demo.svg" alt="QR code to the live demo" style="width:300px;height:300px;display:block"><div style="color:#0A0E14;font-weight:800;font-size:24px;margin-top:6px">Scan to try Precedent</div><a class="site-link" href="https://arize.design-bakery.com" style="font-size:24px;display:block">arize.design-bakery.com</a><a class="site-link" href="https://github.com/Pukujan/arize-ai-hackersprint" style="font-size:18px;display:block;margin-top:4px">github.com/Pukujan/arize-ai-hackersprint</a></div>
   <div class="flex flex-col gap-6 items-center">
     <a href="/" class="inline-block text-3xl px-12 py-6 rounded-2xl font-bold transition-all" style="background: var(--primary); color: var(--ink);" onmouseover="this.style.background='var(--accent)'; this.style.color='var(--bg)'" onmouseout="this.style.background='var(--primary)'; this.style.color='var(--ink)'">
       Open live demo →
@@ -338,7 +369,7 @@ body {
   </div>
   </div>
   
-  <div class="mt-16 text-xl" style="color: var(--muted);">
+  <div class="mt-8 text-xl" style="color: var(--muted);">
     Daytona HackSprint NYC · 2026
   </div>
 </section>
@@ -400,6 +431,9 @@ addEventListener('click', (e) => {
 
 // Initialize
 goToSlide(0);
+function fitDeck(){const d=document.getElementById('deck');const top=48,pad=8;const W=innerWidth-2*pad,H=innerHeight-top-2*pad;const k=Math.min(W/1920,H/1080);d.style.transform=`translate(${(innerWidth-1920*k)/2}px,${top+pad+(H-1080*k)/2}px) scale(${k})`;}
+addEventListener('resize',fitDeck);fitDeck();
+
 </script>
 
 <script src="/static/partners.js"></script><script src="/static/navbar.js"></script></body>

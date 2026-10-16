@@ -74,7 +74,7 @@ def _clip(t, n):
 
 def template_answer(question, cites):
     first = cites[0]
-    out = [f"**Short answer:** The most relevant authorities retrieved for this question are led by **{first['title']}** {first['ref']}; see the key authorities below.", "", "### Key authorities"]
+    out = [f"**Short answer:** AI drafting was unavailable for this question, so no synthesized answer was generated; the top retrieved authority is **{first['title']}** {first['ref']} - review the key authorities below.", "", "### Key authorities"]
     for c in cites[:5]:
         q = f' - "{_clip(c["passage"].split(chr(10), 1)[-1], 160)}"' if c.get("passage") else (f" - {c['type'].replace('_', ' ')}" + (f", cited by {c['cited_by']}" if c['cited_by'] else ""))
         out.append(f"- **{c['title']}** {c['ref']}{q}")
@@ -99,7 +99,9 @@ def answer(run, question, ret, prior=None):
             try: _pf.write_text(t)
             except Exception: pass
         import llm as _llm
+        _llm.LAST_ERR.clear()
         text, provider = _llm.complete_stream(sys_p, umsg, 400, on_delta=_delta, fallback= lambda: template_answer(question, cites))
+        if provider.startswith("template") and _llm.LAST_ERR: run.event(A, "llm_error", "model call failed, honest template fallback: " + ", ".join(f"{k}={v}" for k, v in _llm.LAST_ERR.items()))
         tracing.oi(_sp, openinference__span__kind="LLM", llm__model_name="claude-haiku-4-5", llm__provider="anthropic", llm__system="anthropic", llm__invocation_parameters={"max_tokens": 400},
                    llm__input_messages__0__message__role="system", llm__input_messages__0__message__content=sys_p, llm__input_messages__1__message__role="user", llm__input_messages__1__message__content=f"Question: {question}\nAuthorities:\n{ctx}"[:4000],
                    llm__output_messages__0__message__role="assistant", llm__output_messages__0__message__content=text, input__value=question, output__value=text, metadata={"provider": provider},

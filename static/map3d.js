@@ -43,8 +43,8 @@ function locate(c){ const t=(c.type||"").toLowerCase(), court=(c.court||""), lc=
 const proj=d3.geoAlbersUsa().scale(1300).translate([487.5,305]), U=0.01;
 const xy=([la,lo])=>{ const p=proj([lo,la])||proj([-104.98,39.74]); return [(p[0]-487.5)*U,-(p[1]-305)*U]; };
 const COL={county:0x34d399,state:0x818cf8,statute:0xf59e0b,federal:0xf472b6}, ARC={cc:0x34d399,cs:0x60a5fa,st:0xf59e0b,fed:0xf472b6,other:0x94a3b8};
-const panel=document.createElement("div"); panel.id="docpanel"; panel.className="absolute left-4 bottom-4 w-[340px] hidden [perspective:1000px] z-30"; panel.addEventListener("pointerdown",e=>e.stopPropagation()); panel.addEventListener("click",e=>e.stopPropagation()); host.parentElement.appendChild(panel);
-function openDoc(c){ panel.classList.remove("hidden"); const E=t=>String(t||"").replace(/</g,"&lt;"); const q=window.cleanPassage?cleanPassage(c.passage):(c.passage||"").slice(0,300);
+const panel=document.createElement("div"); panel.id="docpanel"; panel.className="absolute left-4 bottom-14 w-[340px] hidden [perspective:1000px] z-30"; panel.addEventListener("pointerdown",e=>e.stopPropagation()); panel.addEventListener("click",e=>e.stopPropagation()); host.parentElement.appendChild(panel);
+function openDoc(c){ panel.classList.remove("hidden"); try{ api._layoutTr&&api._layoutTr(); }catch(e){} const E=t=>String(t||"").replace(/</g,"&lt;"); const q=window.cleanPassage?cleanPassage(c.passage):(c.passage||"").slice(0,300);
  panel.innerHTML=`<div id="pg" class="w-full max-h-[50vh] overflow-auto rounded-xl p-4 text-slate-100 origin-left transition-transform duration-500 border border-white/10 shadow-2xl" style="transform:rotateY(-95deg);background:rgba(15,18,30,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)">
  <button class="float-right text-slate-400 hover:text-white" onclick="this.closest('.absolute').classList.add('hidden')">✕</button>
  <div class="text-indigo-300 font-semibold text-xs">${c.ref||"related"} · ${E(c.type)}</div><div class="font-semibold text-base leading-snug mt-1">${E(c.title)}</div>
@@ -52,7 +52,7 @@ function openDoc(c){ panel.classList.remove("hidden"); const E=t=>String(t||"").
  ${q?`<blockquote class="mt-3 text-[13px] leading-relaxed text-slate-200 border-l-2 border-indigo-400/70 pl-3 italic">${E(q)}</blockquote>`:`<div class="mt-3 text-xs text-slate-400">Graph-linked authority (no passage retrieved).</div>`}
  <div class="mt-2">${window.caseLinks?caseLinks(c):""}</div></div>`;
  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const p=document.getElementById("pg"); if(p) p.style.transform="rotateY(0)"; })); }
-api.open=openDoc; api.closeDoc=()=>{ panel.classList.add("hidden"); }; addEventListener("keydown",e=>{ if(e.key==="Escape") panel.classList.add("hidden"); });
+api.open=openDoc; api.closeDoc=()=>{ panel.classList.add("hidden"); try{ api._layoutTr&&api._layoutTr(); }catch(e){} }; new MutationObserver(()=>{ try{ api._layoutTr&&api._layoutTr(); }catch(e){} }).observe(panel,{attributes:true,attributeFilter:["class"]}); addEventListener("keydown",e=>{ if(e.key==="Escape") panel.classList.add("hidden"); });
 const legend=document.createElement("div"); legend.className="absolute top-3 left-4 text-[11px] text-slate-300 space-y-0.5 pointer-events-none";
 legend.innerHTML=`<div class="uppercase tracking-widest text-slate-500">U.S. citation map · Colorado focus</div><div><span style="color:#34d399">━</span> county↔county</div><div><span style="color:#60a5fa">━</span> county → state court</div><div><span style="color:#f59e0b">━</span> case ↔ statute</div><div><span style="color:#f472b6">━</span> federal / out-of-state</div><div id="cnt" class="text-indigo-300 font-semibold"></div>`;
 host.parentElement.appendChild(legend);
@@ -107,7 +107,7 @@ if(!webgl){
     for(let x=x0;x<=x1;x++) for(let y=y0;y<=y1;y++){ const im=new Image(); im.crossOrigin="anonymous"; let t=setTimeout(()=>{ im.src=""; if(++done===total) finish(); },3000);
       im.onload=()=>{ clearTimeout(t); cx.drawImage(im,(x-x0)*256,(y-y0)*256); cx.filter="none"; ok++; if(++done===total) finish(); }; im.onerror=()=>{ clearTimeout(t); if(++done===total) finish(); };
       im.src=`https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${z}/${y}/${x}`; } }
-  const attr=document.createElement("div"); attr.className="absolute bottom-1 right-2 text-[10px] text-slate-500 z-10"; attr.style.display="none"; attr.innerHTML='Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'; host.parentElement.appendChild(attr);
+  const attr=document.createElement("div"); attr.className="absolute bottom-1 right-2 text-[10px] text-slate-500 z-[5] pointer-events-none"; attr.style.display="none"; attr.innerHTML='Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors'; host.parentElement.appendChild(attr);
   try{ basemap(7,-109.06,-102.04,36.99,41.0,0.0606,true); }catch(e){}
   // --- Colorado counties (us-atlas counties-10m, FIPS 08xxx) ---
   const coCounties=await (await fetch("/static/vendor/co_counties_proj.json")).json(); const cMeshes=[], cByName={};
@@ -142,7 +142,7 @@ if(!webgl){
     busy(){ mode="busy"; try{ clearInterval(trT); tr.classList.add("hidden"); }catch(e){} panel.classList.add("hidden"); panel.innerHTML=""; try{ tip.classList.add("hidden"); api.stopTour&&api.stopTour(); }catch(e){} clear(); clearTimeout(tour); label.textContent="Agents retrieving across U.S. and Colorado courts…"; document.getElementById("cnt").textContent="";
       busyRing=new THREE.Mesh(new THREE.RingGeometry(0.03,0.04,48),new THREE.MeshBasicMaterial({color:0x818cf8,transparent:true,opacity:0.8,side:THREE.DoubleSide}));
       const [x,y]=xy(DENVER); busyRing.position.set(x,y,Z0+0.002); pinGroup.add(busyRing); coView(); },
-    show(c0,edges=[],docs=[]){ mode="show"; clear(); const c=c0.concat(docs); cites=c; api._c=c; const g=groups(c); heatCounties(c); const where={}; let seq=0;
+    show(c0,edges=[],docs=[]){ mode="show"; clear(); const c=c0.concat(docs); cites=c; api._c=c; api._e=edges||[]; const g=groups(c); heatCounties(c); const where={}; let seq=0;
       [...g.values()].forEach((G,k)=>{ const p=mkPin(G); p.userData.born=performance.now()+k*200; pins.push(p); G.items.forEach(i=>where[i]=p); });
       const id={}; c.forEach((x,i)=>id[x.id]=i); const P=p=>new THREE.Vector3().copy(p.position).setZ(p.position.z+0.004);
       let den=pins.find(p=>p.userData.G.key==="denver"); const ups=[...g.values()].filter(G=>G.up);
@@ -157,17 +157,20 @@ if(!webgl){
     focus(k){ if(!cites[k]) return; cur=k; const p=pins.find(p=>p.userData.G.items.includes(k)); if(!p) return;
       label.innerHTML=`<b class="text-indigo-300">${cites[k].ref||"retrieved"}</b> ${cites[k].title.replace(/</g,"&lt;")}<br><span class="text-slate-400">${cites[k]._loc.label}</span>`;
       const cat=p.userData.G.cat, far=cat==="federal", d=far?2.6:(cat==="county"?0.75:1.0); lookT.copy(p.position); camT.set(p.position.x,p.position.y-d*0.25,d); if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ cam.position.copy(camT); look.copy(lookT); } },
-    order(){ return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0]).filter(x=>x[1]>0).sort((a,b)=>a[1]-b[1]).map(x=>x[0]); },
+    order(){ const hp=c=>holding(c,(api.ctx||{}).question)?0:1; return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0,hp(c)]).filter(x=>x[1]>0&&(x[2]===0||citedBy(cites[x[0]]))).sort((a,b)=>a[2]-b[2]||a[1]-b[1]).map(x=>x[0]); },
+    jump(k){ const O=api.order(); const n=O.indexOf(k); if(n<0){ api.focus(k); return; } api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; api.tour(n); },
     tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; tbtn.innerHTML=(window.ICON?ICON("pause",16):"")+" Pause";
       if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.innerHTML=TOURH; return; }
       const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.innerHTML=TOURH; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,a?600:Math.max(2600,ms+1200)); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
     replay(){ if(cur>=0) typeOut(cur); },
+    jumpRef(n){ const k=cites.findIndex(c=>parseInt(String(c.ref||"").replace(/\D/g,""))===+n); if(k>=0) api.jump(k); },
+    summaryStop(t){ clearInterval(trT); if(sync) sync.dead=true; cur=-1; api.fit(); label.innerHTML='<b class="text-indigo-300">Summary</b> Colorado overview'; tr.classList.remove("hidden"); const esc=x=>x.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;"); let n=0; const L=String(t||""); trT=setInterval(()=>{ n+=2; tr.innerHTML='<b style="color:#a5b4fc">Summary</b> '+esc(L.slice(0,n))+(n<L.length?"<span class='animate-pulse'>▍</span>":""); if(n>=L.length) clearInterval(trT); },30); },
     stopTour(){ touring=false; clearTimeout(tour); try{curAudio&&curAudio.pause();}catch(e){} tbtn.innerHTML=TOURH; },
     fit(){ const fed=pins.some(p=>p.userData.G.cat==="federal"); if(fed){ camT.copy(homeCam); lookT.copy(homeLook); } else coView(); },
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
   R.domElement.addEventListener("click",ev=>{ const r=R.domElement.getBoundingClientRect(); mouse.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
     ray.setFromCamera(mouse,cam); ray.params.Line.threshold=0.01; const hit=ray.intersectObjects(pins.flatMap(p=>[p.userData.head,p.children[0]]),false)[0];
-    R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.focus(k); openDoc(cites[k]); } } });
+    R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.jump(k); openDoc(cites[k]); } } });
   let touring=false, tpos=0; const tbar=document.createElement("div"); tbar.className="absolute bottom-10 right-4 z-20 flex gap-1 text-xs";
   const SV={"◀":'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>',"▶":'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>'};
   const mk=(t,f)=>{ const b=document.createElement("button"); b.dataset.tourctl="1"; if(SV[t]){ b.innerHTML=SV[t]; b.setAttribute("aria-label",t==="◀"?"Previous stop":"Next stop"); b.title=b.getAttribute("aria-label"); } else b.textContent=t; b.className="abtn"; b.onclick=e=>{e.stopPropagation();f();}; tbar.appendChild(b); return b; };
@@ -202,7 +205,8 @@ if(!webgl){
       boxes.push([x-w/2,y-h/2,w,h]); L.d.style.display=""; L.d.style.left=x+"px"; L.d.style.top=y+"px"; L.d.style.color=o&&o.n?"#6ee7b7":"rgba(203,213,225,.6)"; L.d.style.fontWeight=o&&o.n?"700":"400"; }); }
   overlay();
   // --- Tour transcript (derived from answer text + retrieved passage; no extra model call) ---
-  const tr=document.createElement("div"); tr.id="transcript"; tr.className="absolute bottom-14 z-20 hidden rounded-xl px-3 py-2 text-[13px] leading-snug text-slate-100 border border-white/10 shadow-xl"; tr.style.cssText="left:50%;transform:translateX(-50%);width:min(440px,44%);max-height:30%;overflow:auto;background:rgba(15,18,30,.55);backdrop-filter:blur(8px)"; tr.addEventListener("pointerdown",e=>e.stopPropagation()); host.parentElement.appendChild(tr);
+  const tr=document.createElement("div"); tr.id="transcript"; tr.className="absolute bottom-14 z-20 hidden rounded-xl px-3 py-2 text-[13px] leading-snug text-slate-100 border border-white/10 shadow-xl"; tr.style.cssText="left:50%;transform:translateX(-50%);width:min(440px,44%);max-height:30%;overflow:auto;background:rgba(15,18,30,.55);backdrop-filter:blur(8px)"; tr.addEventListener("pointerdown",e=>e.stopPropagation());
+  function layoutTr(){ const open=!panel.classList.contains("hidden"); const W=host.parentElement.clientWidth; const pr=open?panel.getBoundingClientRect():null, hr=host.parentElement.getBoundingClientRect(), pe=open?(pr.right-hr.left+16):0; if(open&&(W/2-220)<pe){ tr.style.left=pe+"px"; tr.style.transform="none"; tr.style.width="min(440px,"+Math.max(240,W-pe-16)+"px)"; } else { tr.style.left="50%"; tr.style.transform="translateX(-50%)"; tr.style.width="min(440px,44%)"; } } api._layoutTr=layoutTr; addEventListener('resize',layoutTr); host.parentElement.appendChild(tr);
   let trT=null;
   const CITE_RE=/\b\d+\s+(U\.S\.|P\.\s?\d?d|Colo\.(\s?App\.)?|S\.\s?Ct\.|F\.\s?\d?d|L\.\s?Ed\.)\s+\d+|\bv\.\s+[A-Z][\w.]*,\s+\d+/;
   function sentences(t){ return String(t||"").replace(/\s+/g," ").split(/(?<=[.!?])\s+(?=[A-Z“"(])/).map(x=>x.trim()).filter(Boolean); }
@@ -211,10 +215,16 @@ if(!webgl){
     const terms=String(q||"").toLowerCase().split(/\W+/).filter(w=>w.length>2&&!stop.has(w));
     let best=S[0],bs=-1; S.forEach((x,i)=>{ const l=x.toLowerCase(); const sc=terms.reduce((a,t)=>a+(l.includes(t)?1:0),0)+(/\b(held|hold|must|may|requires?|shall|is not|are not)\b/.test(l)?0.5:0)-i*0.01; if(sc>bs){bs=sc;best=x;} });
     return best; }
+  function citedBy(c){ const E=api._e||[]; const nm=String(c.title||"").split(/\s+v\.?\s+/).map(x=>x.trim()).find(x=>x.length>3&&!/^(People|State|United States)$/.test(x))||"";
+    const src=E.filter(e=>e.dst===c.id).map(e=>cites.find(x=>x.id===e.src)).filter(x=>x&&x!==c);
+    for(const s of src){ const hit=nm&&sentences(s.passage).find(x=>x.includes(nm)&&x.length<=320); const who=(s.ref?s.ref+" ":"")+(s.title||"another source");
+      if(hit) return `Cited by ${who} in this answer's sources: “${hit}”`; }
+    if(src.length){ const s=src[0]; return `Cited by ${(s.ref?s.ref+" ":"")+(s.title||"another source")} in this answer's sources.`; }
+    return ""; }
   function explain(k){ const c=cites[k]||{}, ctx=api.ctx||{}, ref=c.ref||""; const yr=(String(c.date||"").match(/\d{4}/)||[""])[0];
     const where=[c.court, c._loc&&c._loc.cat==="county"?c._loc.label.split("→")[0].trim():""].filter(Boolean).join(", ");
-    const ex=holding(c,ctx.question);
-    const sum=`${c.title||"Authority"}${where?" ("+where+(yr?", "+yr:"")+")":(yr?" ("+yr+")":"")}: ${ex||"Linked in the citation graph; no passage text was retrieved for this authority."}`;
+    const ex=holding(c,ctx.question)||citedBy(c);
+    const sum=`${c.title||"Authority"}${where?" ("+where+(yr?", "+yr:"")+")":(yr?" ("+yr+")":"")}: ${ex}`;
     let rel=""; if(ref&&ctx.answer){ const lines=String(ctx.answer).split("\n").filter(l=>l.includes(ref)); const l=lines.find(x=>/^\s*[-*•]/.test(x))||lines[0];
       if(l){ let t=l.replace(/\*\*|[*#>`]/g,"").replace(/\s*\[\d+\]/g,"").replace(/^\s*[-•]\s*/,"").replace(/^short answer:?\s*/i,"").replace(/\s+/g," ").trim();
         const q=t.match(/[“"]([^”"]{20,})[”"]/); const nm=t.split(/\s+[-–—]\s+/)[0];
@@ -254,14 +264,14 @@ if(!webgl){
     const r=host.parentElement.getBoundingClientRect(); tip.style.left=(ev.clientX-r.left+14)+"px"; tip.style.top=(ev.clientY-r.top+14)+"px"; tip.classList.remove("hidden");
     tip.innerHTML=`<b class="text-emerald-300">${esc(o.C.name)} County</b> <span class="text-slate-400">FIPS ${o.C.fips}</span>`+(o.n?`<div class="mt-1 text-slate-400">${o.n} retrieved case${o.n>1?"s":""} · click to open</div><ul class="mt-1 list-disc pl-4">${o.items.slice(0,6).map(i=>`<li>${esc(cites[i].title).slice(0,70)}</li>`).join("")}</ul>`:'<div class="text-slate-500">no retrieved cases</div>'); });
   R.domElement.addEventListener("mouseleave",()=>tip.classList.add("hidden"));
-  R.domElement.addEventListener("click",ev=>{ const o=countyAt(ev); if(!R._ph&&o&&o.n){ const k=o.items[0]; api.focus(k); openDoc(cites[k]); } });
+  R.domElement.addEventListener("click",ev=>{ const o=countyAt(ev); if(!R._ph&&o&&o.n){ const k=o.items[0]; api.jump(k); openDoc(cites[k]); } });
   function resize(){ const w=host.clientWidth,h=host.clientHeight; R.setSize(w,h); cam.aspect=w/h; cam.updateProjectionMatrix(); }
   new ResizeObserver(resize).observe(host); resize();
   R.setAnimationLoop(now=>{ const t=now/1000;
     cam.position.lerp(camT,0.035); look.lerp(lookT,0.05); cam.lookAt(look);
     if(busyRing){ busyRing.scale.setScalar(1+((t*1.5)%1)*4); busyRing.material.opacity=0.8*(1-((t*1.5)%1)); }
     pins.forEach(p=>{ const u=p.userData, age=(now-u.born)/400; p.scale.setScalar(Math.max(0.001,Math.min(1,age))); const f=u.G.items.includes(cur);
-      u.head.scale.setScalar(1+(f?0.4+level*1.4:0)+Math.sin(t*3+p.position.x*9)*0.08); const ph=((t+p.position.y*5)%1.2)/1.2; u.halo.scale.setScalar(1+ph*2*(f?1.6:1)); u.halo.material.opacity=0.6*(1-ph); });
+      u.head.scale.setScalar(1+(f?0.4+level*1.4:0)+Math.sin(t*3+p.position.x*9)*0.08); const ph=((t+p.position.y*5)%1.2)/1.2; u.halo.scale.setScalar(f?1+ph*2.4:1); u.halo.material.opacity=f?0.6*(1-ph):0.12; /* only the focused pin pulses */ });
     arcs.forEach(a=>{ if(now>a.start){ a.t=Math.min(1,a.t+0.03); a.line.geometry.setDrawRange(0,Math.floor(a.t*a.n)); } });
     R.render(scene,cam); });
 }

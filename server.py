@@ -35,7 +35,11 @@ def ask(request: Request, q: dict = Body(...)):
     if not limits.run_lock.acquire(blocking=False): return JSONResponse({"error": "busy, try again in a few seconds"}, 429)
     rid = time.strftime("%H%M%S-") + uuid.uuid4().hex[:6]
     def job():
-        try: _run_and_log(question, rid, prev); _recent_q[key] = (rid, time.time())
+        try:
+            _run_and_log(question, rid, prev)
+            try: _ok = not json.loads((ROOT / "runs" / rid / "result.json").read_text()).get("provider", "").startswith("template")
+            except Exception: _ok = False
+            if _ok: _recent_q[key] = (rid, time.time())   # never reuse a template fallback run
         finally: limits.run_lock.release()
     threading.Thread(target=job, daemon=True).start()
     return {"run_id": rid}
@@ -217,15 +221,17 @@ def sponsor():
 
 @app.get("/map", response_class=HTMLResponse)
 def map_page(): return (ROOT / "static" / "map.html").read_text()
+@app.get("/observability", response_class=HTMLResponse)
+def observability_page(): return (ROOT / "static" / "observability.html").read_text()
 @app.get("/api/runs")
 def runs_list(n: int = 15):
     out = []
     for d in sorted((ROOT / "runs").iterdir(), key=lambda p: p.stat().st_mtime, reverse=True):
         f = d / "result.json"
-        if not f.exists() or d.name.startswith(("test","arize")): continue
+        if not f.exists() or d.name.startswith(("test","arize","exp-")): continue
         try: r = json.loads(f.read_text())
         except Exception: continue
-        out.append({"run_id": d.name, "question": r.get("question", ""), "n": len(r.get("citations", []))})
+        out.append({"run_id": d.name, "question": r.get("question", ""), "n": len(r.get("citations", [])), "ts": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(f.stat().st_mtime))})
         if len(out) >= n: break
     return out
 @app.get("/guide", response_class=HTMLResponse)
