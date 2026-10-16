@@ -1,0 +1,111 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Precedent · Legal GraphRAG Agents</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="/static/vendor/tailwind.js"></script>
+<script src="/static/vendor/vis-network.min.js"></script>
+<style>body{background:radial-gradient(1200px 600px at 10% -10%,#1e1b4b 0,#0b1020 50%,#05070f 100%)}
+.glass{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(8px)}
+.seat.on{box-shadow:0 0 0 2px #818cf8,0 0 24px #6366f1aa}.seat.done{border-color:#34d399}
+@keyframes pulse2{50%{opacity:.4}}.live{animation:pulse2 1s infinite}</style><script src="/static/links.js"></script></head>
+<body class="text-slate-200 min-h-screen font-sans"><nav class="sticky top-0 z-40 backdrop-blur bg-slate-950/60 border-b border-white/5"><div class="max-w-7xl mx-auto px-6 h-11 flex items-center gap-6 text-sm"><span class="font-bold text-indigo-400">⚖ Precedent</span><a href="/" class="text-slate-300 hover:text-white">Demo</a><a href="/dashboard" class="text-slate-300 hover:text-white">Dashboards</a><a href="/slides" class="text-slate-300 hover:text-white">Slides</a></div></nav>
+<div class="max-w-7xl mx-auto px-6 py-8">
+<header class="flex items-center justify-between mb-8">
+ <div><h1 class="text-3xl font-bold tracking-tight"><span class="text-indigo-400">⚖ Precedent</span> <span class="text-slate-400 font-light">Legal GraphRAG Agents</span></h1>
+ <p class="text-slate-400 text-sm mt-1">Multi-agent retrieval over a 120k-node citation graph · every citation verified</p></div>
+ <div id="badges" class="flex gap-2 text-xs"></div></header>
+<div class="glass rounded-2xl p-4 flex gap-3 mb-6">
+ <input id="q" class="flex-1 bg-transparent outline-none text-lg placeholder-slate-500" placeholder="Ask a legal research question…" value="When can police search a vehicle without a warrant?">
+ <button id="go" class="bg-indigo-500 hover:bg-indigo-400 px-6 py-2 rounded-xl font-semibold">Ask</button></div>
+<div class="flex gap-2 mb-6 text-xs" id="examples"></div>
+<div class="glass rounded-2xl overflow-hidden relative mb-6" style="height:clamp(460px,60vh,680px)"><div id="docs3d" class="absolute inset-0"></div><div class="absolute bottom-2 left-3 text-[10px] uppercase tracking-widest text-slate-500">United States · Colorado courts &amp; statutes</div><div id="docnav" class="absolute bottom-2 right-3 flex gap-1"></div></div>
+<div class="grid grid-cols-12 gap-6">
+ <div class="col-span-8 space-y-6">
+  <div class="glass rounded-2xl p-6"><div class="flex items-center justify-between mb-3"><h2 class="font-semibold text-slate-300">Answer</h2>
+   <div class="flex gap-2 items-center"><span id="sg"></span><label class="text-xs text-slate-400 flex items-center gap-1 mr-1"><input id="hf" type="checkbox" class="accent-indigo-500"> Hands-free</label><button id="play" class="hidden text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-lg">🔊 Listen</button></div></div>
+   <div id="answer" class="leading-relaxed text-slate-100 text-[15px] max-w-none">Ask a question to start the agent pipeline.</div>
+   <div id="meta" class="text-xs text-slate-500 mt-4"></div><div id="disc" class="text-xs text-amber-300/80 mt-2"></div></div>
+  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Citation trail</h2><div id="net" style="height:360px"></div></div>
+  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Retrieved authorities</h2><div id="cites" class="space-y-2"></div></div>
+ </div>
+ <div class="col-span-4 space-y-6">
+  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-4">Agent seats <span class="text-xs text-slate-500">(ACS claim file)</span></h2>
+   <div class="grid grid-cols-2 gap-3" id="seats"></div></div>
+  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Live pipeline <span class="text-xs text-slate-500">events.jsonl</span></h2>
+   <div id="events" class="space-y-2 text-xs font-mono max-h-[520px] overflow-auto"></div></div>
+  <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Team task board <span class="text-xs text-slate-500">ACS · claim via /api/claim</span></h2>
+   <div id="tasks" class="space-y-1 text-xs"></div></div>
+ </div></div>
+<div class="glass rounded-2xl p-2 mt-6"><div class="flex justify-between px-3 pt-2"><h2 class="font-semibold text-slate-300">Live sponsor stack</h2><span class="text-xs"><a class="text-indigo-300 hover:underline" href="/dashboard" target="_blank">dashboard ↗</a> · <a class="text-indigo-300 hover:underline" href="/slides" target="_blank">slides ↗</a></span></div>
+<iframe src="/dashboard?compact=1" class="w-full rounded-xl" style="height:760px;border:0"></iframe></div></div>
+<script>
+const SEATS=[["planner","🧭","Planner"],["retriever","🕸","Retriever"],["answer","✍️","Answer"],["safeguard","🛡","Safeguard"]];
+const C={planner:"text-sky-300",retriever:"text-indigo-300",answer:"text-fuchsia-300",safeguard:"text-emerald-300"};
+const $=id=>document.getElementById(id);let lastAnswer="",tts=false;
+function seats(state){$("seats").innerHTML=SEATS.map(([k,i,n])=>`<div class="seat glass rounded-xl p-3 border ${state[k]||''}"><div class="text-2xl">${i}</div><div class="font-semibold text-sm">${n}</div><div class="text-[10px] text-slate-400">${state[k]==='on'?'<span class=live>● working</span>':state[k]==='done'?'✓ handed off':'idle'}</div></div>`).join("")}
+seats({});
+["Can police search a car without a warrant if they have probable cause?","Water rights priority dispute between ranchers","Can a landlord evict a tenant without a court order?","Is marijuana possession a crime after Amendment 64?"].forEach(e=>{const b=document.createElement("button");b.className="glass px-3 py-1 rounded-full hover:bg-white/10";b.textContent=e;b.onclick=()=>{$("q").value=e;ask()};$("examples").appendChild(b)});
+fetch("/api/health").then(r=>r.json()).then(h=>{tts=h.elevenlabs;const b=(t,on)=>`<span class="px-2 py-1 rounded-full ${on?'bg-emerald-500/20 text-emerald-300':'bg-slate-700/50 text-slate-500'}">${t}</span>`;
+$("badges").innerHTML=b("Daytona",!!h.sandbox)+b("SurrealDB",h.backend=="surrealdb")+b("Arize",h.arize)+b("ElevenLabs",h.elevenlabs)});
+function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
+let running=false,lastAskT=0,resultWaiters=[];
+async function ask(){const q=$("q").value.trim();if(!q||running||Date.now()-lastAskT<800)return null;lastAskT=Date.now();running=true;$("go").disabled=true;$("go").classList.add("opacity-50");
+ $("answer").innerHTML='<span class="live text-slate-400">Agents working…</span>';$("events").innerHTML="";$("sg").innerHTML="";$("cites").innerHTML="";$("play").classList.add("hidden");seats({});window.Docs3D&&Docs3D.busy();
+ const done=()=>{running=false;$("go").disabled=false;$("go").classList.remove("opacity-50")};
+ const resp=await fetch("/api/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q})});const j=await resp.json().catch(()=>({}));
+ if(!resp.ok){$("answer").innerHTML=`<span class="text-amber-300">⏳ ${esc(j.error||"busy")}</span>`;done();return null}
+ const run_id=j.run_id;return await new Promise(res=>{let shown=0;const poll=async()=>{const d=await (await fetch("/api/run/"+run_id)).json();const st={};
+  d.events.forEach(e=>{if(e.kind=="claim")st[e.agent]="on";if(["release","handoff"].includes(e.kind))st[e.agent]="done"});seats(st);
+  d.events.slice(shown).forEach(e=>{const el=document.createElement("div");el.className="glass rounded-lg p-2";el.innerHTML=`<span class="text-slate-500">${e.ts.slice(11,19)}</span> <span class="${C[e.agent]||''} font-bold">${e.agent}</span> <span class="text-slate-400">${e.kind}</span><div class="text-slate-300 mt-1">${esc(e.msg)}${e.to?' → <b>'+e.to+'</b>':''}</div>`;$("events").appendChild(el)});shown=d.events.length;
+  if(d.result){render(d.result);done();res(d.result)}else setTimeout(poll,300)};poll()})}
+function render(r){lastAnswer=r.answer;const byRef={};r.citations.forEach(c=>byRef[c.ref]=c);
+ $("answer").innerHTML=md(r.answer,byRef);
+ const s=r.safeguard;$("sg").innerHTML=`<span class="px-3 py-1 rounded-full text-xs font-bold ${s.pass?'bg-emerald-500/20 text-emerald-300':'bg-red-500/20 text-red-300'}">🛡 Safeguard ${s.pass?'PASS':'FAIL'} · ${s.used.length} cited · ${s.invalid.length+s.unknown_authorities.length} hallucinated</span>`;
+ $("disc").textContent="⚠ "+s.disclaimer;$("meta").textContent=`run ${r.run_id} · model: ${r.provider} · passages: ${r.passage_source||"none (graph-only)"} · graph: ${r.backend} · ${r.elapsed_s}s`+(s.unsupported_claims.length?` · ${s.unsupported_claims.length} sentence(s) without citation flagged`:"");
+ if(tts)$("play").classList.remove("hidden");
+ lastCites=r.citations;window.Docs3D&&Docs3D.show(r.citations,r.edges,r.documents||[]);
+ $("docnav").innerHTML=r.citations.slice(0,12).map((c,i)=>`<button onclick="Docs3D.focus(${i});Docs3D.open&&Docs3D.open(lastCites[${i}])" class="w-5 h-5 rounded-full text-[10px] bg-indigo-500/30 hover:bg-indigo-500/70">${i+1}</button>`).join("");
+ if(tts&&$("hf").checked&&!(window.PrecedentVoice&&PrecedentVoice.state()!=="idle"))setTimeout(()=>speak(),400);
+ $("cites").innerHTML=r.citations.map(c=>`<div class="glass rounded-xl p-3 flex justify-between gap-4"><div><span class="text-indigo-300 font-bold">${c.ref}</span> ${c.url?`<a class="hover:underline" target=_blank href="${c.url}">${esc(c.title)}</a>`:esc(c.title)}
+  <div class="text-xs text-slate-500">${c.type} ${esc(c.court)} ${c.date} · path: ${c.path.map(esc).join(" → ")}</div>${c.passage?`<div class="text-xs text-slate-300 mt-1 border-l-2 border-indigo-500/50 pl-2 italic">${esc(c.passage.slice(0,320))}…</div>`:""}${window.caseLinks?window.caseLinks(c):""}</div><div class="text-right text-xs text-slate-400 whitespace-nowrap">cited by ${c.cited_by}<br>PR ${c.pagerank}</div></div>`).join("");
+ const ids=new Set();r.citations.forEach(c=>ids.add(c.id));r.seeds.forEach(x=>ids.add(x));r.edges.forEach(e=>{ids.add(e.src);ids.add(e.dst)});
+ const refOf={};r.citations.forEach(c=>refOf[c.id]=c.ref);
+ const nodes=[...ids].map(id=>({id,label:(refOf[id]?refOf[id]+" ":"")+(id.length>28?id.slice(0,26)+"…":id),shape:"dot",size:refOf[id]?18:9,
+  color:r.seeds.includes(id)?"#f59e0b":refOf[id]?"#818cf8":"#475569",font:{color:"#cbd5e1",size:11}}));
+ new vis.Network($("net"),{nodes,edges:r.edges.map(e=>({from:e.src,to:e.dst,arrows:"to",color:{color:"#64748b"}}))},{physics:{stabilization:true},interaction:{hover:true}})}
+$("go").onclick=ask;$("q").onkeydown=e=>{if(e.key=="Enter")ask()};
+let lastCites=[],actx=null;
+async function speak(){const text=shortLine(lastAnswer);if(!text)return;$("play").textContent="⏳";
+ try{const r=await fetch("/api/tts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text})});
+ if(!r.ok){ if("speechSynthesis" in window){ $("meta").textContent+=" · voice: browser TTS (ElevenLabs hourly cap reached)"; await new Promise(res=>{const u=new SpeechSynthesisUtterance(text);u.onend=res;u.onerror=res;speechSynthesis.speak(u)}); } return }
+ const a=new Audio(URL.createObjectURL(await r.blob()));
+ try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const src=actx.createMediaElementSource(a),an=actx.createAnalyser();an.fftSize=256;src.connect(an);an.connect(actx.destination);
+  const buf=new Uint8Array(an.frequencyBinCount);const tick=()=>{if(a.paused||a.ended){window.__ttsLevel=0;window.Docs3D&&Docs3D.pulse(0);return}an.getByteFrequencyData(buf);let s=0;for(const v of buf)s+=v;const l=s/buf.length/255;window.__ttsLevel=l;window.Docs3D&&Docs3D.pulse(l);requestAnimationFrame(tick)};a.onplay=tick}catch(e){}
+ const n=Math.min(lastCites.length,5);a.ontimeupdate=()=>{if(a.duration&&n)window.Docs3D&&Docs3D.focus(Math.min(n-1,Math.floor(a.currentTime/a.duration*n)))};
+ await new Promise(res=>{a.onended=res;a.onerror=res;a.play().catch(res)})}finally{$("play").textContent="🔊 Listen"}}
+$("play").onclick=()=>speak();
+
+
+// Minimal safe Markdown renderer (escape first, then a small whitelist of constructs)
+function inl(t,byRef){t=esc(t);
+ t=t.replace(/\*\*(.+?)\*\*/g,"<strong class='text-white'>$1</strong>").replace(/(^|[^*])\*([^*\n]+)\*/g,"$1<em>$2</em>").replace(/`([^`]+)`/g,"<code class='px-1 rounded bg-slate-800'>$1</code>");
+ if(!t.includes("<strong"))t=t.replace(/\b((?:[A-Z][\w.'&-]*\s){0,6}v\.\s(?:[A-Z][\w.'&-]*(?:\s|,\s)?){1,6})/g,m=>m.includes("<strong")?m:`<span class="font-semibold text-indigo-100">${m}</span>`);
+ return t.replace(/\[(\d+)\]/g,(m,n)=>{const c=byRef[m];return c?`<a href="${c.url||'#'}" target="_blank" title="${esc(c.title)}" class="inline-block text-xs align-super px-1 rounded bg-indigo-500/30 text-indigo-200 font-bold no-underline hover:bg-indigo-500/60">${n}</a>`:`<span class="text-red-400">${m}</span>`})}
+function md(src,byRef){const L=(src||"").replace(/\r/g,"").replace(/\\n/g,"\n").split("\n");let h="",list=null,para=[],quote=[];
+ const fp=()=>{if(para.length){h+=`<p class="mb-3">${inl(para.join(" "),byRef)}</p>`;para=[]}};
+ const fl=()=>{if(list){h+=`</${list}>`;list=null}};
+ const fq=()=>{if(quote.length){h+=`<blockquote class="my-3 border-l-4 border-indigo-400/60 bg-indigo-500/10 rounded-r-lg px-4 py-2 italic text-slate-300">${inl(quote.join(" "),byRef)}</blockquote>`;quote=[]}};
+ for(const raw of L){const l=raw.trim();let m;
+  if(!l){fp();fl();fq();continue}
+  if(m=l.match(/^(#{1,4})\s+(.*)/)){fp();fl();fq();h+=`<h3 class="text-sm uppercase tracking-wider text-indigo-300 font-semibold mt-4 mb-2">${inl(m[2],byRef)}</h3>`;continue}
+  if(m=l.match(/^>\s?(.*)/)){fp();fl();quote.push(m[1]);continue}
+  if(m=l.match(/^(?:[-*•]|\d+[.)])\s+(.*)/)){fp();fq();const t=/^\d/.test(l)?"ol":"ul";if(list!==t){fl();h+=t=="ul"?`<ul class="list-disc pl-5 space-y-2 mb-3 marker:text-indigo-400">`:`<ol class="list-decimal pl-5 space-y-2 mb-3">`;list=t}
+   {const q=m[1].match(/^(.*?)\s[-–—:]\s*["“](.+?)["”]?\s*$/);h+=q?`<li>${inl(q[1],byRef)}<span class="block text-slate-400 italic text-sm mt-0.5 border-l-2 border-indigo-400/40 pl-2">“${inl(q[2],byRef)}”</span></li>`:`<li>${inl(m[1],byRef)}</li>`}continue}
+  fl();fq();para.push(l)}
+ fp();fl();fq();return h}
+function shortLine(a){const l=(a||"").split("\n").map(x=>x.trim()).filter(Boolean);let t=l.find(x=>/short answer/i.test(x))||l[0]||"";
+ t=t.replace(/\*\*?short answer:?\*\*?:?/i,"").replace(/\[\d+\]/g,"").replace(/[*#>`_]/g,"").replace(/\s+/g," ").trim();return t.length>300?t.slice(0,300).replace(/\s\S*$/,"")+".":t}
+async function board(){try{const d=await (await fetch("/api/tasks")).json();const col={open:"text-slate-500",claimed:"text-amber-300",done:"text-emerald-300",blocked:"text-red-300"};
+$("tasks").innerHTML=Object.entries(d.tasks).map(([k,t])=>`<div class="flex justify-between gap-2 glass rounded-lg px-2 py-1"><span><b class="text-indigo-300">${k}</b> <span class="text-slate-500">${t.priority}</span> ${esc(t.title)}</span><span class="${col[t.status]||''} whitespace-nowrap">${t.status}${t.owner?' · '+esc(t.owner):''}</span></div>`).join("")}catch(e){}}
+board();setInterval(board,5000);
+
+window.PRECEDENT={ask:async t=>{$("q").value=t;return await ask()},speak};
+</script><script src="/static/vendor/d3-array.min.js"></script><script src="/static/vendor/d3-geo.min.js"></script><script type="module" src="/static/map3d.js"></script><script src="/static/voice.js"></script></body></html>

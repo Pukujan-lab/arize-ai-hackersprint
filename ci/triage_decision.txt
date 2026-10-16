@@ -1,0 +1,95 @@
+{
+  "labels": [
+    "account:unrecognized",
+    "filer:human-direct",
+    "needs-account-review",
+    "needs-filer-stamp",
+    "needs-human-verification",
+    "needs-impact-evidence",
+    "needs-priority-definition",
+    "needs-record-context",
+    "needs-record-schema",
+    "needs-release-relevance",
+    "observational-issue",
+    "ontology:oio-1.0.0",
+    "ontology:project-1.0.0",
+    "proposal",
+    "queue:class-3",
+    "queue:class-3:account-99",
+    "type:observational"
+  ],
+  "warnings": [
+    "missing-identity-or-authorization-evidence",
+    "human-account-not-in-owner-policy",
+    "human-origin-account-not-owner-verified",
+    "human-direct-origin-needs-owner-attestation",
+    "priority-path-or-concept-not-defined",
+    "missing-or-invalid-impact-risk-evidence",
+    "missing-release-relevance",
+    "issue-record-schema-invalid:ontology schema validation failed: /filer/created_at: '' does not match '^\\\\d{4}-\\\\d{2}-\\\\d{2}T\\\\d{2}:\\\\d{2}:\\\\d{2}(?:\\\\.\\\\d+)?(?:Z|[+-]\\\\d{2}:\\\\d{2})$'",
+    "destination-or-ontology-version-does-not-match-installed-target"
+  ],
+  "origin": "human-direct",
+  "actor_id": "1",
+  "actor_login": "alex-demo",
+  "record": {
+    "schema_version": "oio.issue-log-record.v1",
+    "issue_type": "observational",
+    "project": {
+      "id": "Pukujan/legal-graphrag-starter",
+      "repository": "Pukujan/legal-graphrag-starter"
+    },
+    "ontology": {
+      "default_version": "0.0.0",
+      "project_version": "0.0.0"
+    },
+    "filer": {
+      "origin": "human-direct",
+      "authenticated_actor": "1:alex-demo",
+      "content_author": "unknown",
+      "created_at": "",
+      "directing_human": null,
+      "authorization_state": "claimed",
+      "authorization_evidence": null,
+      "session_reference": null,
+      "destination_repository": "Pukujan/legal-graphrag-starter"
+    },
+    "priority": {
+      "status": "unresolved",
+      "path": null,
+      "concept_id": null
+    },
+    "impact": {
+      "affected": [
+        "legal-graphrag demo retriever"
+      ],
+      "consequence": "Graph expansion over-weights statutes for vehicle-search questions; workaround: boost caselaw seeds.",
+      "breadth": "legal-graphrag demo retriever",
+      "workaround": "Graph expansion over-weights statutes for vehicle-search questions; workaround: boost caselaw seeds.",
+      "impact_band": "informational",
+      "likelihood": "likely",
+      "exposure": "unknown",
+      "recoverability": "unknown",
+      "evidence_confidence": "unknown",
+      "unresolved_risk": "unknown",
+      "change_risk": "unknown",
+      "exposure_duration": "unknown",
+      "recovery": "unknown"
+    },
+    "release_relevance": {
+      "relation": "unknown",
+      "product_outcome": "unknown",
+      "delay_cost": "unknown",
+      "smallest_useful_slice": "unknown"
+    }
+  },
+  "queue_order_key": [
+    3,
+    99,
+    [
+      101
+    ],
+    5
+  ]
+}
+[triage_local] exit=0; 20 stubbed GitHub API calls recorded in /home/daytona/hack/demo/ci/triage_api_calls.jsonl

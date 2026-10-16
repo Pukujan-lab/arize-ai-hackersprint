@@ -1,0 +1,52 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Precedent · Sponsor stack</title><meta name="viewport" content="width=device-width,initial-scale=1">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{background:radial-gradient(1200px 600px at 10% -10%,#1e1b4b 0,#0b1020 50%,#05070f 100%)}.glass{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08)}
+.edge{stroke:#334155;stroke-width:2.5;fill:none}.edge.on{stroke:#818cf8;stroke-dasharray:8 6;animation:flow .6s linear infinite;filter:drop-shadow(0 0 4px #818cf8)}
+@keyframes flow{to{stroke-dashoffset:-14}}.node rect{fill:#0f172a;stroke:#475569;stroke-width:1.5}.node.on rect{stroke:#a5b4fc;fill:#1e1b4b;filter:drop-shadow(0 0 8px #6366f1)}
+.node text{fill:#e2e8f0;font:600 12px ui-sans-serif}.node .sub{fill:#94a3b8;font:400 10px ui-sans-serif}</style></head>
+<body class="text-slate-200 min-h-screen font-sans"><div id="wrap" class="max-w-7xl mx-auto px-6 py-6">
+<div class="flex justify-between items-end mb-4" id="hdr"><div><h1 class="text-2xl font-bold"><span class="text-indigo-400">⚖ Precedent</span> <span class="text-slate-400 font-light">live sponsor stack</span></h1>
+<p class="text-xs text-slate-500">Real counters from the running sandbox · refreshes every 2s</p></div><a href="/" class="text-sm text-indigo-300 hover:underline">← back to demo</a></div>
+<div class="glass rounded-2xl p-4 mb-5"><svg viewBox="0 0 1000 170" class="w-full">
+<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" fill="#64748b"/></marker></defs>
+<path id="e-q-p" class="edge" d="M110,85 L170,85" marker-end="url(#ar)"/><path id="e-p-o" class="edge" d="M290,85 C320,85 320,40 350,40" marker-end="url(#ar)"/>
+<path id="e-p-s" class="edge" d="M290,85 C320,85 320,130 350,130" marker-end="url(#ar)"/><path id="e-o-s" class="edge" d="M420,58 L420,110" marker-end="url(#ar)"/>
+<path id="e-o-m" class="edge" d="M490,40 C520,40 520,85 550,85" marker-end="url(#ar)"/><path id="e-s-m" class="edge" d="M490,130 C520,130 520,85 550,85" marker-end="url(#ar)"/>
+<path id="e-m-g" class="edge" d="M670,85 L710,85" marker-end="url(#ar)"/><path id="e-g-e" class="edge" d="M830,85 L870,85" marker-end="url(#ar)"/>
+<g class="node" id="n-q"><rect x="10" y="60" width="100" height="50" rx="10"/><text x="60" y="82" text-anchor="middle">Question</text><text class="sub" x="60" y="98" text-anchor="middle">web :3000</text></g>
+<g class="node" id="n-p"><rect x="170" y="60" width="120" height="50" rx="10"/><text x="230" y="82" text-anchor="middle">Planner</text><text class="sub" x="230" y="98" text-anchor="middle">ACS seat</text></g>
+<g class="node" id="n-o"><rect x="350" y="15" width="140" height="50" rx="10"/><text x="420" y="37" text-anchor="middle">Octo passages</text><text class="sub" x="420" y="53" text-anchor="middle">retriever</text></g>
+<g class="node" id="n-s"><rect x="350" y="105" width="140" height="50" rx="10"/><text x="420" y="127" text-anchor="middle">SurrealDB graph</text><text class="sub" x="420" y="143" text-anchor="middle">->cites traversal</text></g>
+<g class="node" id="n-m"><rect x="550" y="60" width="120" height="50" rx="10"/><text x="610" y="82" text-anchor="middle">Haiku answer</text><text class="sub" x="610" y="98" text-anchor="middle">cached</text></g>
+<g class="node" id="n-g"><rect x="710" y="60" width="120" height="50" rx="10"/><text x="770" y="82" text-anchor="middle">Safeguard</text><text class="sub" x="770" y="98" text-anchor="middle">citations ✓</text></g>
+<g class="node" id="n-e"><rect x="870" y="60" width="120" height="50" rx="10"/><text x="930" y="82" text-anchor="middle">ElevenLabs</text><text class="sub" x="930" y="98" text-anchor="middle">voice</text></g>
+</svg><div class="text-xs text-slate-500 mt-1" id="lastrun"></div></div>
+<div class="grid grid-cols-3 xl:grid-cols-5 gap-4" id="cards"></div>
+<div class="glass rounded-2xl p-4 mt-5"><div class="text-sm font-semibold text-slate-300 mb-2">Latency per agent per run (ms)</div><svg id="chart" viewBox="0 0 1000 160" class="w-full"></svg>
+<div class="flex gap-4 text-xs mt-1" id="lg"></div></div></div>
+<script>
+const $=id=>document.getElementById(id), esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+if(new URLSearchParams(location.search).has("compact")){$("hdr").style.display="none";$("wrap").className="px-2 py-2"}
+const SEQ=[["n-q"],["e-q-p","n-p"],["e-p-o","n-o"],["e-o-s","e-p-s","n-s"],["e-o-m","e-s-m","n-m"],["e-m-g","n-g"],["e-g-e","n-e"]];
+function animate(){document.querySelectorAll(".on").forEach(e=>e.classList.remove("on"));SEQ.forEach((g,i)=>setTimeout(()=>g.forEach(id=>$(id).classList.add("on")),i*450));setTimeout(()=>document.querySelectorAll(".edge.on").forEach(e=>e.classList.remove("on")),SEQ.length*450+2500)}
+const card=(t,c,rows,how,ok=true)=>`<div class="glass rounded-2xl p-4"><div class="flex justify-between"><div class="font-semibold">${t}</div><span class="w-2 h-2 mt-2 rounded-full ${ok?'bg-emerald-400':'bg-slate-600'}"></span></div>
+<div class="text-[11px] text-slate-500 mb-2">${how}</div>${rows.map(([k,v])=>`<div class="flex justify-between text-sm py-0.5"><span class="text-slate-400">${k}</span><span class="font-mono ${c}">${esc(v)}</span></div>`).join("")}</div>`;
+let lastRun=null;const COLORS={planner:"#38bdf8",retriever:"#818cf8",answer:"#e879f9",safeguard:"#34d399"};
+async function tick(){try{const d=await (await fetch("/api/stack")).json();
+ if(d.runs.length){const r=d.runs[d.runs.length-1];if(r.run_id!==lastRun){if(lastRun!==null)animate();lastRun=r.run_id}
+  $("lastrun").textContent=`last run ${r.run_id} · "${r.q}" · ${r.elapsed_s}s · passages: ${r.passages||"graph-only"} · model: ${r.provider} · safeguard ${r.pass?"PASS":"FAIL"}`}
+ const D=d.daytona,S=d.surrealdb,O=d.octo,M=d.model,E=d.elevenlabs,A=d.acs,Z=d.arize;
+ $("cards").innerHTML=card("Daytona","text-sky-300",[["sandbox",D.sandbox],["CPU / RAM",`${D.cpus} cpu · ${D.ram_used_gb}/${D.ram_gb} GB`],["sandbox uptime",D.uptime_h+" h"],["server uptime",D.server_uptime_min+" min"]],D.how)
+ +card("SurrealDB","text-indigo-300",[["nodes",S.nodes.toLocaleString()],["edges",S.edges.toLocaleString()],["queries",S.queries],["last / avg",`${S.last_ms??"-"} / ${S.avg_ms??"-"} ms`]],S.how,S.backend=="surrealdb")
+ +card("Octo DB","text-amber-300",[["searches",O.searches],["live / snapshot",`${O.live} / ${O.snapshot}`],["cache hits",O.cache_hits],["last source",O.last_source||"-"]],O.how)
+ +card("Model (Haiku)","text-fuchsia-300",[["real calls",M.real_total],["cached answers",M.cached_answers],["template fallback",M.template],["runs",M.runs]],M.how,M.anthropic_key)
+ +card("ElevenLabs","text-emerald-300",[["TTS calls",E.tts_calls],["cache hits",E.cache_hits],["cached clips",E.cached_files],["status",E.enabled?"live":"key missing"]],E.how,E.enabled)
+ +card("ACS coordination","text-sky-300",[["tasks",`${A.tasks} (${A.claimed} claimed, ${A.done} done)`],["issue logs",A.issue_logs],["events",A.events]],A.how+`<div class="mt-1 font-mono text-[10px] text-slate-500 leading-tight">${A.recent.slice(-3).map(esc).join("<br>")}</div>`)
+ +card("Arize","text-rose-300",[["status",Z.status],["spans sent",Z.spans_sent]],Z.how,Z.connected)
+ +card("Rate limits","text-amber-300",Object.entries(d.limits.caps).map(([k,v])=>[k.replace("elevenlabs_","11labs "),`${v.used_last_hour}/${v.cap_per_hour} /hr`]).concat([["per IP",d.limits.per_ip_per_min+" q/min"],["in flight",d.limits.in_flight?"1 (busy)":"0"],["blocked",Object.values(d.limits.blocked).reduce((a,b)=>a+b,0)]]),"One run at a time, per-IP and hourly caps; over cap falls back to cache/template/browser voice with a notice.")
+ +card("Safeguard","text-emerald-300",[["runs passed",`${d.runs.filter(r=>r.pass).length}/${d.runs.length} recent`],["hallucinated cites","blocked by design"]],"Every citation must be in the retrieved set; disclaimer always on.");
+ const rs=d.runs.slice(-12),ag=["planner","retriever","answer","safeguard"],mx=Math.max(50,...rs.flatMap(r=>ag.map(a=>r.latency[a]||0)));const bw=1000/Math.max(rs.length,1);
+ $("chart").innerHTML=rs.map((r,i)=>ag.map((a,j)=>{const v=r.latency[a]||0,h=Math.max(1,v/mx*130);return `<rect x="${i*bw+8+j*(bw-16)/4}" y="${145-h}" width="${(bw-16)/4-3}" height="${h}" fill="${COLORS[a]}" rx="2"><title>${a}: ${v} ms (${esc(r.q)})</title></rect>`}).join("")+`<text x="${i*bw+bw/2}" y="158" fill="#64748b" font-size="9" text-anchor="middle">${r.run_id.slice(0,6)}</text>`).join("");
+ $("lg").innerHTML=ag.map(a=>`<span><span style="color:${COLORS[a]}">■</span> ${a}</span>`).join("")}catch(e){}}
+tick();setInterval(tick,2000);
+</script></body></html>

@@ -1,0 +1,143 @@
+// 3D United States citation map: states extruded (Albers USA, vendored us-atlas + d3-geo), Colorado raised.
+// One glowing pin per retrieved document at its deciding court; arcs for graph links; camera US -> Colorado -> pins.
+const host = document.getElementById("docs3d");
+const api = { busy(){}, show(){}, focus(){}, pulse(){}, idle(){} }; window.Docs3D = api;
+const DENVER=[39.7393,-104.9897], CAPITOL=[39.7392,-104.9848], DC=[38.8906,-77.0044];
+const SEATS={adams:[39.9853,-104.8205,"Brighton"],alamosa:[37.4695,-105.8700,"Alamosa"],arapahoe:[39.6133,-105.0166,"Littleton"],archuleta:[37.2694,-107.0098,"Pagosa Springs"],baca:[37.4086,-102.6141,"Springfield"],
+bent:[38.0717,-103.2227,"Las Animas"],boulder:[40.0150,-105.2705,"Boulder"],broomfield:[39.9205,-105.0867,"Broomfield"],chaffee:[38.5347,-105.9989,"Salida"],cheyenne:[38.8214,-102.3530,"Cheyenne Wells"],
+"clear creek":[39.7055,-105.6972,"Georgetown"],conejos:[37.0886,-106.0192,"Conejos"],costilla:[37.2003,-105.4239,"San Luis"],crowley:[38.2181,-103.7563,"Ordway"],custer:[38.1350,-105.4664,"Westcliffe"],
+delta:[38.7422,-108.0690,"Delta"],denver:[39.7393,-104.9897,"Denver"],dolores:[37.7664,-108.9062,"Dove Creek"],douglas:[39.3722,-104.8561,"Castle Rock"],eagle:[39.6553,-106.8287,"Eagle"],
+elbert:[39.2836,-104.5225,"Kiowa"],"el paso":[38.8339,-104.8214,"Colorado Springs"],fremont:[38.4411,-105.2422,"Cañon City"],garfield:[39.5505,-107.3248,"Glenwood Springs"],gilpin:[39.8019,-105.5139,"Central City"],
+grand:[40.0733,-106.1031,"Hot Sulphur Springs"],gunnison:[38.5458,-106.9253,"Gunnison"],hinsdale:[38.0300,-107.3153,"Lake City"],huerfano:[37.6239,-104.7803,"Walsenburg"],jackson:[40.7319,-106.2837,"Walden"],
+jefferson:[39.7555,-105.2211,"Golden"],kiowa:[38.4811,-102.7810,"Eads"],"kit carson":[39.3058,-102.2694,"Burlington"],lake:[39.2508,-106.2925,"Leadville"],"la plata":[37.2753,-107.8801,"Durango"],
+larimer:[40.5853,-105.0844,"Fort Collins"],"las animas":[37.1695,-104.5005,"Trinidad"],lincoln:[39.1361,-103.4697,"Hugo"],logan:[40.6255,-103.2077,"Sterling"],mesa:[39.0639,-108.5506,"Grand Junction"],
+mineral:[37.8497,-106.9264,"Creede"],moffat:[40.5153,-107.5464,"Craig"],montezuma:[37.3489,-108.5859,"Cortez"],montrose:[38.4783,-107.8762,"Montrose"],morgan:[40.2503,-103.7999,"Fort Morgan"],
+otero:[37.9853,-103.5438,"La Junta"],ouray:[38.0228,-107.6714,"Ouray"],park:[39.2247,-106.0020,"Fairplay"],phillips:[40.5836,-102.3024,"Holyoke"],pitkin:[39.1911,-106.8175,"Aspen"],
+prowers:[38.0872,-102.6208,"Lamar"],pueblo:[38.2544,-104.6091,"Pueblo"],"rio blanco":[40.0372,-107.9131,"Meeker"],"rio grande":[37.6800,-106.3534,"Del Norte"],routt:[40.4850,-106.8317,"Steamboat Springs"],
+saguache:[38.0875,-106.1420,"Saguache"],"san juan":[37.8119,-107.6645,"Silverton"],"san miguel":[37.9375,-107.8123,"Telluride"],sedgwick:[40.9883,-102.2643,"Julesburg"],summit:[39.4817,-106.0384,"Breckenridge"],
+teller:[38.7472,-105.1783,"Cripple Creek"],washington:[40.1608,-103.2144,"Akron"],weld:[40.4233,-104.7091,"Greeley"],yuma:[40.0789,-102.2232,"Wray"]};
+const JD={1:"jefferson",2:"denver",3:"las animas",4:"el paso",5:"eagle",6:"la plata",7:"montrose",8:"larimer",9:"garfield",10:"pueblo",11:"fremont",12:"alamosa",13:"morgan",14:"routt",15:"prowers",16:"otero",17:"adams",18:"arapahoe",19:"weld",20:"boulder",21:"mesa",22:"montezuma",23:"douglas"};
+const CNAMES=Object.keys(SEATS).sort((a,b)=>b.length-a.length);
+function findCounty(txt){ if(!txt) return null; const t=txt.toLowerCase();
+  const pats=[/district court (?:of|for|in) (?:the )?(?:city and )?(?:county of )?([a-z ]+?) county/,/(?:appeal|certiorari) (?:from|to) the [a-z ]*?court (?:of|for|in) ([a-z ]+?) county/,/([a-z]+(?: [a-z]+)?) county district court/,/county court (?:of|for|in) ([a-z ]+?) county/,/city and county of (denver|broomfield)/,/([a-z]+(?: [a-z]+)?) county/];
+  for(const re of pats){ const m=t.match(re); if(m){ const w=m[1].trim(); const k=CNAMES.find(n=>w===n||w.endsWith(" "+n)); if(k) return k; } }
+  const jd=t.match(/(\d{1,2})(?:st|nd|rd|th) judicial district/); if(jd&&JD[+jd[1]]) return JD[+jd[1]]; return null; }
+
+
+const CAP={alabama:[32.377,-86.300],alaska:[58.302,-134.420],arizona:[33.448,-112.097],arkansas:[34.747,-92.289],california:[38.577,-121.494],colorado:[39.739,-104.985],connecticut:[41.764,-72.682],delaware:[39.157,-75.520],florida:[30.438,-84.281],georgia:[33.749,-84.388],hawaii:[21.307,-157.857],idaho:[43.618,-116.200],illinois:[39.798,-89.654],indiana:[39.768,-86.163],iowa:[41.591,-93.604],kansas:[39.048,-95.678],kentucky:[38.187,-84.875],louisiana:[30.457,-91.187],maine:[44.307,-69.782],maryland:[38.979,-76.491],massachusetts:[42.358,-71.064],michigan:[42.733,-84.555],minnesota:[44.955,-93.102],mississippi:[32.304,-90.182],missouri:[38.579,-92.173],montana:[46.586,-112.018],nebraska:[40.808,-96.700],nevada:[39.164,-119.766],"new hampshire":[43.207,-71.538],"new jersey":[40.220,-74.770],"new mexico":[35.682,-105.940],"new york":[42.653,-73.757],"north carolina":[35.780,-78.639],"north dakota":[46.821,-100.783],ohio:[39.961,-82.999],oklahoma:[35.492,-97.503],oregon:[44.938,-123.030],pennsylvania:[40.264,-76.884],"rhode island":[41.831,-71.415],"south carolina":[34.000,-81.033],"south dakota":[44.367,-100.346],tennessee:[36.166,-86.784],texas:[30.275,-97.740],utah:[40.777,-111.888],vermont:[44.262,-72.581],virginia:[37.539,-77.434],washington:[47.036,-122.905],"west virginia":[38.336,-81.612],wisconsin:[43.075,-89.384],wyoming:[41.140,-104.820]};
+const CIRC={first:[42.352,-71.050,"1st Cir. (Boston)"],second:[40.714,-74.002,"2d Cir. (New York)"],third:[39.951,-75.150,"3d Cir. (Philadelphia)"],fourth:[37.539,-77.434,"4th Cir. (Richmond)"],fifth:[29.951,-90.071,"5th Cir. (New Orleans)"],sixth:[39.103,-84.512,"6th Cir. (Cincinnati)"],seventh:[41.878,-87.630,"7th Cir. (Chicago)"],eighth:[38.627,-90.199,"8th Cir. (St. Louis)"],ninth:[37.780,-122.416,"9th Cir. (San Francisco)"],tenth:[39.745,-104.992,"10th Cir. (Denver)"],eleventh:[33.749,-84.388,"11th Cir. (Atlanta)"]};
+const STATES=Object.keys(CAP).sort((a,b)=>b.length-a.length);
+const tc=s=>s.replace(/\b\w/g,x=>x.toUpperCase());
+function locate(c){ const t=(c.type||"").toLowerCase(), court=(c.court||""), lc=court.toLowerCase();
+  if(t.includes("statute")||t.includes("cfr")||/c\.r\.s\./i.test(c.id)) return /u\.s\.c|cfr/i.test(c.id+t)?{key:"dc-stat",ll:DC,label:"U.S. Code / CFR (Washington, DC)",cat:"federal"}:{key:"capitol",ll:CAPITOL,label:"Colorado State Capitol (C.R.S.)",cat:"statute"};
+  if(/supreme court of the united states/.test(lc)||(!court&&/ U\.S\. \d/.test(c.id))) return {key:"scotus",ll:DC,label:"U.S. Supreme Court (Washington, DC)",cat:"federal"};
+  let m=lc.match(/court of appeals for the (\w+) circuit/); if(m){ if(m[1]==="federal"||m[1]==="district") return {key:"dccir",ll:DC,label:"D.C./Federal Circuit",cat:"federal"};
+    const C=CIRC[m[1]]; if(C) return {key:"cir:"+m[1],ll:C,label:"U.S. Court of Appeals, "+C[2],cat:m[1]==="tenth"?"state":"federal"}; }
+  const coState=/colorado/.test(lc)||(!court&&/P\.[23]d|COA|CO \d/.test(c.id));
+  if(coState){ const courtLabel=/appeals/i.test(court)?"Colorado Court of Appeals (Denver)":/supreme/i.test(court)?"Colorado Supreme Court (Denver)":/district court for the district of colorado/.test(lc)?"U.S. District Court, D. Colo. (Denver)":"Colorado courts (Denver)";
+    const k=findCounty((c.origin_text||"")+" "+(c.passage||""));
+    if(k&&k!=="denver") return {key:"c:"+k,ll:SEATS[k],label:`${tc(k)} County (${SEATS[k][2]}) → ${courtLabel}`,cat:"county",up:true};
+    return {key:"denver",ll:DENVER,label:courtLabel,cat:"state"}; }
+  const st=STATES.find(n=>lc.includes(n)); if(st) return {key:"st:"+st,ll:CAP[st],label:`${court.slice(0,48)} (${tc(st)})`,cat:"federal"};
+  return {key:"denver",ll:DENVER,label:"Colorado courts (Denver)",cat:"state"}; }
+const proj=d3.geoAlbersUsa().scale(1300).translate([487.5,305]), U=0.01;
+const xy=([la,lo])=>{ const p=proj([lo,la])||proj([-104.98,39.74]); return [(p[0]-487.5)*U,-(p[1]-305)*U]; };
+const COL={county:0x34d399,state:0x818cf8,statute:0xf59e0b,federal:0xf472b6}, ARC={cc:0x34d399,cs:0x60a5fa,st:0xf59e0b,fed:0xf472b6,other:0x94a3b8};
+const panel=document.createElement("div"); panel.className="absolute inset-y-4 right-4 w-[min(520px,45%)] hidden [perspective:1000px] z-10"; host.parentElement.appendChild(panel);
+function openDoc(c){ panel.classList.remove("hidden"); panel.innerHTML=`<div id="pg" class="w-full h-full bg-[#f8f5ec] text-slate-800 rounded-lg shadow-2xl p-5 overflow-auto origin-left transition-transform duration-700" style="transform:rotateY(-95deg)">
+ <button class="float-right text-slate-500 hover:text-slate-900" onclick="this.closest('.absolute').classList.add('hidden')">✕</button>
+ <div class="text-indigo-600 font-bold text-sm">${c.ref||"retrieved"} · ${c.type||""}</div><div class="font-serif text-xl font-bold leading-tight mt-1">${(c.title||"").replace(/</g,"&lt;")}</div>
+ <div class="text-xs text-slate-500 mt-1">${[c.court,c.date].filter(Boolean).join(" · ")} · ${c._loc?c._loc.label:""}</div>
+ <blockquote class="mt-4 font-serif text-[15px] leading-relaxed bg-yellow-200/60 border-l-4 border-indigo-500 px-3 py-2 shadow-[0_0_24px_rgba(250,204,21,.45)]">${((c.passage||"").split("\n").slice(-1)[0]||"No passage retrieved — graph-linked authority.").replace(/</g,"&lt;")}</blockquote>
+ ${c.url?`<a href="${c.url}" target="_blank" class="text-indigo-600 text-sm underline mt-3 inline-block">Open source ↗</a>`:""}</div>`;
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{ const p=document.getElementById("pg"); if(p) p.style.transform="rotateY(0)"; })); }
+api.open=openDoc;
+const legend=document.createElement("div"); legend.className="absolute top-3 left-4 text-[11px] text-slate-300 space-y-0.5 pointer-events-none";
+legend.innerHTML=`<div class="uppercase tracking-widest text-slate-500">U.S. citation map · Colorado focus</div><div><span style="color:#34d399">━</span> county↔county</div><div><span style="color:#60a5fa">━</span> county → state court</div><div><span style="color:#f59e0b">━</span> case ↔ statute</div><div><span style="color:#f472b6">━</span> federal / out-of-state</div><div id="cnt" class="text-indigo-300 font-semibold"></div>`;
+host.parentElement.appendChild(legend);
+const label=document.createElement("div"); label.className="absolute top-3 right-4 text-sm text-slate-200 text-right pointer-events-none max-w-[45%]"; host.parentElement.appendChild(label);
+function groups(cites){ const g=new Map(); cites.forEach((c,i)=>{ const L=locate(c); c._loc=L; if(!g.has(L.key)) g.set(L.key,{...L,items:[]}); g.get(L.key).items.push(i); }); return g; }
+function arcType(a,b){ const A=a._loc.cat,B=b._loc.cat; if(A==="federal"||B==="federal") return "fed"; if(A==="statute"||B==="statute") return "st"; if(A==="county"&&B==="county") return "cc"; if((A==="county")!==(B==="county")) return "cs"; return "other"; }
+function counties(c){ return new Set(c.filter(x=>x._loc&&x._loc.cat==="county").map(x=>x._loc.key)).size; }
+function states(c){ return new Set(c.map(x=>x._loc&&x._loc.key.startsWith("st:")?x._loc.key:(x._loc&&["scotus","dc-stat","dccir"].includes(x._loc.key)?"dc":(x._loc&&x._loc.key.startsWith("cir:")&&x._loc.key!=="cir:tenth"?x._loc.key:"co")))).size; }
+let webgl=false; try{ const t=document.createElement("canvas"); webgl=!!(t.getContext("webgl2")||t.getContext("webgl")); }catch(e){}
+const usData = await (await fetch("/static/vendor/us_states_proj.json")).json();
+if(!webgl){
+  const path=r=>"M"+r.map(p=>p.join(",")).join("L")+"Z";
+  host.innerHTML=`<svg viewBox="0 0 975 610" class="w-full h-full">${usData.map(s=>s.polys.map(r=>`<path d="${path(r)}" fill="${s.name==="Colorado"?"#3730a3":"#1e293b"}" stroke="#6366f1" stroke-width="0.6"/>`).join("")).join("")}<g id="arcs2"></g><g id="pins2"></g></svg>`;
+  const P2=([la,lo])=>proj([lo,la])||proj([-104.98,39.74]); let cites=[];
+  Object.assign(api,{ busy(){ document.getElementById("pins2").innerHTML=""; document.getElementById("arcs2").innerHTML=""; label.textContent="Agents retrieving…"; },
+   show(c0,edges=[],docs=[]){ const c=c0.concat(docs); cites=c; api._c=c; const g=groups(c); const P=document.getElementById("pins2"); P.innerHTML="";
+    g.forEach(G=>{ const [x,y]=P2(G.ll); P.insertAdjacentHTML("beforeend",`<circle cx="${x}" cy="${y}" r="${2+G.items.length}" fill="#${COL[G.cat].toString(16)}" style="cursor:pointer" onclick="Docs3D.open(Docs3D._c[${G.items[0]}])"><title>${G.label}</title></circle>`); });
+    const id={}; c.forEach((x,i)=>id[x.id]=i); const A=document.getElementById("arcs2"); A.innerHTML="";
+    edges.filter(e=>e.src in id&&e.dst in id).forEach(e=>{ const a=c[id[e.src]],b=c[id[e.dst]]; const [x1,y1]=P2(a._loc.ll),[x2,y2]=P2(b._loc.ll);
+      A.insertAdjacentHTML("beforeend",`<path d="M${x1},${y1} Q${(x1+x2)/2},${(y1+y2)/2-40} ${x2},${y2}" stroke="#${ARC[arcType(a,b)].toString(16)}" stroke-width="1.2" fill="none"/>`); });
+    document.getElementById("cnt").textContent=`${counties(c)} counties linked · ${states(c)} jurisdictions`; },
+   focus(k){ if(cites[k]) label.textContent=`${cites[k].ref} ${cites[k].title} — ${cites[k]._loc.label}`; } });
+} else {
+  const THREE = await import("/static/vendor/three.module.min.js");
+  const R=new THREE.WebGLRenderer({antialias:true,alpha:true}); R.setPixelRatio(Math.min(devicePixelRatio,2)); host.appendChild(R.domElement);
+  const scene=new THREE.Scene(), cam=new THREE.PerspectiveCamera(36,1,0.01,100); cam.up.set(0,0,1);
+  const homeCam=new THREE.Vector3(0,-6.2,6.4), homeLook=new THREE.Vector3(0,0.2,0); cam.position.copy(homeCam);
+  const look=homeLook.clone(), lookT=homeLook.clone(), camT=homeCam.clone(); cam.lookAt(look);
+  scene.add(new THREE.AmbientLight(0xffffff,0.75)); const dl=new THREE.DirectionalLight(0xc7d2fe,1.5); dl.position.set(-3,-4,6); scene.add(dl);
+  const matS=new THREE.MeshStandardMaterial({color:0x172042,roughness:0.7,metalness:0.15}), matCO=new THREE.MeshStandardMaterial({color:0x3730a3,roughness:0.5,metalness:0.3,emissive:0x1e1b4b});
+  const lineM=new THREE.LineBasicMaterial({color:0x4f46e5,transparent:true,opacity:0.7}), lineCO=new THREE.LineBasicMaterial({color:0xa5b4fc});
+  let coC=new THREE.Vector3();
+  for(const s of usData){ const co=s.name==="Colorado"; const depth=co?0.12:0.04;
+    for(const r of s.polys){ const sh=new THREE.Shape(r.map(([x,y])=>new THREE.Vector2((x-487.5)*U,-(y-305)*U)));
+      const m=new THREE.Mesh(new THREE.ExtrudeGeometry(sh,{depth,bevelEnabled:false}),co?matCO:matS); m.position.z=-depth+(co?0.06:0); scene.add(m);
+      const pts=r.map(([x,y])=>new THREE.Vector3((x-487.5)*U,-(y-305)*U,(co?0.061:0.001))); pts.push(pts[0]);
+      scene.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),co?lineCO:lineM));
+      if(co){ const b=new THREE.Box3().setFromPoints(pts); b.getCenter(coC); } } }
+  const Z0=0.062, Zof=ll=>{ const [la,lo]=ll; return (la>36.9&&la<41.1&&lo>-109.1&&lo<-102)?Z0:0.002; };
+  const dots=new THREE.Points(new THREE.BufferGeometry().setFromPoints(Object.values(SEATS).map(s=>{const [x,y]=xy(s);return new THREE.Vector3(x,y,Z0+0.001)})),new THREE.PointsMaterial({color:0x818cf8,size:0.012}));
+  scene.add(dots);
+  const pinGroup=new THREE.Group(), arcGroup=new THREE.Group(); scene.add(pinGroup, arcGroup);
+  let pins=[], arcs=[], cites=[], mode="idle", level=0, cur=-1, busyRing=null, tour=null;
+  const ray=new THREE.Raycaster(), mouse=new THREE.Vector2();
+  function clear(){ pinGroup.clear(); arcGroup.clear(); pins=[]; arcs=[]; cur=-1; }
+  function mkPin(G){ const [x,y]=xy(G.ll); const off=G.key==="capitol"?[0.018,0.018]:[0,0]; const n=G.items.length, col=COL[G.cat], far=G.cat==="federal";
+    const k=far?2.2:1, h=(0.07+0.012*n)*k; const g=new THREE.Group(); g.position.set(x+off[0],y+off[1],Zof(G.ll));
+    const stem=new THREE.Mesh(new THREE.CylinderGeometry(0.0025*k,0.0025*k,h,6),new THREE.MeshBasicMaterial({color:col})); stem.rotation.x=Math.PI/2; stem.position.z=h/2; g.add(stem);
+    const head=new THREE.Mesh(new THREE.SphereGeometry((0.011+0.002*n)*k,14,10),new THREE.MeshBasicMaterial({color:col})); head.position.z=h; g.add(head);
+    const halo=new THREE.Mesh(new THREE.RingGeometry(0.014*k,0.022*k,28),new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:0.5,side:THREE.DoubleSide})); g.add(halo);
+    g.userData={G,head,halo,born:performance.now()}; g.scale.setScalar(0.001); pinGroup.add(g); return g; }
+  function mkArc(a,b,type){ const mid=a.clone().add(b).multiplyScalar(0.5); mid.z+=0.04+a.distanceTo(b)*0.35;
+    const pts=new THREE.QuadraticBezierCurve3(a,mid,b).getPoints(48), geo=new THREE.BufferGeometry().setFromPoints(pts); geo.setDrawRange(0,0);
+    const line=new THREE.Line(geo,new THREE.LineBasicMaterial({color:ARC[type],transparent:true,opacity:0.95})); arcGroup.add(line); return {line,n:pts.length,t:0}; }
+  const coView=()=>{ lookT.copy(coC); camT.set(coC.x,coC.y-1.9,1.9); };
+  Object.assign(api,{
+    busy(){ mode="busy"; clear(); clearTimeout(tour); label.textContent="Agents retrieving across U.S. and Colorado courts…"; document.getElementById("cnt").textContent="";
+      busyRing=new THREE.Mesh(new THREE.RingGeometry(0.03,0.04,48),new THREE.MeshBasicMaterial({color:0x818cf8,transparent:true,opacity:0.8,side:THREE.DoubleSide}));
+      const [x,y]=xy(DENVER); busyRing.position.set(x,y,Z0+0.002); pinGroup.add(busyRing); camT.copy(homeCam); lookT.copy(homeLook); },
+    show(c0,edges=[],docs=[]){ mode="show"; clear(); const c=c0.concat(docs); cites=c; api._c=c; const g=groups(c); const where={}; let seq=0;
+      [...g.values()].forEach((G,k)=>{ const p=mkPin(G); p.userData.born=performance.now()+k*200; pins.push(p); G.items.forEach(i=>where[i]=p); });
+      const id={}; c.forEach((x,i)=>id[x.id]=i); const P=p=>new THREE.Vector3().copy(p.position).setZ(p.position.z+0.004);
+      let den=pins.find(p=>p.userData.G.key==="denver"); const ups=[...g.values()].filter(G=>G.up);
+      if(ups.length&&!den){ den=mkPin({key:"denver",ll:DENVER,label:"Colorado appellate courts (Denver)",cat:"state",items:[]}); den.userData.born=performance.now(); pins.push(den); }
+      ups.forEach(G=>{ const p=pins.find(q=>q.userData.G===G); if(p&&den){ const a=mkArc(P(p),P(den),"cs"); a.start=performance.now()+1800+seq++*200; arcs.push(a); } });
+      edges.filter(e=>e.src in id&&e.dst in id).slice(0,48).forEach((e,k)=>{ const pa=where[id[e.src]], pb=where[id[e.dst]]; let a;
+        if(pa!==pb) a=mkArc(P(pa),P(pb),arcType(c[id[e.src]],c[id[e.dst]]));
+        else { const c0v=P(pa), ang=k*0.9, r=0.035+0.006*(k%4); a=mkArc(c0v.clone().add(new THREE.Vector3(Math.cos(ang)*0.008,Math.sin(ang)*0.008,0)),c0v.clone().add(new THREE.Vector3(Math.cos(ang)*r,Math.sin(ang)*r,0)),arcType(c[id[e.src]],c[id[e.dst]])); }
+        a.start=performance.now()+1800+seq++*160; arcs.push(a); });
+      document.getElementById("cnt").textContent=`${counties(c)} counties linked · ${states(c)} jurisdictions · ${arcs.length} links`;
+      camT.copy(homeCam); lookT.copy(homeLook); clearTimeout(tour); tour=setTimeout(()=>{ coView(); tour=setTimeout(()=>api.focus(0),1800); },1400); },
+    focus(k){ if(!cites[k]) return; cur=k; const p=pins.find(p=>p.userData.G.items.includes(k)); if(!p) return;
+      label.innerHTML=`<b class="text-indigo-300">${cites[k].ref||"retrieved"}</b> ${cites[k].title.replace(/</g,"&lt;")}<br><span class="text-slate-400">${cites[k]._loc.label}</span>`;
+      const far=p.userData.G.cat==="federal"; lookT.copy(p.position); camT.set(p.position.x,p.position.y-(far?2.2:1.5),far?2.4:1.6); },
+    pulse(v){ level=v; }, idle(){ mode="idle"; } });
+  R.domElement.addEventListener("click",ev=>{ const r=R.domElement.getBoundingClientRect(); mouse.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
+    ray.setFromCamera(mouse,cam); ray.params.Line.threshold=0.01; const hit=ray.intersectObjects(pins.flatMap(p=>[p.userData.head,p.children[0]]),false)[0];
+    if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.focus(k); openDoc(cites[k]); } } });
+  R.domElement.style.cursor="pointer";
+  function resize(){ const w=host.clientWidth,h=host.clientHeight; R.setSize(w,h); cam.aspect=w/h; cam.updateProjectionMatrix(); }
+  new ResizeObserver(resize).observe(host); resize();
+  R.setAnimationLoop(now=>{ const t=now/1000;
+    cam.position.lerp(camT,0.035); look.lerp(lookT,0.05); cam.lookAt(look);
+    if(busyRing){ busyRing.scale.setScalar(1+((t*1.5)%1)*4); busyRing.material.opacity=0.8*(1-((t*1.5)%1)); }
+    pins.forEach(p=>{ const u=p.userData, age=(now-u.born)/400; p.scale.setScalar(Math.max(0.001,Math.min(1,age))); const f=u.G.items.includes(cur);
+      u.head.scale.setScalar(1+(f?0.4+level*1.4:0)+Math.sin(t*3+p.position.x*9)*0.08); const ph=((t+p.position.y*5)%1.2)/1.2; u.halo.scale.setScalar(1+ph*2*(f?1.6:1)); u.halo.material.opacity=0.6*(1-ph); });
+    arcs.forEach(a=>{ if(now>a.start){ a.t=Math.min(1,a.t+0.03); a.line.geometry.setDrawRange(0,Math.floor(a.t*a.n)); } });
+    R.render(scene,cam); });
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": "0.1.0",
+  "project": "legal-graphrag-demo",
+  "seats": {
+    "planner": {
+      "role": "orchestrator",
+      "status": "done",
+      "run_id": "163752-ef5fa9",
+      "claimed_at": "2026-10-16T16:37:52Z",
+      "released_at": "2026-10-16T16:37:52Z",
+      "handoff_to": "retriever",
+      "summary": "dispatched retriever"
+    },
+    "retriever": {
+      "role": "graph retrieval",
+      "status": "done",
+      "run_id": "163752-ef5fa9",
+      "claimed_at": "2026-10-16T16:37:52Z",
+      "released_at": "2026-10-16T16:37:54Z",
+      "handoff_to": "answer",
+      "summary": "ranked top 8 authorities by citation-weighted PageRank"
+    },
+    "answer": {
+      "role": "cited answer",
+      "status": "done",
+      "run_id": "163752-ef5fa9",
+      "claimed_at": "2026-10-16T16:37:54Z",
+      "released_at": "2026-10-16T16:37:57Z",
+      "handoff_to": "safeguard",
+      "summary": "answer drafted (113 words)"
+    },
+    "safeguard": {
+      "role": "eval + citation guard",
+      "status": "pass",
+      "run_id": "163752-ef5fa9",
+      "claimed_at": "2026-10-16T16:37:57Z",
+      "released_at": "2026-10-16T16:37:57Z",
+      "handoff_to": null,
+      "summary": "PASS"
+    }
+  },
+  "updated_at": "2026-10-16T16:37:57Z"
+}

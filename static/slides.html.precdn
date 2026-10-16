@@ -1,0 +1,49 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Precedent · How we use the event partners</title><script src="https://cdn.tailwindcss.com"></script>
+<style>body{background:radial-gradient(1400px 700px at 10% -10%,#1e1b4b 0,#0b1020 55%,#05070f 100%)}.slide{display:none}.slide.on{display:flex}
+.shot{border-radius:14px;border:1px solid rgba(255,255,255,.1);box-shadow:0 20px 60px rgba(0,0,0,.5)}.n{font-variant-numeric:tabular-nums}
+.edge{stroke:#6366f1;stroke-width:3;fill:none;stroke-dasharray:10 8;animation:f 1s linear infinite}@keyframes f{to{stroke-dashoffset:-18}}</style></head>
+<body class="text-slate-100 font-sans overflow-hidden">
+<nav class="fixed top-0 inset-x-0 z-40 backdrop-blur bg-slate-950/60 border-b border-white/5"><div class="max-w-7xl mx-auto px-6 h-11 flex items-center gap-6 text-sm"><span class="font-bold text-indigo-400">⚖ Precedent</span><a href="/" class="text-slate-300 hover:text-white">Demo</a><a href="/dashboard" class="text-slate-300 hover:text-white">Dashboards</a><a href="/slides" class="text-slate-300 hover:text-white">Slides</a></div></nav>
+<main id="deck"></main>
+<div class="fixed bottom-5 right-6 flex gap-3 items-center text-sm z-50"><span id="pg" class="text-slate-500 n"></span><button id="vo" class="px-4 py-2 rounded-xl bg-white/10 hover:bg-white/20">🎙 Voiceover</button></div>
+<script>
+const esc=s=>String(s??"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const big=(v,l,c="text-indigo-300")=>`<div><div class="text-5xl font-bold n ${c}">${esc(v)}</div><div class="text-sm text-slate-400 mt-1">${l}</div></div>`;
+const S=(kicker,title,body)=>`<section class="slide min-h-screen flex-col justify-center px-20 pt-14"><div class="text-xs uppercase tracking-[.35em] text-indigo-400 mb-3">${kicker}</div><h1 class="text-5xl font-bold mb-8">${title}</h1>${body}</section>`;
+const img=(f,cls="")=>`<img src="/static/slides/${f}" class="shot ${cls}" onerror="this.style.display='none'">`;
+async function build(){let d={};try{d=await (await fetch("/api/stack")).json()}catch(e){}
+ const D=d.daytona||{},SU=d.surrealdb||{},O=d.octo||{},M=d.model||{},E=d.elevenlabs||{},A=d.acs||{},Z=d.arize||{},L=(d.limits||{caps:{}});
+ const runs=d.runs||[],pass=runs.filter(r=>r.pass).length;
+ const node=(x,y,w,t,s,c)=>`<g><rect x="${x}" y="${y}" width="${w}" height="64" rx="14" fill="#0f172a" stroke="${c}" stroke-width="2"/><text x="${x+w/2}" y="${y+28}" fill="#e2e8f0" font-size="17" font-weight="700" text-anchor="middle">${t}</text><text x="${x+w/2}" y="${y+48}" fill="${c}" font-size="12" text-anchor="middle">${s}</text></g>`;
+ const slides=[
+ S("Daytona HackSprint NYC · 2026","⚖ Precedent",`<div class="text-3xl text-slate-300 max-w-4xl">Cited legal answers for people who can't afford legal research — built and checked by coordinated agents inside Daytona.</div>
+  <div class="flex gap-12 mt-12">${big((SU.nodes||0).toLocaleString(),"authorities in the graph")}${big("804,646","opinion passages (Octo)","text-amber-300")}${big("4","agents with ACS seats","text-emerald-300")}${big(`${pass}/${runs.length}`,"recent runs passed the safeguard","text-emerald-300")}</div>`),
+ S("Live product","Ask → map lights up → cited answer",`<div class="grid grid-cols-5 gap-6 items-start">${img("map_pins.png","col-span-3 w-full")}<div class="col-span-2 space-y-4">${img("answer.png","w-full")}<div class="text-lg text-slate-300">One glowing pin per retrieved document at its deciding court; arcs = citation links; camera flies US → Colorado → each cited case in sync with the voice.</div></div></div>`),
+ S("Architecture","Dataflow — every node is a partner",`<svg viewBox="0 0 1200 300" class="w-full max-w-6xl">
+  <path class="edge" d="M150,150 H210"/><path class="edge" d="M370,150 C400,150 400,70 430,70"/><path class="edge" d="M370,150 C400,150 400,230 430,230"/><path class="edge" d="M600,70 C630,70 630,150 660,150"/><path class="edge" d="M600,230 C630,230 630,150 660,150"/><path class="edge" d="M820,150 H860"/><path class="edge" d="M1020,150 H1050"/>
+  ${node(10,118,140,"Question","voice / text","#94a3b8")}${node(210,118,160,"Planner","ACS seat","#38bdf8")}${node(430,38,170,"Retriever","Octo passages","#f59e0b")}${node(430,198,170,"Graph expand","SurrealDB","#818cf8")}
+  ${node(660,118,160,"Answer","Claude Haiku 4.5","#e879f9")}${node(860,118,160,"Safeguard","citations ✓ + caps","#34d399")}${node(1050,118,140,"Voice","ElevenLabs","#34d399")}
+  <rect x="200" y="20" width="840" height="270" rx="24" fill="none" stroke="#38bdf8" stroke-dasharray="6 6" opacity=".5"/><text x="1030" y="282" fill="#38bdf8" font-size="14" text-anchor="end">Daytona sandbox · every span → Arize (OTel)</text></svg>`),
+ S("Partner · Daytona","One sandbox runs everything",`<div class="grid grid-cols-5 gap-8 items-center">${img("dash_Daytona.png","col-span-3 w-full")}<div class="col-span-2 grid grid-cols-2 gap-8">${big(D.cpus||"-","CPUs")}${big((D.ram_gb||"-")+" GB","RAM")}${big(D.uptime_h||"-"+"","hours uptime")}${big("4","services: agents · SurrealDB · web · CI")}</div></div>
+  <div class="text-lg text-slate-400 mt-6">Agents, SurrealDB, offline CI + GitHub-free issue triage, web app and preview URL — all inside sandbox ${esc(D.sandbox||"")}.</div>`),
+ S("Partner · SurrealDB","The citation graph is the retriever's second brain",`<div class="grid grid-cols-5 gap-8 items-center">${img("dash_SurrealDB.png","col-span-3 w-full")}<div class="col-span-2 space-y-6"><div class="grid grid-cols-2 gap-6">${big((SU.nodes||0).toLocaleString(),"nodes")}${big((SU.edges||0).toLocaleString(),"RELATE edges")}${big((SU.avg_ms??"-")+" ms","avg traversal")}${big(SU.queries||0,"queries this session")}</div>
+  <pre class="glass text-sm bg-black/40 rounded-xl p-4 text-indigo-200">SELECT VALUE &lt;-cites&lt;-node.name
+FROM node:⟨case⟩;</pre></div></div>`),
+ S("Partner · ElevenLabs","Siri-style voice loop",`<div class="grid grid-cols-5 gap-8 items-center">${img("dash_ElevenLabs.png","col-span-3 w-full")}<div class="col-span-2 space-y-6"><div class="text-xl text-slate-300">Tap the orb → speak → 1.2 s silence submits → answer read aloud (eleven_flash_v2_5) → listens again. Scribe STT fallback. Pins pulse with the voice.</div>
+  <div class="grid grid-cols-2 gap-6">${big(E.tts_calls??0,"TTS calls")}${big(E.cache_hits??0,"cache hits","text-emerald-300")}</div></div></div>`),
+ S("Partner · Arize","Every agent step is a span",`<div class="grid grid-cols-5 gap-8 items-center">${img("dash_Arize.png","col-span-3 w-full")}<div class="col-span-2 space-y-4"><div class="text-xl text-slate-300">OpenTelemetry via arize-otel: pipeline → planner → retriever → answer → safeguard. Turns on automatically when the space key is present.</div>
+  <div class="text-lg ${Z.connected?"text-emerald-300":"text-amber-300"}">${esc(Z.status||"")}</div></div></div>`),
+ S("ACS + Octo","Coordinated agents on Alex's own data layer",`<div class="grid grid-cols-2 gap-8">${img("dash_ACS.png","w-full")}${img("dash_Octo.png","w-full")}</div>
+  <div class="flex gap-12 mt-6">${big(A.tasks??"-","claimable tasks")}${big(A.issue_logs??"-","schema-valid issue logs","text-emerald-300")}${big(A.events??"-","agent events")}${big(O.searches??0,"Octo searches this session","text-amber-300")}</div>`),
+ S("Safeguards","Safe by construction",`<div class="grid grid-cols-2 gap-6 text-xl max-w-6xl">
+  ${[["🛡 Citation verification","Every cited authority must be in the retrieved set; quotes are verbatim; else FAIL."],["⏱ Rate limits","1 run in flight · 6 q/min/IP · hourly caps: Haiku "+((L.caps.anthropic||{}).cap_per_hour||40)+", TTS "+((L.caps.elevenlabs_tts||{}).cap_per_hour||30)+", STT "+((L.caps.elevenlabs_stt||{}).cap_per_hour||20)+"."],
+    ["↘ Fallback chain","DeepSeek → Haiku → labeled template; ElevenLabs → browser voice; Octo live → snapshot → graph-only."],["📋 ACS claim file","One owner per task, file-locked; every run logged as an OIO issue record."],
+    ["🔑 Secrets","Keys only in a mode-600 env file; presence checks only — never printed or logged."],["⚖ Not legal advice","Disclaimer on every answer; caveat section in every response."]].map(([t,b])=>`<div class="glass rounded-2xl p-5 bg-white/5 border border-white/10"><div class="font-semibold mb-1">${t}</div><div class="text-base text-slate-400">${b}</div></div>`).join("")}</div>`),
+ S("Thank you","Live demo",`<a href="/" class="inline-block text-3xl px-10 py-5 rounded-2xl bg-indigo-500 hover:bg-indigo-400 font-semibold w-max">Open live demo ↗</a><div class="text-lg text-slate-400 mt-8">Daytona · SurrealDB · ElevenLabs · Arize · ACS · Octo</div>`)];
+ document.getElementById("deck").innerHTML=slides.join("");go(0)}
+let i=0;function go(k){const S=[...document.querySelectorAll(".slide")];i=Math.max(0,Math.min(S.length-1,k));S.forEach((s,j)=>s.classList.toggle("on",j===i));document.getElementById("pg").textContent=`${i+1} / ${S.length}`}
+addEventListener("keydown",e=>{if(["ArrowRight"," ","PageDown"].includes(e.key))go(i+1);if(["ArrowLeft","PageUp"].includes(e.key))go(i-1)});
+addEventListener("click",e=>{if(!e.target.closest("a,button,nav"))go(i+1)});
+const a=new Audio("/static/voiceover.mp3?v=2");document.getElementById("vo").onclick=()=>a.paused?a.play():a.pause();
+build();
+</script></body></html>

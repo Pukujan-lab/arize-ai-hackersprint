@@ -1,0 +1,20 @@
+{
+ "action": "opened",
+ "repository": {
+  "full_name": "Pukujan/legal-graphrag-starter"
+ },
+ "sender": {
+  "login": "alex-demo",
+  "id": 1
+ },
+ "issue": {
+  "number": 42,
+  "title": "Retriever returns statutes but misses key Colorado cases",
+  "user": {
+   "login": "alex-demo",
+   "id": 1
+  },
+  "labels": [],
+  "body": "### Issue Type\nobservational\n\n### Filer Origin (who initiated this filing)\nhuman-direct\n\n### Destination Repository\nPukujan/legal-graphrag-starter\n\n### Affected App, Adopter, Users, or Systems\nlegal-graphrag demo retriever\n\n### Observed Consequence and Workaround\nGraph expansion over-weights statutes for vehicle-search questions; workaround: boost caselaw seeds.\n\n### Evidence Confidence\nmedium\n\n### Impact if Unresolved\nmedium\n\n### Likelihood\nlikely\n"
+ }
+}
