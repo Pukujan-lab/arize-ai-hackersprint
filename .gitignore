@@ -18,3 +18,7 @@ __pycache__/
 bin/
 *.tgz
 !static/slides/hero_loop.mp4
+
+node_modules/
+.venv/
+venv/
