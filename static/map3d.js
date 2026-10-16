@@ -142,7 +142,7 @@ if(!webgl){
     busy(){ mode="busy"; try{ clearInterval(trT); tr.classList.add("hidden"); }catch(e){} panel.classList.add("hidden"); panel.innerHTML=""; try{ tip.classList.add("hidden"); api.stopTour&&api.stopTour(); }catch(e){} clear(); clearTimeout(tour); label.textContent="Agents retrieving across U.S. and Colorado courts…"; document.getElementById("cnt").textContent="";
       busyRing=new THREE.Mesh(new THREE.RingGeometry(0.03,0.04,48),new THREE.MeshBasicMaterial({color:0x818cf8,transparent:true,opacity:0.8,side:THREE.DoubleSide}));
       const [x,y]=xy(DENVER); busyRing.position.set(x,y,Z0+0.002); pinGroup.add(busyRing); coView(); },
-    show(c0,edges=[],docs=[]){ mode="show"; clear(); const c=c0.concat(docs); cites=c; api._c=c; const g=groups(c); heatCounties(c); const where={}; let seq=0;
+    show(c0,edges=[],docs=[]){ mode="show"; clear(); const c=c0.concat(docs); cites=c; api._c=c; api._e=edges||[]; const g=groups(c); heatCounties(c); const where={}; let seq=0;
       [...g.values()].forEach((G,k)=>{ const p=mkPin(G); p.userData.born=performance.now()+k*200; pins.push(p); G.items.forEach(i=>where[i]=p); });
       const id={}; c.forEach((x,i)=>id[x.id]=i); const P=p=>new THREE.Vector3().copy(p.position).setZ(p.position.z+0.004);
       let den=pins.find(p=>p.userData.G.key==="denver"); const ups=[...g.values()].filter(G=>G.up);
@@ -157,7 +157,8 @@ if(!webgl){
     focus(k){ if(!cites[k]) return; cur=k; const p=pins.find(p=>p.userData.G.items.includes(k)); if(!p) return;
       label.innerHTML=`<b class="text-indigo-300">${cites[k].ref||"retrieved"}</b> ${cites[k].title.replace(/</g,"&lt;")}<br><span class="text-slate-400">${cites[k]._loc.label}</span>`;
       const cat=p.userData.G.cat, far=cat==="federal", d=far?2.6:(cat==="county"?0.75:1.0); lookT.copy(p.position); camT.set(p.position.x,p.position.y-d*0.25,d); if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ cam.position.copy(camT); look.copy(lookT); } },
-    order(){ return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0]).filter(x=>x[1]>0).sort((a,b)=>a[1]-b[1]).map(x=>x[0]); },
+    order(){ const hp=c=>holding(c,(api.ctx||{}).question)?0:1; return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0,hp(c)]).filter(x=>x[1]>0&&(x[2]===0||citedBy(cites[x[0]]))).sort((a,b)=>a[2]-b[2]||a[1]-b[1]).map(x=>x[0]); },
+    jump(k){ const O=api.order(); const n=O.indexOf(k); if(n<0){ api.focus(k); return; } api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; api.tour(n); },
     tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; tbtn.innerHTML=(window.ICON?ICON("pause",16):"")+" Pause";
       if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.innerHTML=TOURH; return; }
       const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.innerHTML=TOURH; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,a?600:Math.max(2600,ms+1200)); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
@@ -167,7 +168,7 @@ if(!webgl){
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
   R.domElement.addEventListener("click",ev=>{ const r=R.domElement.getBoundingClientRect(); mouse.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
     ray.setFromCamera(mouse,cam); ray.params.Line.threshold=0.01; const hit=ray.intersectObjects(pins.flatMap(p=>[p.userData.head,p.children[0]]),false)[0];
-    R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.focus(k); openDoc(cites[k]); } } });
+    R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.jump(k); openDoc(cites[k]); } } });
   let touring=false, tpos=0; const tbar=document.createElement("div"); tbar.className="absolute bottom-10 right-4 z-20 flex gap-1 text-xs";
   const SV={"◀":'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>',"▶":'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>'};
   const mk=(t,f)=>{ const b=document.createElement("button"); b.dataset.tourctl="1"; if(SV[t]){ b.innerHTML=SV[t]; b.setAttribute("aria-label",t==="◀"?"Previous stop":"Next stop"); b.title=b.getAttribute("aria-label"); } else b.textContent=t; b.className="abtn"; b.onclick=e=>{e.stopPropagation();f();}; tbar.appendChild(b); return b; };
@@ -212,10 +213,16 @@ if(!webgl){
     const terms=String(q||"").toLowerCase().split(/\W+/).filter(w=>w.length>2&&!stop.has(w));
     let best=S[0],bs=-1; S.forEach((x,i)=>{ const l=x.toLowerCase(); const sc=terms.reduce((a,t)=>a+(l.includes(t)?1:0),0)+(/\b(held|hold|must|may|requires?|shall|is not|are not)\b/.test(l)?0.5:0)-i*0.01; if(sc>bs){bs=sc;best=x;} });
     return best; }
+  function citedBy(c){ const E=api._e||[]; const nm=String(c.title||"").split(/\s+v\.?\s+/).map(x=>x.trim()).find(x=>x.length>3&&!/^(People|State|United States)$/.test(x))||"";
+    const src=E.filter(e=>e.dst===c.id).map(e=>cites.find(x=>x.id===e.src)).filter(x=>x&&x!==c);
+    for(const s of src){ const hit=nm&&sentences(s.passage).find(x=>x.includes(nm)&&x.length<=320); const who=(s.ref?s.ref+" ":"")+(s.title||"another source");
+      if(hit) return `Cited by ${who} in this answer's sources: “${hit}”`; }
+    if(src.length){ const s=src[0]; return `Cited by ${(s.ref?s.ref+" ":"")+(s.title||"another source")} in this answer's sources.`; }
+    return ""; }
   function explain(k){ const c=cites[k]||{}, ctx=api.ctx||{}, ref=c.ref||""; const yr=(String(c.date||"").match(/\d{4}/)||[""])[0];
     const where=[c.court, c._loc&&c._loc.cat==="county"?c._loc.label.split("→")[0].trim():""].filter(Boolean).join(", ");
-    const ex=holding(c,ctx.question);
-    const sum=`${c.title||"Authority"}${where?" ("+where+(yr?", "+yr:"")+")":(yr?" ("+yr+")":"")}: ${ex||"Linked in the citation graph; no passage text was retrieved for this authority."}`;
+    const ex=holding(c,ctx.question)||citedBy(c);
+    const sum=`${c.title||"Authority"}${where?" ("+where+(yr?", "+yr:"")+")":(yr?" ("+yr+")":"")}: ${ex}`;
     let rel=""; if(ref&&ctx.answer){ const lines=String(ctx.answer).split("\n").filter(l=>l.includes(ref)); const l=lines.find(x=>/^\s*[-*•]/.test(x))||lines[0];
       if(l){ let t=l.replace(/\*\*|[*#>`]/g,"").replace(/\s*\[\d+\]/g,"").replace(/^\s*[-•]\s*/,"").replace(/^short answer:?\s*/i,"").replace(/\s+/g," ").trim();
         const q=t.match(/[“"]([^”"]{20,})[”"]/); const nm=t.split(/\s+[-–—]\s+/)[0];
@@ -255,7 +262,7 @@ if(!webgl){
     const r=host.parentElement.getBoundingClientRect(); tip.style.left=(ev.clientX-r.left+14)+"px"; tip.style.top=(ev.clientY-r.top+14)+"px"; tip.classList.remove("hidden");
     tip.innerHTML=`<b class="text-emerald-300">${esc(o.C.name)} County</b> <span class="text-slate-400">FIPS ${o.C.fips}</span>`+(o.n?`<div class="mt-1 text-slate-400">${o.n} retrieved case${o.n>1?"s":""} · click to open</div><ul class="mt-1 list-disc pl-4">${o.items.slice(0,6).map(i=>`<li>${esc(cites[i].title).slice(0,70)}</li>`).join("")}</ul>`:'<div class="text-slate-500">no retrieved cases</div>'); });
   R.domElement.addEventListener("mouseleave",()=>tip.classList.add("hidden"));
-  R.domElement.addEventListener("click",ev=>{ const o=countyAt(ev); if(!R._ph&&o&&o.n){ const k=o.items[0]; api.focus(k); openDoc(cites[k]); } });
+  R.domElement.addEventListener("click",ev=>{ const o=countyAt(ev); if(!R._ph&&o&&o.n){ const k=o.items[0]; api.jump(k); openDoc(cites[k]); } });
   function resize(){ const w=host.clientWidth,h=host.clientHeight; R.setSize(w,h); cam.aspect=w/h; cam.updateProjectionMatrix(); }
   new ResizeObserver(resize).observe(host); resize();
   R.setAnimationLoop(now=>{ const t=now/1000;
