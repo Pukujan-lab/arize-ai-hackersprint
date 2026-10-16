@@ -153,7 +153,7 @@ if(!webgl){
         else { const c0v=P(pa), ang=k*0.9, r=0.035+0.006*(k%4); a=mkArc(c0v.clone().add(new THREE.Vector3(Math.cos(ang)*0.008,Math.sin(ang)*0.008,0)),c0v.clone().add(new THREE.Vector3(Math.cos(ang)*r,Math.sin(ang)*r,0)),arcType(c[id[e.src]],c[id[e.dst]])); }
         a.start=performance.now()+1800+seq++*160; arcs.push(a); });
       document.getElementById("cnt").textContent=`${counties(c)} counties linked · ${states(c)} jurisdictions · ${arcs.length} links`;
-      coView(); clearTimeout(tour); tour=setTimeout(()=>api.tour(),2400); },
+      coView(); clearTimeout(tour); tour=setTimeout(()=>api.tour(),1000+Math.min(6,g.size)*200); },
     focus(k){ if(!cites[k]) return; cur=k; const p=pins.find(p=>p.userData.G.items.includes(k)); if(!p) return;
       label.innerHTML=`<b class="text-indigo-300">${cites[k].ref||"retrieved"}</b> ${cites[k].title.replace(/</g,"&lt;")}<br><span class="text-slate-400">${cites[k]._loc.label}</span>`;
       const cat=p.userData.G.cat, far=cat==="federal", d=far?2.6:(cat==="county"?1.05:1.7); lookT.copy(p.position); camT.set(p.position.x,p.position.y-d*0.25,d); if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ cam.position.copy(camT); look.copy(lookT); } },

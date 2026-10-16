@@ -63,6 +63,8 @@ def retriever(run, question):
         for _i, _c in enumerate(cites[:10]):
             tracing.oi(_sp, **{f"retrieval__documents__{_i}__document__id": str(_c.get("id")), f"retrieval__documents__{_i}__document__content": (_c.get("title","") + " — " + (_c.get("passage") or ""))[:1500],
                               f"retrieval__documents__{_i}__document__score": float(_c.get("score") or (10 - _i)), f"retrieval__documents__{_i}__document__metadata": {"ref": _c.get("ref"), "court": _c.get("court"), "date": _c.get("date"), "type": _c.get("type")}})
+        try: run.event(A, "ranked", f"{len(cites)} authorities ranked", citations=[{k: (c.get(k) or "")[:600] if k == "passage" else c.get(k) for k in ("id","ref","title","type","court","date","url","passage","origin_text","path","cited_by")} for c in cites], edges=sub[:80])
+        except Exception: pass
         run.release(A, handoff_to="answer", summary=f"ranked top {len(cites)} authorities by citation-weighted PageRank")
     return {"citations": cites, "edges": sub, "seeds": seeds, "passage_source": psrc, "documents": docs}
 
