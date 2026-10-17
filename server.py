@@ -1,7 +1,8 @@
 import re, json
 import os, time, uuid, threading, pathlib, httpx
-from fastapi import FastAPI, Body
+from fastapi import FastAPI, Depends
 from fastapi.responses import HTMLResponse, Response, JSONResponse
+import contracts
 import agents, tracing, acs_board, limits
 from coord import Run, CLAIM
 
@@ -18,7 +19,7 @@ def index():
     return (ROOT / "static" / "index.html").read_text()
 
 
-@app.get("/api/health")
+@app.get("/api/health", response_model=contracts.HealthResponse, response_model_exclude_unset=True)
 def health():
     g = agents._G
     return {
@@ -71,8 +72,8 @@ def _rl_msg():
     )
 
 
-@app.post("/api/ask")
-def ask(request: Request, q: dict = Body(...)):
+@app.post("/api/ask", response_model=contracts.AskResponse, response_model_exclude_unset=True)
+def ask(request: Request, q: dict = Depends(contracts.body(contracts.AskRequest))):
     question = " ".join(str(q.get("question", "")).split())[:500]
     if len(question) < 3:
         return JSONResponse({"error": "empty question"}, 400)
@@ -129,7 +130,7 @@ def ask(request: Request, q: dict = Body(...)):
     return {"run_id": rid}
 
 
-@app.get("/api/run/{rid}")
+@app.get("/api/run/{rid}", response_model=contracts.RunResponse, response_model_exclude_unset=True)
 def run(rid: str):
     r = Run(rid)
     res = r.dir / "result.json"
@@ -141,13 +142,13 @@ def run(rid: str):
     }
 
 
-@app.get("/api/seats")
+@app.get("/api/seats", response_model=contracts.AnyObject)
 def seats():
     return json.loads(CLAIM.read_text()) if CLAIM.exists() else {}
 
 
-@app.post("/api/tts")
-def tts(q: dict = Body(...)):
+@app.post("/api/tts", responses=contracts.AUDIO)
+def tts(q: dict = Depends(contracts.body(contracts.TtsRequest))):
     voice = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
     h = _tts_key(str(q.get("text", ""))[:400], voice)
     with _tts_lock(h):
@@ -181,8 +182,8 @@ def _tts(q):
     return Response(r.content, media_type="audio/mpeg", headers={"X-TTS-Cache": "miss"})
 
 
-@app.post("/api/tts_ts")
-def tts_ts(q: dict = Body(...)):
+@app.post("/api/tts_ts", response_model=contracts.AnyObject)
+def tts_ts(q: dict = Depends(contracts.body(contracts.TtsRequest))):
     voice = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
     h = _tts_key(str(q.get("text", ""))[:400], voice)
     with _tts_lock(h):
@@ -262,28 +263,28 @@ def _run_and_log(question, rid, prev=None):
     acs_board.event({"agent": "planner", "kind": "run_logged", "run_id": rid, "msg": f"run {rid} logged to ACS ({rec.name})"})
 
 
-@app.get("/api/tasks")
+@app.get("/api/tasks", response_model=contracts.AnyObject)
 def api_tasks():
     return acs_board.tasks()
 
 
-@app.post("/api/claim")
-def api_claim(q: dict = Body(...)):
+@app.post("/api/claim", response_model=contracts.TaskResponse, response_model_exclude_unset=True)
+def api_claim(q: dict = Depends(contracts.body(contracts.ClaimRequest))):
     try:
         return {"ok": True, "task": acs_board.claim(q["task"], q.get("agent", "remote-agent"), q.get("force", False))}
     except (KeyError, PermissionError) as e:
         return JSONResponse({"ok": False, "error": str(e)}, 409)
 
 
-@app.post("/api/release")
-def api_release(q: dict = Body(...)):
+@app.post("/api/release", response_model=contracts.TaskResponse, response_model_exclude_unset=True)
+def api_release(q: dict = Depends(contracts.body(contracts.ReleaseRequest))):
     try:
         return {"ok": True, "task": acs_board.release(q["task"], q.get("agent", "remote-agent"), q.get("status", "done"), q.get("note", ""))}
     except (KeyError, PermissionError) as e:
         return JSONResponse({"ok": False, "error": str(e)}, 409)
 
 
-@app.get("/api/acs/events")
+@app.get("/api/acs/events", response_model=contracts.EVENTS)
 def api_acs_events(n: int = 50):
     return [json.loads(l) for l in acs_board.EVENTS.read_text().splitlines()[-n:]] if acs_board.EVENTS.exists() else []
 
@@ -310,7 +311,7 @@ def _agent_latency(rid):
     return out
 
 
-@app.get("/api/stack")
+@app.get("/api/stack", response_model=contracts.AnyObject)
 def stack():
     import stats
 
@@ -406,7 +407,7 @@ def stack():
 from fastapi import UploadFile, File
 
 
-@app.post("/api/stt")
+@app.post("/api/stt", response_model=contracts.SttResponse, response_model_exclude_unset=True)
 async def stt(file: UploadFile = File(...)):
     key = os.environ.get("ELEVENLABS_API_KEY")
     if not key:
@@ -432,12 +433,12 @@ async def stt(file: UploadFile = File(...)):
     return {"text": r.json().get("text", "")}
 
 
-@app.get("/api/limits")
+@app.get("/api/limits", response_model=contracts.AnyObject)
 def api_limits():
     return limits.snapshot()
 
 
-@app.get("/api/sponsor")
+@app.get("/api/sponsor", response_model=contracts.AnyObject)
 def sponsor():
     import stats, subprocess, socket
 
@@ -533,7 +534,7 @@ def observability_page():
     return (ROOT / "static" / "observability.html").read_text()
 
 
-@app.get("/api/runs")
+@app.get("/api/runs", response_model=contracts.RUNS, response_model_exclude_unset=True)
 def runs_list(request: Request, n: int = 15):
     out = []
     sid = _sid(request)

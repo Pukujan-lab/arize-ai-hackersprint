@@ -89,11 +89,13 @@ def start(interval=None):
 
 
 def mount(app):
-    @app.get("/api/acs/hotload")
+    import contracts
+
+    @app.get("/api/acs/hotload", response_model=contracts.HotloadStatus, response_model_exclude_unset=True)
     def _acs_hotload():
         return status()
 
-    @app.post("/api/acs/reload")
+    @app.post("/api/acs/reload", response_model=contracts.HotloadStatus, response_model_exclude_unset=True)
     def _acs_reload():
         return {"changed": reload(force=True), **status()}
 
