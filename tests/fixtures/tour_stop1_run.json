@@ -1,0 +1,386 @@
+{
+ "run_id": "031554-8c5a12",
+ "question": "Automobile exception: probable cause standard in Colorado",
+ "answer": "**Short answer:** In Colorado, the automobile exception permits a warrantless vehicle search where probable cause exists to believe it contains evidence of a crime, plus a practical risk of unavailability if delayed [4]; the Colorado Supreme Court frames the standard as \"probable cause to believe that the automobile contains evidence of a crime\" [7].\n\n### Key authorities\n- **People v. Lee** [4] - \"there is probable cause to believe that it contains evidence of a crime\"\n- **People v. Bailey** [7] - \"allows police officers to conduct a warrantless search of an automobile if they have probable cause\"\n- **People v. McMillon** [3] - \"A warrantless search of a vehicle is per se unreasonable... unless it falls within one of the recognized exceptions\"\n- **People v. Chamberlain** [1] - \"reasonable to believe\" language indicates \"some degree of articulable suspicion\"\n\n### Caveat\nThese are Colorado state decisions construing Article II, Section 7 and the Fourth Amendment; Chamberlain's \"reasonable to believe\" discussion should be verified against the full opinion and subsequent Zuniga-line authority.",
+ "citations": [
+  {
+   "id": "People v. Chamberlain, 229 P.3d 1054",
+   "title": "People v. Chamberlain",
+   "type": "caselaw",
+   "court": "Colorado state court",
+   "date": "2010-05-10",
+   "ref": "[1]",
+   "passage": "People v. Chamberlain | Supreme Court of Colorado | 2010\nThe Court's use of phrases like \"reasonable to believe\" and \"reasonable basis to believe\" is a further indication that it intends some degree of articulable suspicion, a standard which it has previously acknowledged in its Fourth Amendment jurisprudence as meriting official intrusion. While this particular language is often used synonymously with probable cause, in light of the automobile exception, which already provides an exception to the warrant requirement whenever police have probable cause to believe an automobile contains evidence of a crime, see, e.g., Wyoming v. Houghton, 526 U.S. 295, 119 S.Ct. 1297, 143 L.Ed.2d 408 (1999), a requirement of probable cause in this context would render the entire second prong of the Gant search-incident-to-arrest exception superfluous",
+   "pagerank": 0.48,
+   "cited_by": 0,
+   "seed": true,
+   "score": 6.0,
+   "path": [
+    "People v. Chamberlain, 229 P.3d 1054"
+   ],
+   "url": "https://www.courtlistener.com/opinion/2600030/people-v-chamberlain/"
+  },
+  {
+   "id": "People v. Cox, 401 P.3d 509",
+   "title": "People v. Cox",
+   "type": "caselaw",
+   "court": "Colorado state court",
+   "date": "2017-02-06",
+   "ref": "[2]",
+   "passage": "People v. Cox | Supreme Court of Colorado | 2017\nJUSTICE HOOD,\ndissenting.\n¶24 In People v. Zuniga, 2016 CO 52, 372 P.3d 1052, I dissented based on my belief that the circumstances there, including Lobo’s alert, fell short of establishing probable cause to search Zuniga’s car. I respectfully dissent here, too, because I believe these circumstances fall even shorter.\n¶25 The majority correctly states the Fourth Amendment’s warrant requirement, the automobile exception to that requirement, and the probable cause standard. Under the probable cause standard, there must be “a fair probability that contraband or evidence of a crime will be found in a particular place.” See People v. Swietlicki, 2015 CO 67, ¶ 32, 361 P.3d 411, 417 (quoting Illinois v. Gates, 462 U.S. 213, 238, 103 S.Ct. 2317, 76 L.Ed.2d 527 (1983)) (emphasis added).",
+   "pagerank": 0.48,
+   "cited_by": 0,
+   "seed": true,
+   "score": 5.5,
+   "path": [
+    "People v. Cox, 401 P.3d 509"
+   ],
+   "url": "https://www.courtlistener.com/opinion/5345597/people-v-cox/"
+  },
+  {
+   "id": "People v. McMillon, 892 P.2d 879",
+   "title": "People v. McMillon",
+   "type": "caselaw",
+   "court": "Colorado state court",
+   "date": "1995-04-03",
+   "ref": "[3]",
+   "passage": "People v. McMillon | Supreme Court of Colorado | 1995\nA warrantless search of a vehicle is per se unreasonable under Article II, Section 7, of the Colorado Constitution, and the Fourth Amendment to the United States Constitution unless it falls within one of the recognized exceptions to the warrant requirement. See People v. Edwards, 836 P.2d 468, 471 (Colo.1992) (citing Colorado v. Bannister, 449 U.S. 1, 101 S.Ct. 42, 66 L.Ed.2d 1 (1980)). The automobile exception, one of these exceptions, permits police officers “to search an automobile without a warrant when they have probable cause to believe the vehicle contains weapons or other evidence of a crime.” People v. Naranjo, 686 P.2d 1343, 1346 (Colo.1984); Colorado v. Bannister, 449 U.S. 1, 3, 101 S.Ct. 42, 43, 66 L.Ed.2d 1 (1980) (stating that the automobile exception “exists when an automobile or other vehicle is stopped and the police",
+   "pagerank": 0.48,
+   "cited_by": 0,
+   "seed": true,
+   "score": 5.0,
+   "path": [
+    "People v. McMillon, 892 P.2d 879"
+   ],
+   "url": "https://www.courtlistener.com/opinion/1163407/people-v-mcmillon/"
+  },
+  {
+   "id": "People v. Lee, 914 P.2d 441",
+   "title": "People v. Lee",
+   "type": "caselaw",
+   "court": "Colorado state court",
+   "date": "1995-07-27",
+   "ref": "[4]",
+   "passage": "People v. Lee | Colorado Court of Appeals | 1995\nUnder the automobile exception, a police officer may conduct a warrantless search of a vehicle if: (1) there is probable cause to believe that it contains evidence of a crime; and (2) the circumstances create a practical risk of the vehicle’s unavailability if the search is postponed until a search warrant is obtained. People v. Edwards, 836 P.2d 468 (Colo.1992).\nA.\nIn the context of a search or seizure, probable cause is a flexible standard. It is satisfied by a common-sense determination that, at the time of the search or seizure, there was reasonable cause to believe that evidence of criminal activity was located in the area to be searched. It does not require a “more likely true than false” level of certainty. See People v. Leftwich, 869 P.2d 1260 (Colo.1994); cert. dismissed, — U.S. -, 115 S.Ct. 17, 129 L.Ed.2d 916 (1994); People v. M",
+   "pagerank": 0.48,
+   "cited_by": 0,
+   "seed": true,
+   "score": 4.5,
+   "path": [
+    "People v. Lee, 914 P.2d 441"
+   ],
+   "url": "https://www.courtlistener.com/opinion/1130173/people-v-lee/"
+  },
+  {
+   "id": "26 CFR",
+   "title": "26 CFR",
+   "type": "unknown",
+   "court": "",
+   "date": "",
+   "ref": "[5]",
+   "pagerank": 2380.27,
+   "cited_by": 6019,
+   "seed": false,
+   "score": 19.41,
+   "path": [
+    "26 CFR § 1.6664-4",
+    "26 CFR"
+   ],
+   "url": ""
+  },
+  {
+   "id": "People v. Hill, 929 P.2d 735",
+   "title": "People v. Hill",
+   "type": "caselaw",
+   "court": "Colorado state court",
+   "date": "1996-12-23",
+   "ref": "[6]",
+   "passage": "People v. Hill | Supreme Court of Colorado | 1996\nGenerally speaking, warrantless searches violate constitutional guarantees because they are presumptively unreasonable. Moore, 900 P.2d at 70. However, there are exceptions to the warrant requirement, including the automobile exception, which allows police officers to conduct a warrantless search of an automobile if they have probable cause to believe that the automobile contains evidence of a crime. Id. Police officers have probable cause to search a motor vehicle if they have a reasonable basis for believing that the area being searched contains contraband or evidence of criminal activity. Id. Under the automobile exception, as long as the police have probable cause to search an automobile, they may also search containers within the automobile that might contain the object of their search. Id.",
+   "pagerank": 0.48,
+   "cited_by": 0,
+   "seed": true,
+   "score": 4.0,
+   "path": [
+    "People v. Hill, 929 P.2d 735"
+   ],
+   "url": "https://www.courtlistener.com/opinion/5335165/people-v-hill/"
+  },
+  {
+   "id": "People v. Bailey, 427 P.3d 821",
+   "title": "People v. Bailey",
+   "type": "caselaw",
+   "court": "Colorado state court",
+   "date": "2018-10-15",
+   "ref": "[7]",
+   "passage": "People v. Bailey | Supreme Court of Colorado | 2018\nOne such exception is the automobile exception, which \"allows police officers to conduct a warrantless search of an automobile if they have probable cause to believe that the automobile contains evidence of a crime.\" Zuniga , ¶ 14, 372 P.3d at 1056 (quoting People v. Hill , 929 P.2d 735, 739 (Colo. 1996) ).\n¶ 19 Because the parties agree that the automobile exception applies here, the question we must address is whether the troopers had probable cause to believe that Bailey's car contained contraband or evidence of a crime to justify the warrantless search conducted. We have discussed on numerous occasions the central tenets underlying the concept of probable cause. We take a moment to do so again here.",
+   "pagerank": 0.48,
+   "cited_by": 0,
+   "seed": true,
+   "score": 3.5,
+   "path": [
+    "People v. Bailey, 427 P.3d 821"
+   ],
+   "url": "https://www.courtlistener.com/opinion/6657329/people-v-bailey/"
+  },
+  {
+   "id": "26 CFR § 1.6664-4",
+   "title": "Reasonable cause and good faith exception to section 6662 penalties",
+   "type": "regulation",
+   "court": "",
+   "date": "",
+   "ref": "[8]",
+   "pagerank": 0.48,
+   "cited_by": 0,
+   "seed": true,
+   "score": 3.0,
+   "path": [
+    "26 CFR § 1.6664-4"
+   ],
+   "url": ""
+  }
+ ],
+ "edges": [
+  {
+   "src": "26 CFR § 1.6664-4",
+   "dst": "26 CFR"
+  },
+  {
+   "src": "26 CFR § 1.6664-4T",
+   "dst": "26 CFR"
+  }
+ ],
+ "documents": [
+  {
+   "id": "People v. Zuniga, 372 P.3d 1052",
+   "title": "People v. Zuniga, 372 P.3d 1052",
+   "type": "",
+   "court": "",
+   "date": "",
+   "ref": "",
+   "passage": "People v. Zuniga | Supreme Court of Colorado | 2016\n184 As the majority explains, one exception to the warrant requirement concerns automobiles. See maj. op. 114. I take no issue with the majority's recitation of this exception or its description of the probable cause standard. Instead, I part company with the majority over whether that standard has been met here.\nII. Application and Analysis\n{385 The majority concludes there was probable cause for the Trooper to search Zuniga's luggage because (1) Zuniga and the driver told different stories about their travels in Colorado, (2) Zuniga and the driver were exceptionally nervous, (8) the Trooper smelled a strong odor of raw marijuana, and (4) the narcotics dog, Lobo, alerted. Id. at 130. While I agree with the majority that some of these facts raise reasonable suspi-clon, I disagree with its conclusion that together they amount to probable",
+   "pagerank": 0.0,
+   "cited_by": 0,
+   "url": ""
+  },
+  {
+   "id": "People v. Romero, 767 P.2d 1225",
+   "title": "People v. Romero",
+   "type": "caselaw",
+   "court": "Colorado state court",
+   "date": "1989-01-23",
+   "ref": "",
+   "passage": "People v. Romero | Supreme Court of Colorado | 1989\nWhere there is probable cause to search a car, the automobile exception to the warrant requirement permits a search without a warrant. The majority cites California v. Carney, 471 U.S. 386, 105 S.Ct. 2066, 85 L.Ed.2d 406 (1985), United States v. Johns, 469 U.S. 478, 105 S.Ct. 881, 83 L.Ed.2d 890 (1985), Colorado v. Bannister, 449 U.S. 1, 101 S.Ct. 42, 66 L.Ed.2d 1 (1980), and Chambers v. Maroney, 399 U.S. 42, 90 S.Ct. 1975, 26 L.Ed.2d 419 (1970), as support for its assertion that the automobile exception is applicable to the present case. See maj. op. at 1227, 1228. The cases cited involve situations in which the police had probable cause at the time of the arrest to search the vehicle. Here, Fletcher did not acquire probable cause to search for a firearm in Romero’s car until long after the initial stop of Romero. This fact distinguish",
+   "pagerank": 0.48,
+   "cited_by": 0,
+   "url": "https://www.courtlistener.com/opinion/1247810/people-v-romero/"
+  },
+  {
+   "id": "People v. Moore, 900 P.2d 66",
+   "title": "People v. Moore",
+   "type": "caselaw",
+   "court": "Colorado state court",
+   "date": "1995-06-30",
+   "ref": "",
+   "passage": "People v. Moore | Supreme Court of Colorado | 1995\nThe United States and the Colorado Constitutions provide that citizens have a right to be free from unreasonable searches and seizures. U.S. Const, amend. IV; Colo. Const. art. II, § 7; People v. Hopkins, 870 P.2d 478, 480 (Colo.1994). Generally speaking, warrantless searches violate these guarantees because they are presumptively unreasonable. People v. Carper, 876 P.2d 582, 584 (Colo.1994). However, there are exceptions to the warrant requirement. People v. Edwards, 836 P.2d 468, 471 (Colo.1992). Among these exceptions is the automobile exception, which allows the police to conduct a warrantless search of an automobile if they have probable cause to believe that the automobile contains evidence of a crime. People v. McMillon, 892 P.2d 879, 882 (Colo.1995); Edwards, 836 P.2d at 471. The police have probable cause to search if they have ",
+   "pagerank": 0.48,
+   "cited_by": 0,
+   "url": "https://www.courtlistener.com/opinion/1158252/people-v-moore/"
+  },
+  {
+   "id": "People v. Vaughn, 334 P.3d 226",
+   "title": "People v. Vaughn, 334 P.3d 226",
+   "type": "",
+   "court": "",
+   "date": "",
+   "ref": "",
+   "passage": "People v. Vaughn | Supreme Court of Colorado | 2014\n16 After hearing Officer Moreland's and Vaughn's testimony, the trial court granted Vaughn's motion to suppress the drug evidence found in the vehicle. The trial court found that there was insufficient probable cause for Officer Moreland's search under the automobile exception, as probable cause is required for non-inventory searches of automobiles. See People v. Hill, 929 P.2d 735, 739 (Colo. 1996) (noting that probable cause is required when a search is performed under the so-called \"automobile exception\"). The trial court also found that the search was inadmissible under the inventory search exception because Officer Moreland was not required to arrest someone for the \"summons-able\" offense of driving with a suspended license.\nII. Analysis",
+   "pagerank": 0.0,
+   "cited_by": 0,
+   "url": ""
+  },
+  {
+   "id": "People v. Hoffman, 293 P.3d 1",
+   "title": "People v. Hoffman",
+   "type": "caselaw",
+   "court": "Colorado state court",
+   "date": "2010-04-15",
+   "ref": "",
+   "passage": "People v. Hoffman | Colorado Court of Appeals | 2010\nWhen we look to the decisions of other courts, however, we see greater room for applying the good faith exception in the face of a determination that a substantial basis for probable cause did not exist for a warrant.\nIn Guerra v. State, 897 P.2d 447, 456-59 (Wyo.1995), the Wyoming Supreme Court observed, \"The threshold showing necessary to a determination of whether an officer relied in good faith upon a search warrant pales considerably next to that required for a finding of probable cause.\"\nSimilarly, the Virginia Supreme Court recently stated:\nstandard by which to decide whether probable cause existed for a search warrant is considerably different from the test to determine if an officer acted in good faith. The showing of an \"objectively reasonable belief\" that probable cause existed under the good faith exception is a significant",
+   "pagerank": 0.48,
+   "cited_by": 0,
+   "url": "https://www.courtlistener.com/opinion/5327951/people-v-hoffman/"
+  },
+  {
+   "id": "People v. Smith, 620 P.2d 232",
+   "title": "People v. Smith",
+   "type": "caselaw",
+   "court": "Colorado state court",
+   "date": "1981-01-05",
+   "ref": "",
+   "passage": "People v. Smith | Supreme Court of Colorado | 1980\nWe recognize that, subject to only a few specially established and well-delineated exceptions, searches conducted outside the judicial process are per se unreasonable under the Fourth Amendment. Katz v. United States, 389 U.S. 347, 88 S.Ct. 507, 19 L.Ed.2d 576 (1967); Chimel v. California, 395 U.S. 752, 89 S.Ct. 2034, 23 L.Ed.2d 685 (1969). The same standard, however, has generally not been afforded to the search of automobiles. Two reasons have been advanced for this disparity: (1) the mobility of automobiles; and (2) the diminished expectation of privacy surrounding automobiles as compared with other places such as the home. Consequently, we have held that where there is probable cause to obtain a warrant to search a car, a search of the car without a warrant is justified. See People v. Coulson, 192 Colo. 53, 555 P.2d 516 (1976); Atwoo",
+   "pagerank": 0.48,
+   "cited_by": 0,
+   "url": "https://www.courtlistener.com/opinion/1196813/people-v-smith/"
+  }
+ ],
+ "ranked_event": {
+  "citations": [
+   {
+    "id": "People v. Chamberlain, 229 P.3d 1054",
+    "ref": "[1]",
+    "title": "People v. Chamberlain",
+    "type": "caselaw",
+    "court": "Colorado state court",
+    "date": "2010-05-10",
+    "url": "https://www.courtlistener.com/opinion/2600030/people-v-chamberlain/",
+    "passage": "People v. Chamberlain | Supreme Court of Colorado | 2010\nThe Court's use of phrases like \"reasonable to believe\" and \"reasonable basis to believe\" is a further indication that it intends some degree of articulable suspicion, a standard which it has previously acknowledged in its Fourth Amendment jurisprudence as meriting official intrusion. While this particular language is often used synonymously with probable cause, in light of the automobile exception, which already provides an exception to the warrant requirement whenever police have probable cause to believe an automobile contains evidenc",
+    "path": [
+     "People v. Chamberlain, 229 P.3d 1054"
+    ],
+    "cited_by": 0
+   },
+   {
+    "id": "People v. Cox, 401 P.3d 509",
+    "ref": "[2]",
+    "title": "People v. Cox",
+    "type": "caselaw",
+    "court": "Colorado state court",
+    "date": "2017-02-06",
+    "url": "https://www.courtlistener.com/opinion/5345597/people-v-cox/",
+    "passage": "People v. Cox | Supreme Court of Colorado | 2017\nJUSTICE HOOD,\ndissenting.\n¶24 In People v. Zuniga, 2016 CO 52, 372 P.3d 1052, I dissented based on my belief that the circumstances there, including Lobo’s alert, fell short of establishing probable cause to search Zuniga’s car. I respectfully dissent here, too, because I believe these circumstances fall even shorter.\n¶25 The majority correctly states the Fourth Amendment’s warrant requirement, the automobile exception to that requirement, and the probable cause standard. Under the probable cause standard, there must be “a fair probability that ",
+    "path": [
+     "People v. Cox, 401 P.3d 509"
+    ],
+    "cited_by": 0
+   },
+   {
+    "id": "People v. McMillon, 892 P.2d 879",
+    "ref": "[3]",
+    "title": "People v. McMillon",
+    "type": "caselaw",
+    "court": "Colorado state court",
+    "date": "1995-04-03",
+    "url": "https://www.courtlistener.com/opinion/1163407/people-v-mcmillon/",
+    "passage": "People v. McMillon | Supreme Court of Colorado | 1995\nA warrantless search of a vehicle is per se unreasonable under Article II, Section 7, of the Colorado Constitution, and the Fourth Amendment to the United States Constitution unless it falls within one of the recognized exceptions to the warrant requirement. See People v. Edwards, 836 P.2d 468, 471 (Colo.1992) (citing Colorado v. Bannister, 449 U.S. 1, 101 S.Ct. 42, 66 L.Ed.2d 1 (1980)). The automobile exception, one of these exceptions, permits police officers “to search an automobile without a warrant when they have probable cause to beli",
+    "path": [
+     "People v. McMillon, 892 P.2d 879"
+    ],
+    "cited_by": 0
+   },
+   {
+    "id": "People v. Lee, 914 P.2d 441",
+    "ref": "[4]",
+    "title": "People v. Lee",
+    "type": "caselaw",
+    "court": "Colorado state court",
+    "date": "1995-07-27",
+    "url": "https://www.courtlistener.com/opinion/1130173/people-v-lee/",
+    "passage": "People v. Lee | Colorado Court of Appeals | 1995\nUnder the automobile exception, a police officer may conduct a warrantless search of a vehicle if: (1) there is probable cause to believe that it contains evidence of a crime; and (2) the circumstances create a practical risk of the vehicle’s unavailability if the search is postponed until a search warrant is obtained. People v. Edwards, 836 P.2d 468 (Colo.1992).\nA.\nIn the context of a search or seizure, probable cause is a flexible standard. It is satisfied by a common-sense determination that, at the time of the search or seizure, there was re",
+    "path": [
+     "People v. Lee, 914 P.2d 441"
+    ],
+    "cited_by": 0
+   },
+   {
+    "id": "26 CFR",
+    "ref": "[5]",
+    "title": "26 CFR",
+    "type": "unknown",
+    "court": "",
+    "date": "",
+    "url": "",
+    "passage": "",
+    "path": [
+     "26 CFR § 1.6664-4",
+     "26 CFR"
+    ],
+    "cited_by": 6019
+   },
+   {
+    "id": "People v. Hill, 929 P.2d 735",
+    "ref": "[6]",
+    "title": "People v. Hill",
+    "type": "caselaw",
+    "court": "Colorado state court",
+    "date": "1996-12-23",
+    "url": "https://www.courtlistener.com/opinion/5335165/people-v-hill/",
+    "passage": "People v. Hill | Supreme Court of Colorado | 1996\nGenerally speaking, warrantless searches violate constitutional guarantees because they are presumptively unreasonable. Moore, 900 P.2d at 70. However, there are exceptions to the warrant requirement, including the automobile exception, which allows police officers to conduct a warrantless search of an automobile if they have probable cause to believe that the automobile contains evidence of a crime. Id. Police officers have probable cause to search a motor vehicle if they have a reasonable basis for believing that the area being searched conta",
+    "path": [
+     "People v. Hill, 929 P.2d 735"
+    ],
+    "cited_by": 0
+   },
+   {
+    "id": "People v. Bailey, 427 P.3d 821",
+    "ref": "[7]",
+    "title": "People v. Bailey",
+    "type": "caselaw",
+    "court": "Colorado state court",
+    "date": "2018-10-15",
+    "url": "https://www.courtlistener.com/opinion/6657329/people-v-bailey/",
+    "passage": "People v. Bailey | Supreme Court of Colorado | 2018\nOne such exception is the automobile exception, which \"allows police officers to conduct a warrantless search of an automobile if they have probable cause to believe that the automobile contains evidence of a crime.\" Zuniga , ¶ 14, 372 P.3d at 1056 (quoting People v. Hill , 929 P.2d 735, 739 (Colo. 1996) ).\n¶ 19 Because the parties agree that the automobile exception applies here, the question we must address is whether the troopers had probable cause to believe that Bailey's car contained contraband or evidence of a crime to justify the warr",
+    "path": [
+     "People v. Bailey, 427 P.3d 821"
+    ],
+    "cited_by": 0
+   },
+   {
+    "id": "26 CFR § 1.6664-4",
+    "ref": "[8]",
+    "title": "Reasonable cause and good faith exception to section 6662 penalties",
+    "type": "regulation",
+    "court": "",
+    "date": "",
+    "url": "",
+    "passage": "",
+    "path": [
+     "26 CFR § 1.6664-4"
+    ],
+    "cited_by": 0
+   }
+  ],
+  "edges": [
+   {
+    "src": "26 CFR § 1.6664-4",
+    "dst": "26 CFR"
+   },
+   {
+    "src": "26 CFR § 1.6664-4T",
+    "dst": "26 CFR"
+   }
+  ],
+  "ts": "2026-10-17T07:15:54Z",
+  "agent": "retriever",
+  "kind": "ranked",
+  "msg": "8 authorities ranked"
+ },
+ "safeguard": {
+  "pass": true,
+  "used": [
+   "[1]",
+   "[3]",
+   "[4]",
+   "[7]"
+  ],
+  "invalid": [],
+  "unknown_authorities": [],
+  "unsupported_claims": [
+   "unless it falls within one of the recognized exceptions\"\n- **People v."
+  ],
+  "disclaimer": "This is an AI-generated research summary, not legal advice. Verify all authorities and consult a licensed attorney."
+ },
+ "provider": "inferhub/cb/deepseek-v4.1-flash (cached)",
+ "backend": "networkx",
+ "elapsed_s": 0.04,
+ "passage_source": "octo-live (cached)",
+ "seeds": [
+  "People v. Chamberlain, 229 P.3d 1054",
+  "People v. Cox, 401 P.3d 509",
+  "People v. McMillon, 892 P.2d 879",
+  "People v. Lee, 914 P.2d 441",
+  "People v. Hill, 929 P.2d 735",
+  "People v. Bailey, 427 P.3d 821",
+  "26 CFR § 1.6664-4",
+  "26 CFR § 1.6664-4T"
+ ]
+}
