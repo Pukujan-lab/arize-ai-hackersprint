@@ -1,11 +1,16 @@
 """V2 home (#89): minimal, map-centric, dark-default. Visible by default only answer, the existing 3D map, and a sticky bottom chat input; everything else collapsed; no overflow at 4 widths in both themes."""
 
+import json
+import urllib.request
+
 import pytest
 from ui_server import app_server, needs_chromium, open_page
 
 sync_api = pytest.importorskip("playwright.sync_api")
 pytestmark = needs_chromium
 WIDTHS = [390, 768, 1024, 1440]
+V2_TITLE = "Precedent v2 · Ask, read the memo, tour the map"
+V1_TITLE = "Precedent · Verified legal research memos from multi-agent AI"
 
 
 @pytest.fixture(scope="module")
@@ -20,6 +25,32 @@ def browser():
         b = p.chromium.launch()
         yield b
         b.close()
+
+
+def test_root_serves_v2_v1_serves_old_and_v2_alias(base, browser):
+    for path, expected in (("/", V2_TITLE), ("/v1", V1_TITLE), ("/v2", V2_TITLE)):
+        ctx, page = open_page(browser, base, path, 1440)
+        assert page.title() == expected, f"{path} title {page.title()!r} != {expected!r}"
+        ctx.close()
+
+
+def test_api_health_ok(base):
+    with urllib.request.urlopen(base + "/api/health", timeout=5) as resp:
+        assert resp.status == 200
+        data = json.loads(resp.read().decode("utf-8"))
+    assert data.get("ok") is True
+
+
+@pytest.mark.parametrize("w", WIDTHS)
+def test_root_no_overflow_dark_and_light(base, browser, w):
+    for theme in ("dark", "light"):
+        ctx, page = open_page(browser, base, "/", w)
+        if theme == "light":
+            page.locator("#theme-toggle").click()
+            page.wait_for_timeout(300)
+        sw = page.evaluate("Math.max(document.documentElement.scrollWidth, document.body.scrollWidth)")
+        assert sw <= w + 1, f"/ @{w}px {theme} scrolls sideways ({sw}px)"
+        ctx.close()
 
 
 @pytest.mark.parametrize("w", WIDTHS)

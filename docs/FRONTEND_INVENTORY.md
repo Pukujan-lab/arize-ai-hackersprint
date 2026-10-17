@@ -2,7 +2,7 @@
 
 What every page in `static/` shows, which file owns each control, and which API route it calls. Built from the code on `main` (October 2026), not from screenshots. API routes match `contracts/openapi.json`. `tests/test_frontend_inventory.py` fails if an HTML route in openapi.json has no section here, so add a section when you add a page.
 
-There is no `/runs` page. Run history is the `/api/runs` JSON route, shown inside `/`, `/map` and `/observability`.
+There is no `/runs` page. Run history is the `/api/runs` JSON route, shown inside `/v1`, `/map` and `/observability`.
 
 ## KEEP AS IS
 
@@ -30,7 +30,11 @@ Both map files mount into `#docs3d` and expose `window.Docs3D` (`focus`, `open`,
 
 ## `/`
 
-Demo page. File: `static/index.html`. Scripts: session, audio, tailwind, vis-network, links, d3, map3d (module), voice, followup, declutter, firstscreen, partners, navbar.
+Canonical home. File: `static/v2.html`, the minimal, map-centric v2 page. `GET /` and `GET /v2` serve the same file, so the controls are the ones listed under `/v2` below. The old page is still available at `/v1`.
+
+## `/v1`
+
+Old demo page, kept as the fallback. File: `static/index.html`. Scripts: session, audio, tailwind, vis-network, links, d3, map3d (module), voice, followup, declutter, firstscreen, partners, navbar.
 
 | Control | id / aria-label | Owner | API |
 |---|---|---|---|
@@ -125,7 +129,7 @@ Pitch deck. File: `static/slides.html` (`static/slides.marketing.html` is an old
 
 ## `/v2`
 
-Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, map3d (module), v2. No top `<nav>`; one icon rail on the left holds the page links and the theme toggle.
+Alias of `/`: `GET /v2` serves the same `static/v2.html` as the root. Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, map3d (module), v2. No top `<nav>`; one icon rail on the left holds the page links and the theme toggle.
 
 Visible on first load: the memo (`#answer`), the existing 3D map (`#docs3d`) and the composer at the bottom. Everything else sits in collapsed bottom sheets.
 
@@ -154,8 +158,8 @@ Behaviour notes:
 
 ## Known clutter
 
-- Two navigations on `/`: the top `<nav>` links plus the `declutter.js` sidebar drawer (with its own toggle, close, back and mobile Menu buttons). `declutter.js` restructures the page at runtime by cloning panels (badges, stages, hands-free checkbox) instead of the HTML being laid out that way.
-- Three ways to run an example on `/`: the "Try an example" button (`#tryex`), the hidden `#examples` chips, and the `navbar.js` dropdown (`#exBtn`/`#exMenu`) that replaces them; the tips card also says "or try an example".
+- Two navigations on `/v1`: the top `<nav>` links plus the `declutter.js` sidebar drawer (with its own toggle, close, back and mobile Menu buttons). `declutter.js` restructures the page at runtime by cloning panels (badges, stages, hands-free checkbox) instead of the HTML being laid out that way.
+- Three ways to run an example on `/v1`: the "Try an example" button (`#tryex`), the hidden `#examples` chips, and the `navbar.js` dropdown (`#exBtn`/`#exMenu`) that replaces them; the tips card also says "or try an example".
 - Getting-started cues stack up: the `#firststep` tips card, `firstscreen.js` numbered steps, the pulse on Ask, the `#vorb-label` mic label and `#askhint`.
 - Nav links differ by page: only `/observability` links to Observability, `/slides` drops Dashboards and Slides, and `slides.marketing.html` is an unrouted older deck with its own nav.
-- Duplicate surfaces: run history appears in the `/` sidebar, the `/map` `#runs` list and `/observability`; the map plus Listen/Play controls exist on both `/` (`#play`, TTS via `/api/tts`) and `/map` (`#sumplay`, via `/api/tts_ts`), and the voice orb is on both.
+- Duplicate surfaces: run history appears in the `/v1` sidebar, the `/map` `#runs` list and `/observability`; the map plus Listen/Play controls exist on both `/v1` (`#play`, TTS via `/api/tts`) and `/map` (`#sumplay`, via `/api/tts_ts`), and the voice orb is on both.

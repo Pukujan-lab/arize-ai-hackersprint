@@ -17,7 +17,7 @@ threading.Thread(target=agents.graph, daemon=True).start()
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return (ROOT / "static" / "index.html").read_text()
+    return (ROOT / "static" / "v2.html").read_text()
 
 
 @app.get("/api/health", response_model=contracts.HealthResponse, response_model_exclude_unset=True)
@@ -563,6 +563,11 @@ def runs_list(request: Request, n: int = 15):
 @app.get("/guide", response_class=HTMLResponse)
 def guide_page():
     return (ROOT / "static" / "guide.html").read_text()
+
+
+@app.get("/v1", response_class=HTMLResponse)
+def v1_page():
+    return (ROOT / "static" / "index.html").read_text()
 
 
 @app.get("/v2", response_class=HTMLResponse)

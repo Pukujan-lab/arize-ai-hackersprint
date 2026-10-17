@@ -148,11 +148,11 @@ def test_show_does_not_autostart_tour_while_memo_holds_voice(browser, base):
 
 
 def test_home_ranked_feed_after_render_keeps_stop_1_and_no_tour_during_memo(browser, base):
-    """Home page: render() starts the memo, then the activity feed replays the 'ranked' event for the same run.
+    """Home page (v1 at /v1): render() starts the memo, then the activity feed replays the 'ranked' event for the same run.
     That must not swap in the cut-down citations (dropping [1]) nor start a silent tour while the memo plays."""
     ctx = browser.new_context(viewport={"width": 1280, "height": 800}, user_agent="Mozilla/5.0 (Macintosh) Chrome/130 Safari/537.36")
     pg = ctx.new_page()
-    pg.goto(base + "/", wait_until="load")
+    pg.goto(base + "/v1", wait_until="load")
     pg.wait_for_function("!!(window.Docs3D&&Docs3D.tour)&&typeof render==='function'&&typeof FEED==='object'", polling=200, timeout=30000)
     pg.wait_for_timeout(1500)  # let the page finish its own start-up (featured run, voice init)
     pg.evaluate("()=>{ Docs3D.stopTour(); AudioMgr.stopAll(); if(AudioMgr.isMuted()) AudioMgr.setMuted(false); Docs3D.voice=true; }")
@@ -172,7 +172,7 @@ def test_home_ranked_feed_after_render_keeps_stop_1_and_no_tour_during_memo(brow
 @pytest.mark.live
 @pytest.mark.skipif(not LIVE_BASE, reason="set LIVE_BASE to the deployed site")
 def test_live_stop_1_narrates_right_after_memo(browser):
-    """Home page, example question: memo plays to the end, then the first tour clip is source [1]."""
+    """Home page (v1 at /v1), example question: memo plays to the end, then the first tour clip is source [1]."""
     ctx = browser.new_context(viewport={"width": 1280, "height": 800}, user_agent="Mozilla/5.0 (Macintosh) Chrome/130 Safari/537.36")
     ctx.add_init_script(
         """(()=>{ window.HEARD=[]; const P=HTMLMediaElement.prototype.play; HTMLMediaElement.prototype.play=function(){ const a=this;
@@ -182,7 +182,7 @@ def test_live_stop_1_narrates_right_after_memo(browser):
           return P.apply(this,arguments); }; })()"""
     )
     pg = ctx.new_page()
-    pg.goto(LIVE_BASE + "/", wait_until="load")
+    pg.goto(LIVE_BASE + "/v1", wait_until="load")
     pg.wait_for_function("!!(window.Docs3D&&Docs3D.tour)", polling=300, timeout=60000)
     pg.mouse.click(5, 5)
     pg.fill("#q", FIXTURE["question"])

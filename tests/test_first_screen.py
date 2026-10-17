@@ -1,4 +1,4 @@
-"""First screen: a first-time visitor can tell where to click (cue, highlighted Ask, steps, labeled controls)."""
+"""First screen (v1 at /v1): a first-time visitor can tell where to click (cue, highlighted Ask, steps, labeled controls)."""
 
 import pytest
 
@@ -10,7 +10,7 @@ def page():
     p, b = browser_or_skip()
     with serve() as base:
         pg = b.new_page(viewport={"width": 1440, "height": 900})
-        pg.goto(base + "/", wait_until="domcontentloaded")
+        pg.goto(base + "/v1", wait_until="domcontentloaded")
         pg.wait_for_timeout(1500)
         pg.base = base  # type: ignore[attr-defined]
         yield pg

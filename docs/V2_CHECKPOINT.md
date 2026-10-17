@@ -2,9 +2,15 @@
 
 Resume point for any agent. Read AGENTS.md, contracts/openapi.json and docs/FRONTEND_INVENTORY.md (being added) first.
 
+## Canonical address (with #92)
+- The canonical address is the root, `https://arize.design-bakery.com/`, and it serves v2 (`static/v2.html`).
+- `/v1` serves the old page (`static/index.html`) and is the fallback if v2 needs to be taken down.
+- `/v2` still works and serves the same file as the root.
+- The `arize-v2` subdomain is dropped, so no Cloudflare change is needed.
+
 ## Decision so far
 - APPROVED DIRECTION (Alex, 3:06 PM EDT): the minimal layout is "a lot cleaner" and "a good approach" but needs more refinement before building. Next step: refine mockups against the real inventory and the real 3D render, then write the v2 build spec for ABA.
-- Rebuild only the frontend as v2 (target: arize-v2.design-bakery.com). Backend, API contracts, Octo, voice chain unchanged.
+- Rebuild only the frontend as v2, served at the root (see Canonical address). Backend, API contracts, Octo, voice chain unchanged.
 - KEEP AS IS: static/map3d.js, static/map3d.co.js, static/vendor county/state data, three.module, d3, topojson. The 3D county map, its exploration and the guided tour are the product moat.
 - The problem is everything around the map: too many things visible at once.
 
@@ -28,6 +34,7 @@ Resume point for any agent. Read AGENTS.md, contracts/openapi.json and docs/FRON
 
 ## Built so far
 - #89 (this issue): `/v2` home page. `static/v2.html` + `static/v2.css` + `static/v2.js`, served by `GET /v2` in `app/server.py`. The existing `static/map3d.js` is reused as is through `window.Docs3D`; visible by default are only the memo (`#answer`), the map (`#docs3d`) and the bottom composer (`#q`, `#go`). Sources, follow-ups, legend and run info are collapsed bottom sheets, and the tour autoplays from stop 1 after the memo.
+- #92: v2 is now the root page. `GET /` serves `static/v2.html`, `GET /v2` stays as an alias, and `GET /v1` serves the old `static/index.html`. `contracts/openapi.json` and `docs/FRONTEND_INVENTORY.md` list `/v1`.
 
 ## Hard rules for builders
 - Frontend changes via ABA only. Plain HTML/JS, no React/TS/shadcn, no new deps or CDNs.
