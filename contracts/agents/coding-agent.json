@@ -85,6 +85,8 @@
   "rules": [
     "Never write vendored ACS files (acs/seat_protocol.py, acs/watchdog_check.py, acs/LICENSE.acs, acs/assignment.schema.json)",
     "Never commit cache/, runs/, data/, logs/ or any secret",
-    "Check repo.manifest.json before adding a top-level file or folder"
+    "Check repo.manifest.json before adding a top-level file or folder",
+    "Never hand-write custom code when mature OSS or an existing tool plus thin glue code can do the job; manual coding is allowed only for confirmed debugging or fixing logic pipelines (AGENTS.md, Reuse before you write)",
+    "A PR that adds a new custom module names the OSS options considered and why none fit (.github/pull_request_template.md)"
   ]
 }
