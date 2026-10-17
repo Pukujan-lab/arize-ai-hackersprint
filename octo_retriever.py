@@ -20,7 +20,7 @@ def _live(question):
     req = urllib.request.Request(f"{BASE}/workspaces/{WS}/query", data=json.dumps(body, ensure_ascii=True).encode(),
         headers={"Authorization": "Bearer " + key, "Content-Type": "application/json", "User-Agent": "legal-graph/0.1"})
     try:
-        rows = json.load(urllib.request.urlopen(req, timeout=2.5))["rows"]; _live_ok.update(ok=True, t=time.time())
+        rows = json.load(urllib.request.urlopen(req, timeout=5))["rows"]; _live_ok.update(ok=True, t=time.time())
     except Exception:
         _live_ok.update(ok=False, t=time.time()); return None
     out = []
