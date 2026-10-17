@@ -18,12 +18,13 @@ API = f"https://api.github.com/repos/{REPO}"
 ONTOLOGY = "oio=1.1.0; project=1.0.0"
 TITLE_PREFIX = "[ISSUE]: red-team:"
 PRIORITY = {
-    "security": ("1", "pukujan-arize-ai-hackersprint:priority-1"),
     "integrity": ("2", "pukujan-arize-ai-hackersprint:priority-2"),
     "fallback": ("3", "pukujan-arize-ai-hackersprint:priority-3"),
     "robustness": ("3", "pukujan-arize-ai-hackersprint:priority-3"),
     "audio": ("4", "pukujan-arize-ai-hackersprint:priority-4"),
     "ux": ("5", "pukujan-arize-ai-hackersprint:priority-5"),
+    "flow": ("5", "pukujan-arize-ai-hackersprint:priority-5"),
+    "intuitiveness": ("5", "pukujan-arize-ai-hackersprint:priority-5"),
     "ops": ("6", "pukujan-arize-ai-hackersprint:priority-6"),
 }
 
@@ -58,10 +59,15 @@ def ensure_labels(names: list[str]) -> None:
         "proposal": "cfd3d7",
         "fallback": "fbca04",
         "robustness": "d93f0b",
-        "area:security": "b60205",
         "area:integrity": "d93f0b",
         "area:fallback": "fbca04",
         "area:ux": "1d76db",
+        "ux": "1d76db",
+        "broken-button": "e99695",
+        "flow": "5319e7",
+        "intuitiveness": "c5def5",
+        "area:flow": "5319e7",
+        "area:intuitiveness": "c5def5",
         "area:audio": "5319e7",
         "area:ops": "006b75",
         "severity:critical": "b60205",
@@ -199,7 +205,14 @@ def list_open_redteam():
     return issues if isinstance(issues, list) else []
 
 
+SECURITY_AREAS = {"security"}
+
+
 def upsert(finding: dict):
+    if finding.get("area") in SECURITY_AREAS:
+        print(f"skip security finding (out of scope): {finding.get('title')}")
+        return None
+
     title = f"{TITLE_PREFIX} {finding['title']}"
     fp = fingerprint(title)
     labels = sorted(
@@ -250,6 +263,8 @@ def parse_pytest_report(path: Path) -> list[dict]:
             }
         )
         meta["test"] = node
+        if meta.get("area") in SECURITY_AREAS:
+            continue
         meta["evidence"] = (t.get("call") or {}).get("longrepr", "")[:3500]
         if not meta.get("actual") or meta["actual"] == "failed":
             meta["actual"] = meta["evidence"][:500] or "failed"
