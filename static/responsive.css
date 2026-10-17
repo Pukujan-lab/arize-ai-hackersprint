@@ -18,6 +18,8 @@
 #go:focus-visible,#q:focus-visible{outline:2px solid #a5b4fc;outline-offset:2px}
 #askrow:focus-within{border-color:rgba(129,140,248,.45)}
 .ans-empty>*+*{margin-top:.35rem}
+.ans-try{margin-top:.75rem!important;display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:600;color:#e0e7ff;background:rgba(99,102,241,.22);border:1px solid rgba(129,140,248,.45)}
+.ans-try:hover,.ans-try:focus-visible{background:rgba(99,102,241,.4)}
 #vorb-label{position:fixed;right:118px;bottom:14px;z-index:50;font-size:12px;color:#c7d2fe;background:rgba(15,23,42,.8);border:1px solid rgba(129,140,248,.35);border-radius:999px;padding:4px 10px;pointer-events:none;white-space:nowrap}
 
 /* ---- Tablet and phone: tap targets of at least 44px ---- */

@@ -2,10 +2,10 @@
 // labeled mic). Everything is dismissible; dismissal is remembered in localStorage.
 (function(){
   'use strict';
-  var KEY='precedent.firststep.dismissed';
+  var KEY='precedent.firstScreenDismissed';
   var $=function(id){return document.getElementById(id);};
   function seen(){ try{ return localStorage.getItem(KEY)==='1'; }catch(e){ return false; } }
-  function hideCue(){ var c=$('firststep'); if(c) c.hidden=true; var g=$('go'); if(g) g.classList.remove('pulse-cue'); }
+  function hideCue(){ var c=$('firststep'); if(c) c.hidden=true; var g=$('go'); if(g) g.classList.remove('pulse-cue','first-visit'); }
   function dismiss(){ try{ localStorage.setItem(KEY,'1'); }catch(e){} hideCue(); }
   function labelMic(){
     var orb=$('vorb'); if(!orb){ return false; }
@@ -22,10 +22,10 @@
   }
   function init(){
     if(seen()) hideCue();
-    else { var g=$('go'); if(g) g.classList.add('pulse-cue'); }
+    else { var g=$('go'); if(g) g.classList.add('pulse-cue','first-visit'); }
     var x=$('firststep-dismiss'); if(x) x.addEventListener('click',dismiss);
-    var go=$('go'); if(go) go.addEventListener('click',function(){ go.classList.remove('pulse-cue'); });
-    var q=$('q'); if(q) q.addEventListener('keydown',function(e){ if(e.key==='Enter'&&go) go.classList.remove('pulse-cue'); });
+    var go=$('go'); if(go) go.addEventListener('click',function(){ go.classList.remove('pulse-cue','first-visit'); });
+    var q=$('q'); if(q) q.addEventListener('keydown',function(e){ if(e.key==='Enter'&&go) go.classList.remove('pulse-cue','first-visit'); });
     var tries=0; (function mic(){ if(!labelMic()&&tries++<40) setTimeout(mic,250); })();
     labelTour(); new MutationObserver(labelTour).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['aria-label']});
   }
