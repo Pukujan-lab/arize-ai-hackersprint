@@ -1,0 +1,19 @@
+{
+  "_note": "Inputs for tools/dep_policy.py: a lock with markers, PyPI JSON trimmed to the fields the release-age check reads, and pip-licenses JSON rows.",
+  "today": "2026-10-17",
+  "lock": "fastapi==0.128.8 ; python_full_version < '3.10'\nfastapi==0.143.3 ; python_full_version >= '3.10'\nhttpx==0.28.1\n    # via -r requirements.in\nnumpy==2.0.2 ; python_full_version < '3.10'\nnumpy==2.4.6 ; python_full_version == '3.11.*'\n",
+  "pypi": {
+    "freshpkg": {"releases": {"1.0.0": [{"upload_time_iso_8601": "2024-01-02T00:00:00Z"}], "1.4.0": [{"upload_time_iso_8601": "2026-08-30T12:00:00Z"}]}},
+    "stalepkg": {"releases": {"0.9": [{"upload_time_iso_8601": "2023-05-01T00:00:00Z"}], "0.9.1": [{"upload_time_iso_8601": "2025-06-01T00:00:00Z", "yanked": false}]}},
+    "yankedpkg": {"releases": {"2.0": [{"upload_time_iso_8601": "2026-09-01T00:00:00Z", "yanked": true}], "1.0": [{"upload_time_iso_8601": "2022-01-01T00:00:00Z"}]}}
+  },
+  "licenses": [
+    {"Name": "fastapi", "Version": "0.143.3", "License": "MIT"},
+    {"Name": "httpx", "Version": "0.28.1", "License": "BSD License"},
+    {"Name": "certifi", "Version": "2026.7.22", "License": "Mozilla Public License 2.0 (MPL 2.0)"},
+    {"Name": "uvloop", "Version": "0.23.0", "License": "Apache Software License; MIT License"},
+    {"Name": "copyleftpkg", "Version": "1.0", "License": "GNU General Public License v3 (GPLv3)"},
+    {"Name": "mysterypkg", "Version": "1.0", "License": "UNKNOWN"},
+    {"Name": "pytest", "Version": "8.4.2", "License": "MIT License"}
+  ]
+}

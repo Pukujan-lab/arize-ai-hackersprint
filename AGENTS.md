@@ -41,9 +41,27 @@ Adding a new top-level file or folder? Add it to `repo.manifest.json` in the sam
 
 Alex's rule: never hand-write custom code when mature OSS or an existing tool plus thin glue code can do the job. Manual coding is allowed only for confirmed debugging or fixing logic pipelines.
 
-Before you add a module, look for a maintained package, a tool already in `requirements.txt`, or a service the app already talks to. If one fits, write only the glue that connects it. Writing code by hand is fine when you are fixing a bug you have reproduced, or repairing a logic pipeline that already exists here (for example the agent steps in `app/agents.py` or the fallback chains in `app/llm.py` and `app/ttschain.py`).
+Before you add a module, look for a maintained package, a tool already in `requirements.in`, or a service the app already talks to. If one fits, write only the glue that connects it. Writing code by hand is fine when you are fixing a bug you have reproduced, or repairing a logic pipeline that already exists here (for example the agent steps in `app/agents.py` or the fallback chains in `app/llm.py` and `app/ttschain.py`).
 
-A PR that adds a new custom module must say which OSS options you considered and why none of them fit. The PR template has a line for it.
+CI enforces this. `tools/pr_policy.py` fails the gates job when a PR adds a source file, or more than 150 non-test lines, under `app/`, `acs/` or `tools/`, unless the PR body does one of two things:
+
+- It has an `## OSS considered` section (or an `OSS considered:` line) that names at least one specific project or official SDK, as a link, `owner/repo` or a `backticked` name, and says why it does not fit. "None", "no new module" and the template's own wording do not count.
+- It is a bugfix: it has the `bugfix` label or a `Bugfix:` line, and it closes an issue (`Closes #N`) whose evidence is confirmed (OIO label `evidence:confirmed`, or "Evidence Confidence: confirmed" in the issue body).
+
+PRs that only touch docs, tests, `static/` or CI pass without either. ABA PRs start from `.github/PULL_REQUEST_TEMPLATE/aba.md` (`gh pr create --template aba.md`), which fills the section already. The check reruns when you edit the PR body or labels.
+
+## Dependencies and SDKs
+
+When a provider ships an official SDK (Anthropic, OpenAI or any OpenAI-compatible API such as InferHub, ElevenLabs, Fish Audio, Google GenAI, Arize), call it through the SDK, not through raw `httpx` or `requests`. The PR check prints a warning when a PR adds a raw HTTP call to one of those hosts. It is only a warning, because some older code here still calls them directly.
+
+Direct dependencies go in `requirements.in`. `requirements.txt` is the lock: run the `uv pip compile` command at the top of it after you change `requirements.in`. The lock has a Python 3.9 branch, which is what the Pro runs, and a 3.10+ branch for CI. Moving the Pro to a newer Python is #20. The gates job checks four things:
+
+- the lock matches `requirements.in` (it recompiles it with uv and diffs),
+- every locked package has an allowed license (MIT, BSD, Apache, ISC, PSF, MPL-2.0, Unlicense, 0BSD, Zlib or CC0; anything GPL-family or unknown fails), read with pip-licenses,
+- pip-audit finds no known vulnerability in the pins CI installs (it fails only when the PR changes the requirements; otherwise it warns), and
+- every new direct dependency has a PyPI release in the last 12 months.
+
+Dependabot (`.github/dependabot.yml`) opens weekly update PRs for pip and GitHub Actions, and they go through the same gates.
 
 ## What never goes in git
 
@@ -80,10 +98,13 @@ The four pipeline agents use a separate claim file, `.coord/assignment.json`, lo
 ## Running the CI gates locally
 
 ```bash
-python -m pip install -r requirements.txt pytest ruff mypy
+python -m pip install -r requirements.txt pytest ruff mypy uv==0.13.1 pip-audit pip-licenses
 ruff check . && ruff format --check .
 mypy server.py app acs/board.py acs/claim.py acs/hotload.py
 LLM_MODE=fake ACS_HOTLOAD=0 pytest -q -p no:cacheprovider tests -rs
+python tools/pr_policy.py --repo Pukujan/arize-ai-hackersprint --pr <N>
+python tools/dep_policy.py licenses && python tools/dep_policy.py maturity --base origin/main
+python tools/dep_policy.py pins > /tmp/pins.txt && pip-audit -r /tmp/pins.txt --no-deps --disable-pip
 ```
 
 The writing-helper checks need the pinned helper checked out in `.cgm/` (gitignored):
