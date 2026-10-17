@@ -7,7 +7,7 @@
 
 ## Policy & board
 - Policy: `HACKATHON_POLICY.md` — speed > delivery > presentation > completeness; **feature freeze 3:00 PM ET**.
-- Task board: `python3 acs_claim.py list` (claim: `python3 acs_claim.py claim HACK-0X --agent <name>`).
+- Task board: `python3 acs/claim.py list` (claim: `python3 acs/claim.py claim HACK-0X --agent <name>`).
 
 ## Product
 Cited verified research-memo tool for legal professionals (law firms, in-house counsel, litigation support).
@@ -27,8 +27,8 @@ flowchart LR
   G --> W
   W -.optional.-> T[ElevenLabs TTS]
   P & R & A & G --> C[(ACS claim file / task board<br/>events.jsonl + .oio issue logs)]
-  TM[Teammates' agents] -->|acs_claim.py or /api/claim| C
-  CI[ci_local.sh + offline triage] --> C
+  TM[Teammates' agents] -->|acs/claim.py or /api/claim| C
+  CI[tools/ci_local.sh + offline triage] --> C
   P & R & A & G -.optional.-> AZ[Arize OTel traces]
 ```
 
@@ -61,4 +61,4 @@ Backup: screen recording.
 - Optional ELEVENLABS_API_KEY / ARIZE_API_KEY + ARIZE_SPACE_ID.
 
 ## Run
-`./run_all.sh` · `./ci_local.sh` · `python3 agents.py "question"`
+`tools/run_all.sh` · `tools/ci_local.sh` · `python3 -m app.agents "question"`

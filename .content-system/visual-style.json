@@ -1,0 +1,34 @@
+{
+  "schema_version": "content-generation.visual-style.v1",
+  "reference_asset": ".content-system/assets/adapter-placeholder.txt",
+  "generation_workflow": "built-in image_gen",
+  "narrative_roles": [
+    "hero",
+    "problem",
+    "supporting",
+    "evidence",
+    "story",
+    "social"
+  ],
+  "palette": [
+    "near-black background (#09090b)",
+    "zinc greys for text",
+    "one accent for citations and status"
+  ],
+  "subjects": [
+    "a citation graph around one question",
+    "an agent timeline with handoffs"
+  ],
+  "composition": "documentation-first; README narrative art deferred",
+  "text_policy": "no secrets, run ids or private data baked into images",
+  "roles": {
+    "documentation": "non-narrative helper records and placeholders",
+    "hero": "deferred until narrative art ships"
+  },
+  "reject_when": [
+    "secrets, tokens or private data visible in an image",
+    "an image that shows a feature the app does not have",
+    "SVG used where a narrative raster is required"
+  ],
+  "status_note": "The live site already ships static/og.png and slide screenshots; their generation was not recorded, so they are not listed as narrative assets."
+}

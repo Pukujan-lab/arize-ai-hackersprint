@@ -1,0 +1,26 @@
+{
+  "schema_version": "content-generation.review-rubric.v1",
+  "dimensions": [
+    {
+      "id": "code_accuracy",
+      "question": "Does every feature named in the text exist in app/, static/ or deploy/ today?"
+    },
+    {
+      "id": "citation_honesty",
+      "question": "Does it avoid implying the safeguard checks legal correctness rather than citation membership?"
+    },
+    {
+      "id": "deploy_claim_safety",
+      "question": "Does it avoid saying a merge reached the Pro without a passing deploy run?"
+    },
+    {
+      "id": "secret_safety",
+      "question": "Does it mention secrets by name only, never by value?"
+    },
+    {
+      "id": "storage_accuracy",
+      "question": "Do paths and stores match repo.manifest.json and contracts/storage.json?"
+    }
+  ],
+  "status_note": "Precedent review rubric, added with the CGM adapter."
+}

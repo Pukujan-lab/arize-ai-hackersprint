@@ -1,0 +1,268 @@
+{
+  "schema_version": "precedent.repo-manifest.v1",
+  "owners": {
+    "app": "backend and frontend code",
+    "acs": "agent coordination",
+    "ci": "gates, tests and contracts",
+    "deploy": "Pro deployment and dependencies",
+    "docs": "README, AGENTS.md, docs/ and content adapter"
+  },
+  "entries": [
+    {
+      "path": "app/",
+      "kind": "dir",
+      "owner": "app",
+      "purpose": "FastAPI backend package: app.server:app, agent pipeline (agents.py), LLM chain (llm.py), graph and Octo retrieval, API contracts (contracts.py).",
+      "agents_may_edit": true,
+      "runtime_data": "writes cache/, runs/ and .coord/ at the repo root; reads data/ ($GRAPH_DATA_DIR) and Octo. See contracts/storage.json."
+    },
+    {
+      "path": "server.py",
+      "kind": "file",
+      "owner": "app",
+      "purpose": "Compatibility shim: `from app.server import app`, so `uvicorn server:app` still works.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "acs/",
+      "kind": "dir",
+      "owner": "acs",
+      "purpose": "ACS coordination: board.py (task board), claim.py (CLI), hotload.py (in-process reload), plus the vendored ACS runtime.",
+      "agents_may_edit": true,
+      "runtime_data": "board and events in $ACS_ROOT/.coord/hackathon, OIO logs in $ACS_ROOT/.oio (outside this repo); reads acs/config.json if present",
+      "vendored_read_only": [
+        "acs/seat_protocol.py",
+        "acs/watchdog_check.py",
+        "acs/LICENSE.acs",
+        "acs/assignment.schema.json",
+        "acs/SOURCE.md"
+      ]
+    },
+    {
+      "path": ".coord/",
+      "kind": "dir",
+      "owner": "acs",
+      "purpose": "Seat claims for the four pipeline agents (assignment.json) and its lock; also holds the CGM pin under pins.cgm.",
+      "agents_may_edit": false,
+      "runtime_data": "rewritten on every run; the Pro keeps its own runtime copy across deploys",
+      "note": "Edit only pins by hand; seats belong to app/coord.py."
+    },
+    {
+      "path": "schema/",
+      "kind": "dir",
+      "owner": "app",
+      "purpose": "Versioned data model for the app's Octo tables (SCHEMA_VERSION, MODELS, validate), the migration runner and the schema lock.",
+      "agents_may_edit": true,
+      "runtime_data": "tables tts_clip, tour_step and schema_version in the Octo workspace; see contracts/storage.json",
+      "note": "Bump SCHEMA_VERSION and add a migration for any change; run python -m schema.lock."
+    },
+    {
+      "path": "migrations/",
+      "kind": "dir",
+      "owner": "app",
+      "purpose": "Numbered SQL migrations (Postgres and SQLite), applied to Octo by deploy/deploy.sh. Never edit a released one.",
+      "agents_may_edit": true,
+      "runtime_data": "applied to the Octo workspace, not stored locally"
+    },
+    {
+      "path": "static/",
+      "kind": "dir",
+      "owner": "app",
+      "purpose": "Frontend: plain HTML and JS pages (demo, map, dashboard, slides, guide, observability), no build step.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "tests/",
+      "kind": "dir",
+      "owner": "ci",
+      "purpose": "pytest suite run by the CI gates job; live and data tests skip unless RUN_LIVE=1 or data/nodes.jsonl exists.",
+      "agents_may_edit": true,
+      "runtime_data": "writes runs/, cache/ and .coord/ while running (gitignored or restored)"
+    },
+    {
+      "path": "ci/",
+      "kind": "dir",
+      "owner": "ci",
+      "purpose": "Offline issue-triage helpers used by tools/ci_local.sh.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": ".github/",
+      "kind": "dir",
+      "owner": "ci",
+      "purpose": "Workflows: ci.yml (gates), automerge.yml (squash auto-merge), deploy.yml (self-hosted Pro deploy).",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "pyproject.toml",
+      "kind": "file",
+      "owner": "ci",
+      "purpose": "ruff and mypy settings for the CI gates.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "contracts/",
+      "kind": "dir",
+      "owner": "ci",
+      "purpose": "Machine-readable contracts: openapi.json (API, drift-checked), agents/ (one contract per agent role), storage.json (where data lives).",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "deploy/",
+      "kind": "dir",
+      "owner": "deploy",
+      "purpose": "Pro deployment: deploy.sh (health-checked, rolls back), run_app.sh (uvicorn app.server:app), launchd plists and installer.",
+      "agents_may_edit": true,
+      "runtime_data": "the live checkout is ~/precedent on the Pro; secrets come from ~/.hack_env there and are never in git"
+    },
+    {
+      "path": "requirements.txt",
+      "kind": "file",
+      "owner": "deploy",
+      "purpose": "Python dependencies installed by CI and by deploy.sh on the Pro.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "tools/",
+      "kind": "dir",
+      "owner": "app",
+      "purpose": "Developer scripts: run_all.sh, ci_local.sh, validate_cgm_adoption.py, kokoro/ (local TTS service installer), screenshots, video, Arize helpers.",
+      "agents_may_edit": true,
+      "runtime_data": "run_all.sh writes logs/ (gitignored)"
+    },
+    {
+      "path": "arize/",
+      "kind": "dir",
+      "owner": "app",
+      "purpose": "Arize experiments, evaluators and judge setup scripts.",
+      "agents_may_edit": true,
+      "runtime_data": "talks to Arize; arize/fresh_traces.json is a committed record of replayed span ids"
+    },
+    {
+      "path": "docs/",
+      "kind": "dir",
+      "owner": "docs",
+      "purpose": "Project docs and hackathon records; docs/README.md says which are current and which are historical.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "README.md",
+      "kind": "file",
+      "owner": "docs",
+      "purpose": "Product entry page.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "AGENTS.md",
+      "kind": "file",
+      "owner": "docs",
+      "purpose": "Rules for coding agents, including the always-on writing block between the cgm:always-on markers.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)",
+      "note": "Do not hand-edit the text between the cgm:always-on markers; it must match the pinned helper."
+    },
+    {
+      "path": "repo.manifest.json",
+      "kind": "file",
+      "owner": "docs",
+      "purpose": "This file: every top-level entry, its owner and where its runtime data lives.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": ".content-system/",
+      "kind": "dir",
+      "owner": "docs",
+      "purpose": "Writing and content adapter (pinned helper version, project brief, brand language, visual style, review rubric, asset provenance).",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)",
+      "note": "The helper is pinned by commit; its source is never copied here."
+    },
+    {
+      "path": ".gitignore",
+      "kind": "file",
+      "owner": "deploy",
+      "purpose": "Keeps secrets, caches, run logs and data out of git.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    }
+  ],
+  "runtime_paths": [
+    {
+      "path": "cache/",
+      "purpose": "LLM, Octo, TTS and graph caches",
+      "lives": "local disk of whichever machine runs the app (the Pro in production)",
+      "in_git": false
+    },
+    {
+      "path": "runs/",
+      "purpose": "per-run event logs and results",
+      "lives": "local disk of the app host",
+      "in_git": false
+    },
+    {
+      "path": "data/",
+      "purpose": "graph data (nodes.jsonl, edges.jsonl) and the Octo snapshot; override with GRAPH_DATA_DIR",
+      "lives": "~/precedent/data on the Pro",
+      "in_git": false
+    },
+    {
+      "path": ".tts_cache/",
+      "purpose": "L1 TTS clip cache (SQLite index plus mp3 files); override with TTS_CACHE_DIR",
+      "lives": "local disk of the app host",
+      "in_git": false
+    },
+    {
+      "path": "logs/",
+      "purpose": "tools/run_all.sh process logs",
+      "lives": "local disk",
+      "in_git": false
+    },
+    {
+      "path": "uvicorn.log",
+      "purpose": "launchd stdout/stderr for the app",
+      "lives": "~/precedent on the Pro",
+      "in_git": false
+    },
+    {
+      "path": ".venv/",
+      "purpose": "Python virtualenv",
+      "lives": "local disk",
+      "in_git": false
+    },
+    {
+      "path": "bin/",
+      "purpose": "local SurrealDB binary used by tools/run_all.sh",
+      "lives": "local disk",
+      "in_git": false
+    },
+    {
+      "path": ".cgm/",
+      "purpose": "CI checkout of the pinned writing helper",
+      "lives": "CI runner only",
+      "in_git": false
+    }
+  ],
+  "runtime_writes": [
+    "cache/",
+    "runs/",
+    "data/",
+    ".tts_cache/",
+    ".coord/assignment.json",
+    ".coord/assignment.tmp",
+    ".coord/claim.lock",
+    "contracts/openapi.json",
+    "logs/"
+  ],
+  "storage_map": "contracts/storage.json",
+  "agent_contracts": "contracts/agents/"
+}

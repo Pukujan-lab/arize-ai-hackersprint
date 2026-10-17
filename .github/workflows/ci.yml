@@ -19,6 +19,12 @@ jobs:
       PYTHONDONTWRITEBYTECODE: "1"
     steps:
       - uses: actions/checkout@v4
+      - name: Check out the pinned writing helper (CGM 0.5.12, see docs/continuity/cgm-pin.md)
+        uses: actions/checkout@v4
+        with:
+          repository: Pukujan/content-generation-modules
+          ref: 6831f91e165b62d719c05eb492f7375fa932b560
+          path: .cgm
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -27,6 +33,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pytest ruff mypy
+      - name: CGM adoption (pin, AGENTS.md boot block, asset provenance)
+        run: python tools/validate_cgm_adoption.py --helper-root .cgm
+      - name: CGM adapter and README scope
+        run: python .cgm/scripts/validate_content_system.py --root .cgm --adapter .content-system --project-root .
+      - name: CGM always-on writing contract
+        run: python .cgm/scripts/verify_hsw_applied.py --root .cgm
       - name: Lint (ruff check)
         run: ruff check --output-format=github .
       - name: Format (ruff format --check)
@@ -34,6 +46,6 @@ jobs:
       - name: Types (mypy)
         run: mypy server.py app acs/board.py acs/claim.py acs/hotload.py
       - name: Compile
-        run: python -m compileall -q -x '(\.venv|node_modules)' .
+        run: python -m compileall -q -x '(\.venv|node_modules|\.cgm)' .
       - name: Tests (no secrets, no data, no network)
         run: pytest -q -p no:cacheprovider tests -rs

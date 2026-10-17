@@ -1,0 +1,2 @@
+Placeholder so the content adapter validates while README art for Precedent is deferred.
+Not a narrative image. Replace under the pinned helper's docs/IMAGE_GUIDE.md when README art ships.

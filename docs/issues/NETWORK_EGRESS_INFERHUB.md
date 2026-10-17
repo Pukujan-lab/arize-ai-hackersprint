@@ -14,7 +14,7 @@ Calls from the app to InferHub (`OPENAI_BASE_URL=https://api.inferhub.dev/v1`, m
 - **Same reset on:** octodb.design-bakery.com, www.google.com, workers.cloudflare.com, api.together.xyz
 - **These hosts work:** api.anthropic.com, api.openai.com, api.deepseek.com, openrouter.ai, api.groq.com, api.elevenlabs.io, github.com, pypi.org, otlp.arize.com, vercel.com, *.vercel.app
 - **Same request from a laptop outside the sandbox:** returns 401 without a key, so the service is up.
-- **Config:** no proxy env vars set. Env var names match what llm.py reads.
+- **Config:** no proxy env vars set. Env var names match what app/llm.py reads.
 
 ## Conclusion
 The sandbox only allows outbound traffic to a list of approved hostnames. The app config is correct.

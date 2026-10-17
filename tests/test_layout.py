@@ -16,7 +16,7 @@ from fastapi.testclient import TestClient  # noqa: E402
 
 APP_MODULES = [
     "server", "llm", "agents", "graph_store", "octo_retriever", "limits", "stats", "tracing",
-    "seo", "coord", "contracts", "build_octo_snapshot", "load_surreal",
+    "seo", "coord", "contracts", "build_octo_snapshot", "load_surreal", "ttschain", "octocache",
 ]  # fmt: skip
 ACS_MODULES = ["board", "claim", "hotload"]
 DOCS = ["ABA_BUILD_LOG.md", "ARIZE_SETUP.md", "COPY.md", "HACKATHON_POLICY.md", "PLAN.md", "PRESENTER_GUIDE.md", "UX_GUIDELINES.md"]

@@ -1,0 +1,188 @@
+{
+  "schema_version": "precedent.storage-map.v1",
+  "storage_schema_version": "3",
+  "storage_schema_source": "schema/__init__.py SCHEMA_VERSION (must match; checked by tests/test_manifest.py)",
+  "note": "Where Precedent keeps data at run time. Nothing listed here as in_git=false may be committed. Paths are relative to the repo checkout (~/precedent on the Pro) unless they start with $ACS_ROOT or are remote.",
+  "stores": [
+    {
+      "id": "octo-legal-graph",
+      "kind": "remote-sql",
+      "location": "$OCTO_BASE_URL (default https://octodb.design-bakery.com/api), workspace $OCTO_WORKSPACE_ID",
+      "collections": [
+        "legal_graph.chunk",
+        "legal_graph.expression",
+        "legal_graph.work"
+      ],
+      "access": "read",
+      "module": "app/octo_retriever.py",
+      "in_git": false,
+      "fallback": "octo-snapshot",
+      "schema_version": "octo legal_graph (owned by the Octo workspace)"
+    },
+    {
+      "id": "octo-snapshot",
+      "kind": "sqlite-fts5",
+      "location": "data/octo_snapshot.sqlite",
+      "access": "read",
+      "written_by": "app/build_octo_snapshot.py (manual)",
+      "module": "app/octo_retriever.py",
+      "in_git": false,
+      "fallback_for": "octo-legal-graph"
+    },
+    {
+      "id": "octo-cache",
+      "kind": "json-files",
+      "location": "cache/octo/<query-hash>.json",
+      "access": "read-write",
+      "module": "app/octo_retriever.py",
+      "in_git": false,
+      "note": "L1; synced with the Octo retrieval table (octo-app-tables)"
+    },
+    {
+      "id": "surrealdb-graph",
+      "kind": "surrealdb",
+      "location": "http://127.0.0.1:8000 namespace legal, database graph",
+      "collections": [
+        "node",
+        "cites",
+        "part_of"
+      ],
+      "access": "read",
+      "written_by": "app/load_surreal.py (loads data/*.jsonl)",
+      "module": "app/graph_store.py",
+      "in_git": false,
+      "fallback": "graph-files"
+    },
+    {
+      "id": "graph-files",
+      "kind": "jsonl",
+      "location": "$GRAPH_DATA_DIR or data/ (nodes.jsonl, edges.jsonl)",
+      "access": "read",
+      "module": "app/graph_store.py",
+      "in_git": false,
+      "fallback_for": "surrealdb-graph",
+      "note": "NetworkX fallback; on the Pro it lives in ~/precedent/data"
+    },
+    {
+      "id": "graph-meta-cache",
+      "kind": "pickle",
+      "location": "cache/graph_meta.pkl",
+      "access": "read-write",
+      "module": "app/graph_store.py",
+      "in_git": false
+    },
+    {
+      "id": "llm-cache",
+      "kind": "json-files",
+      "location": "cache/<prompt-hash>.json and cache/_real_calls.json; stale entries moved to cache/_purged/ by schema/backfill.py",
+      "access": "read-write",
+      "module": "app/llm.py",
+      "in_git": false,
+      "note": "L1; synced with the Octo llm_answer table (octo-app-tables)"
+    },
+    {
+      "id": "tts-clip-cache",
+      "kind": "sqlite+audio-files",
+      "location": "$TTS_CACHE_DIR or .tts_cache/ (SQLite index plus .mp3 clips, key sha256(provider|voice|text))",
+      "access": "read-write",
+      "module": "app/ttschain.py",
+      "in_git": false,
+      "fallback_for": "octo-app-tables",
+      "note": "L1 clip cache; filled from Octo on an L2 hit"
+    },
+    {
+      "id": "tts-legacy-cache",
+      "kind": "audio-files",
+      "location": "cache/tts/<text-voice-hash>.mp3",
+      "access": "read",
+      "module": "app/ttschain.py",
+      "in_git": false,
+      "note": "Clips made before the TTS chain; reused, never written"
+    },
+    {
+      "id": "octo-app-tables",
+      "kind": "remote-sql",
+      "location": "Octo workspace $OCTO_WORKSPACE_ID via POST {OCTO_BASE_URL}/workspaces/{id}/query",
+      "collections": [
+        "schema_version",
+        "tts_clip",
+        "tour_step",
+        "llm_answer",
+        "retrieval",
+        "run_cache_link"
+      ],
+      "access": "read-write",
+      "module": "app/ttschain.py, app/octocache.py, app/llm.py, app/octo_retriever.py, schema/store.py, schema/backfill.py",
+      "in_git": false,
+      "note": "L2 shared caches: tts_clip and tour_step for voice, llm_answer and retrieval for answers and passages, run_cache_link records which run used which row",
+      "schema_version": "schema/__init__.py SCHEMA_VERSION; migrations/ applied by deploy/deploy.sh (python -m schema.migrate --apply)"
+    },
+    {
+      "id": "run-log",
+      "kind": "json-files",
+      "location": "runs/<run_id>/ (events.jsonl, result.json, partial.txt, sessions.json)",
+      "access": "read-write",
+      "module": "app/coord.py, app/agents.py, app/server.py",
+      "in_git": false
+    },
+    {
+      "id": "coord-claims",
+      "kind": "json-file",
+      "location": ".coord/assignment.json and .coord/claim.lock",
+      "access": "read-write",
+      "module": "app/coord.py, acs/hotload.py",
+      "in_git": true,
+      "note": "Seed copy and the CGM pin are committed; seats are rewritten on every run. deploy/deploy.sh keeps the Pro's runtime copy across deploys."
+    },
+    {
+      "id": "acs-config",
+      "kind": "json-file",
+      "location": "acs/config.json (optional)",
+      "access": "read",
+      "module": "acs/hotload.py",
+      "in_git": false
+    },
+    {
+      "id": "acs-board",
+      "kind": "json-files",
+      "location": "$ACS_ROOT/.coord/hackathon/ (board.json, events.jsonl, board.lock)",
+      "access": "read-write",
+      "module": "acs/board.py",
+      "in_git": false,
+      "note": "Outside this repo; ACS_ROOT defaults to ~/development/acs-adopter"
+    },
+    {
+      "id": "acs-hotload-lock",
+      "kind": "json-file",
+      "location": "$ACS_ROOT/.coord/hotload.lock.json",
+      "access": "read",
+      "module": "acs/hotload.py, app/server.py",
+      "in_git": false
+    },
+    {
+      "id": "oio-issue-logs",
+      "kind": "json-files",
+      "location": "$ACS_ROOT/.oio/issue-logs/hackathon/*.json",
+      "access": "write",
+      "module": "acs/board.py",
+      "in_git": false
+    },
+    {
+      "id": "arize-traces",
+      "kind": "remote-otel",
+      "location": "Arize project $ARIZE_PROJECT_NAME (space $ARIZE_SPACE_ID)",
+      "access": "write",
+      "module": "app/tracing.py",
+      "in_git": false
+    },
+    {
+      "id": "process-memory",
+      "kind": "in-memory",
+      "location": "app/stats.py counters, app/limits.py rate buckets",
+      "access": "read-write",
+      "module": "app/stats.py, app/limits.py",
+      "in_git": false,
+      "note": "Lost on restart by design"
+    }
+  ]
+}

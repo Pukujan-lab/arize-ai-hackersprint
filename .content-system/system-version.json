@@ -1,0 +1,34 @@
+{
+  "schema_version": "content-generation.adapter.v1",
+  "system": "content-generation-modules",
+  "helper_repository": "https://github.com/Pukujan/content-generation-modules",
+  "helper_version": "0.5.12",
+  "helper_commit": "6831f91e165b62d719c05eb492f7375fa932b560",
+  "helper_pin_note": "Full CGM 0.5.12 pinned at the same commit as Pukujan/hades-v2. Eight modules including human-output-naming. Always-on HSW boot block from the pinned docs/writing-routing.json (acs_prompt_inject.system_block) sits between the cgm:always-on markers in AGENTS.md and in agent-system-block.txt. Root README stays product-only.",
+  "modules": [
+    "brand-foundation",
+    "content-context",
+    "writing-direction",
+    "human-sounding-writing",
+    "human-output-naming",
+    "visual-direction",
+    "image-generation",
+    "html-demo"
+  ],
+  "writing_contract": "docs/writing-routing.json::acs_prompt_inject.system_block",
+  "adapter_contract": "content-generation.project-brief.v2",
+  "authoritative_project_files": [
+    "AGENTS.md",
+    "README.md",
+    "repo.manifest.json",
+    "contracts/storage.json"
+  ],
+  "validation": [
+    "tools/validate_cgm_adoption.py --helper-root <pinned-checkout>",
+    "<pinned-checkout>/scripts/validate_content_system.py --root <pinned-checkout> --adapter .content-system --project-root .",
+    "<pinned-checkout>/scripts/verify_hsw_applied.py --root <pinned-checkout>"
+  ],
+  "vendored_modules": false,
+  "review_outputs": [],
+  "adoption_status": "Adapter pinned at CGM 0.5.12 (@6831f91e). CI checks out the pinned helper into .cgm/ and runs the adoption validator, the helper's adapter validator and the HSW check. verify_adopter_content.py is run by hand, as in hades-v2."
+}

@@ -1,0 +1,115 @@
+{
+  "schema_version": "content-generation.project-brief.v2",
+  "project": "Precedent",
+  "audience": [
+    "attorneys and in-house legal teams who need a quick, cited first pass on a research question",
+    "hackathon judges and teammates looking at how the agents coordinate",
+    "coding agents working in this repository"
+  ],
+  "problem": "A research answer that cites a case nobody retrieved, or quotes a passage that does not exist, is worse than no answer. Multi-agent pipelines make this harder to see, because each agent hands work to the next without a record of who did what.",
+  "solution": "Precedent splits one question across four agents (planner, retriever, answer, safeguard). Each claims a seat, logs its steps, and hands off; the safeguard rejects drafts that cite anything outside the retrieved set.",
+  "mechanism": [
+    "retriever: seed authorities, Octo passage search, one-hop citation expansion, PageRank ranking",
+    "answer: short memo from the numbered authorities only, through InferHub, then Anthropic, then a plain template",
+    "safeguard: deterministic checks on citations, unknown authorities and uncited sentences",
+    "every step is written to runs/<run_id>/events.jsonl and claimed in .coord/assignment.json"
+  ],
+  "evidence": [
+    {
+      "claim": "Four agents run each question: planner, retriever, answer and safeguard.",
+      "source": "agents.py, functions run_pipeline, retriever, answer, safeguard",
+      "status": "shipped",
+      "supports": "The pipeline code claims a seat for each of the four roles and hands off in that order.",
+      "limits": "Shows the code path; it does not show answer quality on any given question.",
+      "recorded_at": "2026-10-17T00:30:00-04:00",
+      "cite_in_readme": false,
+      "source_revision": {
+        "kind": "repository_artifact",
+        "reference": "agents.py at 6316928",
+        "repository": "Pukujan/arize-ai-hackersprint",
+        "commit": "63169284d32be6536b838dacb3e131a3cf8a3fea",
+        "path": "agents.py",
+        "locator": "functions run_pipeline, retriever, answer, safeguard",
+        "uri": "https://github.com/Pukujan/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/agents.py"
+      }
+    },
+    {
+      "claim": "The safeguard fails a draft that cites a reference outside the retrieved set or names an unknown authority.",
+      "source": "agents.py, function safeguard",
+      "status": "shipped",
+      "supports": "check_refs and check_named compare the draft against the retrieved citations; pass requires no invalid or unknown references and at least one citation.",
+      "limits": "These are pattern checks. They do not verify that a quote is a fair reading of the case.",
+      "recorded_at": "2026-10-17T00:30:00-04:00",
+      "cite_in_readme": false,
+      "source_revision": {
+        "kind": "repository_artifact",
+        "reference": "agents.py at 6316928",
+        "repository": "Pukujan/arize-ai-hackersprint",
+        "commit": "63169284d32be6536b838dacb3e131a3cf8a3fea",
+        "path": "agents.py",
+        "locator": "function safeguard",
+        "uri": "https://github.com/Pukujan/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/agents.py"
+      }
+    },
+    {
+      "claim": "When every model call fails, the answer step returns a plain template instead of an invented memo.",
+      "source": "llm.py, function complete, template fallback",
+      "status": "shipped",
+      "supports": "complete() falls back to the caller's template and labels the provider as template.",
+      "limits": "The template lists authorities; it is not a substitute for a drafted memo.",
+      "recorded_at": "2026-10-17T00:30:00-04:00",
+      "cite_in_readme": false,
+      "source_revision": {
+        "kind": "repository_artifact",
+        "reference": "llm.py at 6316928",
+        "repository": "Pukujan/arize-ai-hackersprint",
+        "commit": "63169284d32be6536b838dacb3e131a3cf8a3fea",
+        "path": "llm.py",
+        "locator": "function complete, template fallback",
+        "uri": "https://github.com/Pukujan/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/llm.py"
+      }
+    },
+    {
+      "claim": "The graph store falls back from SurrealDB to NetworkX over local files.",
+      "source": "graph_store.py, class Graph",
+      "status": "shipped",
+      "supports": "Graph() sets backend to networkx when SurrealDB is not reachable and reads nodes.jsonl and edges.jsonl.",
+      "limits": "Needs the case data on disk; the data is not in the repository.",
+      "recorded_at": "2026-10-17T00:30:00-04:00",
+      "cite_in_readme": false,
+      "source_revision": {
+        "kind": "repository_artifact",
+        "reference": "graph_store.py at 6316928",
+        "repository": "Pukujan/arize-ai-hackersprint",
+        "commit": "63169284d32be6536b838dacb3e131a3cf8a3fea",
+        "path": "graph_store.py",
+        "locator": "class Graph",
+        "uri": "https://github.com/Pukujan/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/graph_store.py"
+      }
+    },
+    {
+      "claim": "Deploys to the Pro are health-checked and roll back on failure.",
+      "source": "deploy/deploy.sh, functions health and switch",
+      "status": "shipped",
+      "supports": "deploy.sh resets to origin/main, restarts the launchd job, checks local and public /api/health, and switches back to the previous commit if the check fails.",
+      "limits": "It refuses to run over uncommitted changes in ~/precedent, so a dirty checkout blocks deploys until someone cleans it up.",
+      "recorded_at": "2026-10-17T00:30:00-04:00",
+      "cite_in_readme": false,
+      "source_revision": {
+        "kind": "repository_artifact",
+        "reference": "deploy/deploy.sh at 6316928",
+        "repository": "Pukujan/arize-ai-hackersprint",
+        "commit": "63169284d32be6536b838dacb3e131a3cf8a3fea",
+        "path": "deploy/deploy.sh",
+        "locator": "functions health and switch",
+        "uri": "https://github.com/Pukujan/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/deploy/deploy.sh"
+      }
+    }
+  ],
+  "boundaries": [
+    "Precedent is a research aid, not legal advice; every answer carries a disclaimer",
+    "The case data (data/nodes.jsonl, edges.jsonl) and the Octo snapshot are not in the repository",
+    "The helper writing system is pinned by commit and never vendored here",
+    "Merging a PR does not by itself prove the Pro deployed it; check the deploy run and /api/health"
+  ]
+}
