@@ -25,3 +25,5 @@ venv/
 .tts_cache/
 .cgm/
 uvicorn.log
+
+.oio-src/

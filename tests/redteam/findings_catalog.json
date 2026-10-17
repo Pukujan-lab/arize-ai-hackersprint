@@ -1,0 +1,231 @@
+{
+  "test_acs_reload_requires_auth": {
+    "title": "POST /api/acs/reload is unauthenticated",
+    "area": "security",
+    "severity": "high",
+    "affected": "Precedent ACS hot-load surface on arize.design-bakery.com; any anonymous client",
+    "expected": "Reload requires auth (token/signed request) or is disabled on the public host",
+    "actual": "POST /api/acs/reload returns 200 without credentials and forces a reload",
+    "repro": "1. `curl -s -o /dev/null -w '%{http_code}\\n' -X POST https://arize.design-bakery.com/api/acs/reload`\n2. Observe 200 and hotload version bump",
+    "acceptance": "Unauthenticated reload returns 401/403; regression in tests/redteam/test_security.py stays green.",
+    "extra_labels": [],
+    "unresolved_risk": "Anyone can force ACS config/board reload and observe timing; opens an abuse path next to unauthenticated claim/release."
+  },
+  "test_acs_claim_requires_auth": {
+    "title": "POST /api/claim and /api/release are unauthenticated",
+    "area": "security",
+    "severity": "high",
+    "affected": "ACS task board behind the public demo API",
+    "expected": "Claim/release require shared secret or network isolation",
+    "actual": "Anonymous POST /api/claim is accepted at the auth layer (409 only for unknown task id)",
+    "repro": "1. `curl -s -X POST https://arize.design-bakery.com/api/claim -H 'content-type: application/json' -d '{\"task\":\"RT-PROBE\",\"agent\":\"redteam\"}'`",
+    "acceptance": "Unauthenticated claim/release return 401/403; tests/redteam stays green.",
+    "extra_labels": []
+  },
+  "test_sponsor_does_not_leak_space_id": {
+    "title": "/api/sponsor leaks ARIZE_SPACE_ID",
+    "area": "security",
+    "severity": "high",
+    "affected": "Public /api/sponsor consumers; Arize space confidentiality",
+    "expected": "space_id never appears in public JSON (boolean connected only)",
+    "actual": "arize.space_id is returned as a live value",
+    "repro": "1. `curl -s https://arize.design-bakery.com/api/sponsor | jq .arize`\n2. Note space_id is set (do not paste the value into issues)",
+    "acceptance": "Response omits space_id and any other secret-bearing fields; red-team test green.",
+    "extra_labels": []
+  },
+  "test_xff_alone_does_not_reset_rate_limit": {
+    "title": "Ask rate limit bypass via client X-Forwarded-For",
+    "area": "security",
+    "severity": "high",
+    "affected": " /api/ask abuse controls on the public demo",
+    "expected": "Only a trusted proxy may set client IP; forged XFF must not reset the budget",
+    "actual": "Rotating X-Forwarded-For allows continuing asks after the per-IP cap",
+    "repro": "1. Burn 6+ asks without session from one IP\n2. Retry with a new X-Forwarded-For value and observe 200 instead of 429",
+    "acceptance": "Forged XFF cannot bypass; prefer socket client host unless a trusted proxy hop is configured.",
+    "extra_labels": []
+  },
+  "test_run_id_rejects_path_traversal_and_arbitrary_mkdir": {
+    "title": "GET /api/run/{rid} creates directories for arbitrary ids",
+    "area": "security",
+    "severity": "moderate",
+    "affected": "runs/ on the Pro host; disk and session isolation",
+    "expected": "Unknown or malformed run ids return 404 without mkdir",
+    "actual": "Run() mkdir's runs/<rid> on every GET, including probes",
+    "repro": "1. `curl -s http://127.0.0.1:PORT/api/run/redteam-probe-xyz`\n2. Observe runs/redteam-probe-xyz created",
+    "acceptance": "Validate rid against an allowlist pattern and require an existing run dir; no mkdir on GET.",
+    "extra_labels": []
+  },
+  "test_voice_caption_escapes_user_text": {
+    "title": "XSS sink in static/voice.js caption()",
+    "area": "security",
+    "severity": "high",
+    "affected": "Demo page voice/STT captions; any spoken or transcribed string",
+    "expected": "Caption text is textContent or HTML-escaped",
+    "actual": "caption() assigns unsanitized t to cap.innerHTML",
+    "repro": "1. Open static/voice.js caption()\n2. Note `cap.innerHTML=...${t}` with no esc",
+    "acceptance": "Escape or use textContent; tests/redteam/test_security.py::test_voice_caption_escapes_user_text green.",
+    "extra_labels": []
+  },
+  "test_map_pin_tags_escape_refs": {
+    "title": "XSS risk in map3d.js pinTags refs innerHTML",
+    "area": "security",
+    "severity": "moderate",
+    "affected": "/map overlay labels built from citation refs",
+    "expected": "refs and court strings fully escaped before innerHTML",
+    "actual": "pinTags interpolates ${refs} into innerHTML; court only strips '<'",
+    "repro": "1. Inspect pinTags() in static/map3d.js\n2. Confirm refs are not passed through esc()",
+    "acceptance": "Use esc()/textContent for refs and court; red-team test green.",
+    "extra_labels": []
+  },
+  "test_tour_prefetch_rejects_html_payload": {
+    "title": "Tour prefetch stores raw HTML in step text",
+    "area": "security",
+    "severity": "moderate",
+    "affected": "/api/tour/prefetch and /api/tour/{run_id} consumers",
+    "expected": "Reject or sanitize HTML/script in step text",
+    "actual": "Payload with <img onerror=...> is stored and returned",
+    "repro": "1. POST /api/tour/prefetch with HTML in steps[].text\n2. GET /api/tour/{run_id} and observe the same HTML",
+    "acceptance": "Strip/escape tags on write; never render tour text via unsanitized innerHTML.",
+    "extra_labels": []
+  },
+  "test_oversized_ask_rejected": {
+    "title": "Oversized /api/ask JSON body accepted",
+    "area": "security",
+    "severity": "moderate",
+    "affected": "Public /api/ask; worker memory/CPU",
+    "expected": "413/400 for bodies far beyond the 500-char question cap",
+    "actual": "Megabyte-scale JSON returns 200 (question later truncated)",
+    "repro": "1. POST /api/ask with a ~1MB JSON question field\n2. Observe 200",
+    "acceptance": "Reject early on Content-Length / parsed size before allocating work.",
+    "extra_labels": []
+  },
+  "test_stack_survives_missing_proc": {
+    "title": "/api/stack 500 on macOS host (no /proc)",
+    "area": "fallback",
+    "severity": "high",
+    "affected": "/dashboard (fetches /api/stack); operators on the Pro",
+    "expected": "Stack payload returns 200 with os-neutral memory/uptime fallbacks",
+    "actual": "Unhandled FileNotFoundError on open('/proc/meminfo') \u2192 HTTP 500; dashboard JSON parse error",
+    "repro": "1. On the Pro: `curl -s -o /dev/null -w '%{http_code}\\n' http://127.0.0.1:3000/api/stack` \u2192 500\n2. Open /dashboard and note console: Unexpected token 'I' / Internal Server Error",
+    "acceptance": "Guard /proc reads; ship psutil or macOS fallbacks; user-visible degraded banner if metrics missing. Labels: fallback, robustness.",
+    "extra_labels": [
+      "fallback",
+      "robustness"
+    ],
+    "workaround": "Use /api/health and /api/limits; avoid dashboard stack panel until fixed"
+  },
+  "test_health_does_not_advertise_down_tts_providers": {
+    "title": "Health advertises kokoro in tts[] while kokoro=false",
+    "area": "fallback",
+    "severity": "low",
+    "affected": "Clients choosing TTS from /api/health",
+    "expected": "tts[] lists only providers that are actually reachable",
+    "actual": "tts includes kokoro when kokoro flag is false",
+    "repro": "1. Start app with KOKORO_URL pointing at a closed port\n2. GET /api/health and compare tts[] vs kokoro boolean",
+    "acceptance": "Build tts[] from the same probes as the booleans; labels fallback, robustness.",
+    "extra_labels": [
+      "fallback",
+      "robustness"
+    ]
+  },
+  "test_theme_css_exists": {
+    "title": "Missing static/theme/precedent-theme.css (404)",
+    "area": "ux",
+    "severity": "low",
+    "affected": "Every HTML page referencing the theme stylesheet",
+    "expected": "200 for /static/theme/precedent-theme.css",
+    "actual": "404 on production",
+    "repro": "1. Open any page, Network panel\n2. Or `curl -s -o /dev/null -w '%{http_code}\\n' https://arize.design-bakery.com/static/theme/precedent-theme.css`",
+    "acceptance": "Add the file or remove the link; no console 404.",
+    "extra_labels": []
+  },
+  "test_out_of_state_courts_not_silently_denver": {
+    "title": "Map locate() silently pins unknown courts to Denver",
+    "area": "fallback",
+    "severity": "moderate",
+    "affected": "/map geography UX; out-of-state / federal authorities",
+    "expected": "Unknown courts use an explicit unknown/out-of-state pin or omit coords with a user message",
+    "actual": "Default locate() returns Colorado courts (Denver) without signaling uncertainty",
+    "repro": "1. Read locate() default return in static/map3d.js\n2. Load a run with non-CO courts and watch pins cluster in Denver",
+    "acceptance": "Add unknown/out-of-state category + caption when falling back; labels fallback, robustness.",
+    "extra_labels": [
+      "fallback",
+      "robustness"
+    ]
+  },
+  "test_safeguard_fails_uncited_material_claims": {
+    "title": "Safeguard ignores uncited material claims",
+    "area": "integrity",
+    "severity": "moderate",
+    "affected": "Legal answer integrity; safeguard chip on the demo",
+    "expected": "Material sentences without a retrieved [n] fail the safeguard",
+    "actual": "passed = not bad and not unknown and bool(used) \u2014 unsupported_claims do not fail",
+    "repro": "1. Unit: tests/redteam/test_integrity.py\n2. Or craft an answer with [1] plus an uncited statute claim",
+    "acceptance": "Include unsupported_claims in the pass predicate (or withhold the answer); test green.",
+    "extra_labels": []
+  },
+  "test_graph_unavailable_tells_the_user": {
+    "title": "Graph-unavailable path should keep a clear user message",
+    "area": "fallback",
+    "severity": "informational",
+    "affected": "Asks when data/nodes.jsonl is missing",
+    "expected": "Clear template:graph-unavailable answer (control \u2014 should pass)",
+    "actual": "n/a when green",
+    "repro": "REDTEAM=1 pytest -q tests/redteam/test_fallbacks.py::test_graph_unavailable_tells_the_user",
+    "acceptance": "Keep the honest message; labels fallback, robustness.",
+    "extra_labels": [
+      "fallback",
+      "robustness"
+    ]
+  },
+  "test_tts_all_down_returns_browser_fallback": {
+    "title": "TTS all-down returns browser fallback JSON",
+    "area": "fallback",
+    "severity": "informational",
+    "affected": "Audio UX when Fish/Kokoro unavailable",
+    "expected": "429/503 with fallback:browser (control \u2014 should pass)",
+    "actual": "n/a when green",
+    "repro": "REDTEAM=1 pytest -q tests/redteam/test_fallbacks.py::test_tts_all_down_returns_browser_fallback",
+    "acceptance": "Keep browser fallback + tried[]; labels fallback, robustness.",
+    "extra_labels": [
+      "fallback",
+      "robustness"
+    ]
+  },
+  "test_acs_events_requires_auth": {
+    "title": "GET /api/acs/events is public",
+    "area": "security",
+    "severity": "moderate",
+    "affected": "ACS event log on the public host",
+    "expected": "Events require auth or are omitted from the public app",
+    "actual": "Anonymous GET returns recent agent events",
+    "repro": "curl -s 'https://arize.design-bakery.com/api/acs/events?n=2'",
+    "acceptance": "Auth-gate or remove; red-team green.",
+    "extra_labels": []
+  },
+  "test_safeguard_fail_withholds_or_quarantines_answer": {
+    "title": "Safeguard FAIL still returns the answer to the client",
+    "area": "integrity",
+    "severity": "moderate",
+    "affected": "Legal-answer integrity UX on /",
+    "expected": "On FAIL, withhold or quarantine the memo",
+    "actual": "Pipeline always returns answer; UI renders it with a FAIL chip",
+    "repro": "Read app/agents.py _run_pipeline and static/index.html render()",
+    "acceptance": "Withhold or clearly quarantine; test green.",
+    "extra_labels": []
+  },
+  "test_home_or_health_exposes_surreal_degraded_signal": {
+    "title": "SurrealDB down with silent networkx fallback (no user banner)",
+    "area": "fallback",
+    "severity": "moderate",
+    "affected": "Live demo graph backend",
+    "expected": "Machine-readable degraded signal + user banner",
+    "actual": "backend=networkx with no graph_degraded/surreal field on /api/health",
+    "repro": "curl health + sponsor; open /",
+    "acceptance": "Add degraded signal + banner; labels fallback, robustness.",
+    "extra_labels": [
+      "fallback",
+      "robustness"
+    ]
+  }
+}

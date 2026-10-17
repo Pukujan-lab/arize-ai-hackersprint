@@ -194,6 +194,15 @@
       "purpose": "Keeps secrets, caches, run logs and data out of git.",
       "agents_may_edit": true,
       "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": ".oio/",
+      "kind": "dir",
+      "owner": "ci",
+      "purpose": "Pinned OIO install: issue-log ontology, project extension, install-manifest. Source is never vendored; see docs/continuity/oio-pin.md.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only); ACS also writes OIO run logs under $ACS_ROOT/.oio outside this repo",
+      "note": "Managed by OIO installer; project.json is adopter-owned."
     }
   ],
   "runtime_paths": [
@@ -248,6 +257,12 @@
     {
       "path": ".cgm/",
       "purpose": "CI checkout of the pinned writing helper",
+      "lives": "CI runner only",
+      "in_git": false
+    },
+    {
+      "path": ".oio-src/",
+      "purpose": "CI checkout of the pinned OIO commit",
       "lives": "CI runner only",
       "in_git": false
     }

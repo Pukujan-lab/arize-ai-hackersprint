@@ -33,6 +33,16 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt pytest ruff mypy
+      - name: Check out the pinned OIO (see docs/continuity/oio-pin.md)
+        uses: actions/checkout@v4
+        with:
+          repository: Pukujan/observational-issue-ops
+          ref: e5e5fb1250aa8d154e9a83554638aec4cc8b2c8a
+          path: .oio-src
+      - name: OIO adoption (pin, installer --check, AGENTS.md guidance)
+        run: |
+          python -m pip install -r .oio/requirements.txt
+          python tools/validate_oio_adoption.py --helper-root .oio-src
       - name: CGM adoption (pin, AGENTS.md boot block, asset provenance)
         run: python tools/validate_cgm_adoption.py --helper-root .cgm
       - name: CGM adapter and README scope
