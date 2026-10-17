@@ -30,26 +30,40 @@ function A(src){ const a=new NA(src); all.add(a); return a; } A.prototype=NA.pro
 const play=HTMLMediaElement.prototype.play;
 HTMLMediaElement.prototype.play=function(){
   if(this.tagName==="VIDEO") return play.call(this);
-  if(this.__unlock) return play.call(this);
+  if(this.__unlock||this.volume===0) return play.call(this);   /* silent unlock blips never queue */
   all.add(this);
   if(!this.__as){ this.__as=1; const a=this, on=()=>started(a);              /* hook BEFORE play so an instant 'playing' isn't missed */
-    a.addEventListener("playing",on); a.addEventListener("timeupdate",()=>{ if(a.currentTime>0&&!a.paused) on(); }); }
-  try{ speechSynthesis.cancel(); }catch(e){}   /* one source: element audio cancels browser speech */
-  all.forEach(o=>{ if(o!==this&&!o.paused){ try{ o.pause(); o.dispatchEvent(new Event("ended")); }catch(e){} } });   /* never two at once */
+    a.addEventListener("playing",on); a.addEventListener("timeupdate",()=>{ if(a.currentTime>0&&!a.paused) on(); });
+    ["ended","pause","error"].forEach(ev=>a.addEventListener(ev,()=>setTimeout(pump,0))); }
   if(muted){ try{this.pause();}catch(e){} loadCancel(); setTimeout(()=>this.dispatchEvent(new Event("ended")),0); return Promise.resolve(); }
-  const a=this; if(!a.paused&&a.currentTime>0) started(a);
-  return play.call(a).then(v=>{ started(a); return v; },e=>{ if(e&&e.name==="NotAllowedError"&&!(window.AudioMgr&&AudioMgr.unlocked)){ cur=0; clearTimeout(tmr); show("gesture"); } else if(cur) loadFail(cur); throw e; }); };
+  const a=this; if(!a.paused&&a.currentTime>0){ started(a); return Promise.resolve(); }
+  if(!busy(a)&&!queue.length) return start(a);
+  /* never two at once, and never cut: wait in line until the current clip ENDS (only stopAll interrupts) */
+  loadDone(); const ep=epoch; return new Promise((res,rej)=>{ queue.push({a,ep,res,rej}); pump(); }); };
+function start(a){ return play.call(a).then(v=>{ started(a); return v; },e=>{ if(e&&e.name==="NotAllowedError"&&!(window.AudioMgr&&AudioMgr.unlocked)){ cur=0; clearTimeout(tmr); show("gesture"); } else if(cur) loadFail(cur); setTimeout(pump,0); throw e; }); }
+function busyEl(o){ return !o.__unlock&&!o.paused&&!o.ended&&!(o.duration&&o.currentTime>=o.duration-0.05); }
+function busy(except){ return [...all].some(o=>o!==except&&busyEl(o)) || ("speechSynthesis" in window && speechSynthesis.speaking) || !!speechWait; }
+let epoch=0, speechWait=null; const queue=[];
+function pump(){ while(queue.length&&queue[0].ep!==epoch){ const it=queue.shift(); try{ it.a.dispatchEvent(new Event("ended")); }catch(e){} it.res(); }   /* stale clip from an earlier run: never plays */
+  if(!queue.length||busy(queue[0].a)) return; const it=queue.shift(); start(it.a).then(it.res,it.rej); }
+setInterval(pump,250);
 const of=window.fetch;
 window.fetch=function(u,o){ const url=String(u&&u.url||u);
   if(/\/api\/tts/.test(url)){ if(muted) return Promise.resolve(new Response("muted",{status:204}));
-    const c=new AbortController(), t=loadStart(); c.__t=t; ctrls.add(c); o=Object.assign({},o||{},{signal:c.signal});
+    const h=o&&o.headers, pre=!!(h&&(h["X-Prefetch"]||(h.get&&h.get("X-Prefetch"))));          /* prefetch: silent, no indicator/timeout */
+    const c=new AbortController(); ctrls.add(c); o=Object.assign({},o||{},{signal:c.signal});
+    if(pre) return of.call(this,u,o).finally(()=>ctrls.delete(c));
+    const t=loadStart(); c.__t=t;
     return of.call(this,u,o).then(r=>{ if(!r.ok||r.status===204) setTimeout(()=>loadFail(t),1500); return r; },   /* grace: caller may fall back to browser voice */
       e=>{ loadFail(t); throw e; }).finally(()=>ctrls.delete(c)); }
   return of.apply(this,arguments); };
 if("speechSynthesis" in window){ const sp=speechSynthesis.speak.bind(speechSynthesis);
-  speechSynthesis.speak=u=>{ all.forEach(o=>{ if(!o.paused){ try{ o.pause(); o.dispatchEvent(new Event("ended")); }catch(e){} } }); if(muted){ loadCancel(); setTimeout(()=>u.onend&&u.onend(),0); return; }
-    try{ u.addEventListener("start",()=>loadDone()); }catch(e){} sp(u); }; }
+  const say=u=>{ if(muted){ loadCancel(); setTimeout(()=>u.onend&&u.onend(),0); return; } try{ u.addEventListener("start",()=>loadDone()); }catch(e){} sp(u); };
+  speechSynthesis.speak=u=>{ if(![...all].some(busyEl)) return say(u);                       /* browser voice also waits its turn */
+    const ep=epoch; loadDone(); const w=setInterval(()=>{ if(ep!==epoch){ clearInterval(w); speechWait=null; setTimeout(()=>u.onend&&u.onend(),0); return; }
+      if(![...all].some(busyEl)){ clearInterval(w); speechWait=null; say(u); } },150); speechWait=w; }; }
 function stopAll(fromVoice){ if(!fromVoice) window.AudioMgr&&(AudioMgr.gen=(AudioMgr.gen||0)+1);
+  epoch++; window.AudioMgr&&(AudioMgr.epoch=epoch); pump();                                      /* deliberate stop: drop queued clips */
   all.forEach(a=>{ try{ a.pause(); a.currentTime=0; a.dispatchEvent(new Event("ended")); }catch(e){} });
   document.querySelectorAll("audio").forEach(a=>{ try{a.pause();a.currentTime=0;}catch(e){} });
   loadCancel(); ctrls.forEach(c=>{ try{c.abort();}catch(e){} }); ctrls.clear();
@@ -69,7 +83,7 @@ function unlock(){ const M=window.AudioMgr; if(!M||M.unlocked) return; M.unlocke
   if(el&&el.dataset.kind==="gesture") hide();
   ["pointerdown","touchstart","keydown","click"].forEach(ev=>removeEventListener(ev,unlock,true)); }
 ["pointerdown","touchstart","keydown","click"].forEach(ev=>addEventListener(ev,unlock,{capture:true,passive:true}));
-window.AudioMgr={stopAll,setMuted,isMuted:()=>muted,playing,instances:()=>[...all],unlocked:false,loadStart,loadDone,loadCancel,loadFail};
+window.AudioMgr={stopAll,setMuted,isMuted:()=>muted,playing,instances:()=>[...all],unlocked:false,loadStart,loadDone,loadCancel,loadFail,epoch:0,busy:()=>busy()};
 })();
 
 // ---- Icons + button states (Lucide-style inline SVG) ----
@@ -105,10 +119,11 @@ function paint(){ const pl=M.playing(), mu=M.isMuted();
     if(!pl&&b.dataset.owner==="1") b.dataset.owner="0"; }); }
 M.paint=paint; setInterval(paint,200);
 // Fallback speak: cached ElevenLabs via /api/tts_ts, else browser voice. Returns a promise that resolves when done.
-M.say=function(text,btn){ if(!text||M.isMuted()) return Promise.resolve(); M.stopAll(true); const D=window.Docs3D; if(D){ D.holdVoice=true; D.stopTour&&D.stopTour(); } M.saying=true; if(btn){ btn.dataset.loading="1"; btn.dataset.owner="1"; paint(); }
+M.say=function(text,btn,opt){ if(!text||M.isMuted()) return Promise.resolve(); const Q=opt&&opt.queue; if(!Q) M.stopAll(true); const ep=M.epoch;   /* queue:true = auto narration, waits its turn */
+  const D=window.Docs3D; if(D){ D.holdVoice=true; D.stopTour&&D.stopTour(Q); } M.saying=true; if(btn){ btn.dataset.loading="1"; btn.dataset.owner="1"; paint(); }
   const done=()=>{ if(btn){ btn.dataset.loading="0"; paint(); } };
   return fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})})
-   .then(r=>r.ok&&r.status!==204?r.json():null).then(j=>{ done(); if(btn) btn.dataset.owner="1";
+   .then(r=>r.ok&&r.status!==204?r.json():null).then(j=>{ done(); if(btn) btn.dataset.owner="1"; if(M.epoch!==ep) return;   /* stopped / new question meanwhile: stale clip never plays */
      if(j&&j.audio_b64){ const s=atob(j.audio_b64),u=new Uint8Array(s.length); for(let k=0;k<s.length;k++) u[k]=s.charCodeAt(k);
        const a=new Audio(URL.createObjectURL(new Blob([u],{type:"audio/mpeg"}))); return new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); }); }
      if("speechSynthesis" in window&&!M.isMuted()) return new Promise(res=>{ const u=new SpeechSynthesisUtterance(text); u.onend=res; u.onerror=res; speechSynthesis.speak(u); }); })
