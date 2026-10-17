@@ -1,0 +1,25 @@
+name: deploy
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+  # Squash merges done by auto-merge (GITHUB_TOKEN) do not fire push/workflow_run events,
+  # so also poll: deploy.sh is a no-op when ~/precedent is already at origin/main.
+  schedule:
+    - cron: '*/5 * * * *'
+permissions:
+  contents: read
+concurrency:
+  group: deploy-pro
+  cancel-in-progress: false
+jobs:
+  deploy:
+    if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+    runs-on: [self-hosted, precedent-pro]
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Deploy to ~/precedent (health-checked, rolls back on failure)
+        run: bash deploy/deploy.sh
