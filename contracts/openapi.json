@@ -1569,6 +1569,24 @@
         },
         "summary": "Slides"
       }
+    },
+    "/v2": {
+      "get": {
+        "operationId": "v2_page_v2_get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V2 Page"
+      }
     }
   }
 }

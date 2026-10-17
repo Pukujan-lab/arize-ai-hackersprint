@@ -565,6 +565,11 @@ def guide_page():
     return (ROOT / "static" / "guide.html").read_text()
 
 
+@app.get("/v2", response_class=HTMLResponse)
+def v2_page():
+    return (ROOT / "static" / "v2.html").read_text()
+
+
 from app import seo
 
 seo.install(app)

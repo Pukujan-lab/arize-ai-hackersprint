@@ -123,6 +123,35 @@ Pitch deck. File: `static/slides.html` (`static/slides.marketing.html` is an old
 | Deck and page counter | `#deck`, `#pg` | `slides.html` | none |
 | Closing CTAs: Demo, Map, Guide; external site and GitHub links | `<a>` | `slides.html` | none |
 
+## `/v2`
+
+Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, map3d (module), v2. No top `<nav>`; one icon rail on the left holds the page links and the theme toggle.
+
+Visible on first load: the memo (`#answer`), the existing 3D map (`#docs3d`) and the composer at the bottom. Everything else sits in collapsed bottom sheets.
+
+| Control | id / aria-label | Owner | API |
+|---|---|---|---|
+| Icon rail links: Demo, Map, Dashboards, Guide, Slides | `aside.v2-rail` links | `v2.html` | none |
+| Theme toggle (dark by default, remembered) | `#theme-toggle` aria-label "Toggle dark or light theme" | `v2.js` | none (localStorage `precedent-theme`) |
+| Question box and Ask | `#q`, `#go` aria-label "Ask: run the research agents" | `v2.html`, `v2.js` | `POST /api/ask`, `GET /api/run/{rid}` |
+| Empty-ask hint | `#v2-hint` | `v2.js` | none |
+| Memo | `#answer` | `v2.js` | `GET /api/run/{rid}` |
+| Source reference `[n]` in the memo | `button.v2-ref` | `v2.js` | none (`Docs3D.jumpRef`) |
+| 3D map | `#docs3d` | `map3d.js` (KEEP) | see KEEP AS IS |
+| Sources pill and sheet | `#sources-btn` → `#sources-panel` (collapsed by default), `#cites` | `v2.js` | none (`Docs3D.jump` / `open`) |
+| Follow-ups pill and sheet | `#followups-btn` → `#followups-panel` (collapsed by default), `#fu-chips` | `v2.js` | `POST /api/ask` with `prev_run_id` |
+| Legend pill and sheet | `#legend-btn` → `#legend-panel` | `v2.js` | none |
+| Tour pill | `#tour-btn` aria-label "Play the map tour from the first stop" | `v2.js` | none (`Docs3D.tour(0)`) |
+| Tour controls inside the map (prev, voice, pause/play, next) | `#tour-controls`, `[data-tour]` | `map3d.js` (KEEP) | `POST /api/tts_ts` |
+| Run info pill and sheet | `#runinfo-btn` → `#runinfo-panel`, `#runinfo-body` | `v2.js` | none (shows the last run) |
+
+Behaviour notes:
+
+- The memo renders first; then the map shows the citations and the tour autoplays from stop 1 (`Docs3D.tour(0)`). Pause and stop are the map's own tour controls.
+- `static/v2.js` does not load `audio.js` or `followup.js`; it renders follow-ups itself and styles the map's tour buttons in `v2.css`.
+- Dark is the default theme (`data-theme="dark"` on `<html>`, set in the markup and re-applied from localStorage before the stylesheet paints). Light mode sets `data-theme="light"`.
+- At 390/768 the layout stacks (head, answer, map, pills and composer); at 1024/1440 it splits (map left, answer column right).
+
 ## Known clutter
 
 - Two navigations on `/`: the top `<nav>` links plus the `declutter.js` sidebar drawer (with its own toggle, close, back and mobile Menu buttons). `declutter.js` restructures the page at runtime by cloning panels (badges, stages, hands-free checkbox) instead of the HTML being laid out that way.
