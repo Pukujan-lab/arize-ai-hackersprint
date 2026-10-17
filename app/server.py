@@ -1,5 +1,5 @@
 import re, json
-import os, time, uuid, threading, pathlib, httpx
+import os, time, uuid, threading, pathlib, httpx, subprocess
 from fastapi import FastAPI, Depends
 from fastapi.responses import HTMLResponse, Response, JSONResponse
 from app import contracts
@@ -259,6 +259,52 @@ def _agent_latency(rid):
     return out
 
 
+def _sysctl(name):
+    """stdout of `sysctl -n <name>` on macOS/BSD; None where there is no sysctl (Linux, containers, timeout)."""
+    try:
+        return subprocess.run(["sysctl", "-n", name], capture_output=True, text=True, timeout=2).stdout.strip() or None
+    except Exception:
+        return None
+
+
+def _host_ram_gb():
+    """(total, used) GB from the first source this host has: /proc/meminfo (kB), then hw.memsize + sysconf (bytes); None where nothing reads."""
+    kib, gib = 1024.0**2, 1024.0**3
+    try:
+        mi = {l.split(":")[0]: int(l.split()[1]) for l in open("/proc/meminfo") if l.split(":")[0] in ("MemTotal", "MemAvailable")}
+        if "MemTotal" in mi:
+            return round(mi["MemTotal"] / kib), round((mi["MemTotal"] - mi.get("MemAvailable", 0)) / kib, 1)
+    except Exception:
+        pass
+    total = None
+    hw = _sysctl("hw.memsize")
+    if hw:
+        try:
+            total = int(hw) / gib
+        except ValueError:
+            total = None
+    avail = None
+    try:
+        page = os.sysconf("SC_PAGE_SIZE")
+        if total is None:
+            total = page * os.sysconf("SC_PHYS_PAGES") / gib
+        avail = page * os.sysconf("SC_AVPHYS_PAGES") / gib
+    except Exception:
+        avail = None
+    used = total - avail if (total is not None and avail is not None and avail <= total) else None
+    return (round(total) if total is not None else None), (round(used, 1) if used is not None else None)
+
+
+def _host_uptime_h():
+    """Host uptime in hours: /proc/uptime, else macOS kern.boottime; None when neither can be read."""
+    try:
+        return round(float(open("/proc/uptime").read().split()[0]) / 3600.0, 2)
+    except Exception:
+        pass
+    m = re.search(r"\{\s*sec\s*=\s*(\d+)", _sysctl("kern.boottime") or "")
+    return round(max(0.0, time.time() - int(m.group(1))) / 3600.0, 2) if m else None
+
+
 @app.get("/api/stack", response_model=contracts.AnyObject)
 def stack():
     from app import stats
@@ -269,7 +315,8 @@ def stack():
     recent = [json.loads(p.read_text()) for p in runs[-12:]]
     provs = [r.get("provider", "") for r in (json.loads(p.read_text()) for p in runs)]
     calls = json.loads((ROOT / "cache" / "_real_calls.json").read_text()) if (ROOT / "cache" / "_real_calls.json").exists() else {}
-    mem = {l.split(":")[0]: int(l.split()[1]) for l in open("/proc/meminfo") if l.split(":")[0] in ("MemTotal", "MemAvailable")}
+    ram_gb, ram_used_gb = _host_ram_gb()
+    uptime_h = _host_uptime_h()
     board = acs_board.tasks()
     tasks = board["tasks"].values()
     issue_logs = len(list(acs_board.OIO_DIR.glob("*.json"))) if acs_board.OIO_DIR.exists() else 0
@@ -279,9 +326,9 @@ def stack():
         "daytona": {
             "sandbox": os.environ.get("DAYTONA_SANDBOX_ID", "")[:8],
             "cpus": os.cpu_count(),
-            "ram_gb": round(mem.get("MemTotal", 0) / 1048576),
-            "ram_used_gb": round((mem.get("MemTotal", 0) - mem.get("MemAvailable", 0)) / 1048576, 1),
-            "uptime_h": round(float(open("/proc/uptime").read().split()[0]) / 3600, 2),
+            "ram_gb": ram_gb,
+            "ram_used_gb": ram_used_gb,
+            "uptime_h": uptime_h,
             "server_uptime_min": round((time.time() - S["started"]) / 60, 1),
             "how": "Every agent, SurrealDB, CI and triage run inside one Daytona sandbox; served via Daytona preview.",
         },
