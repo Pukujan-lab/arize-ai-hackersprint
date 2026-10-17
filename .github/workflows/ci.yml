@@ -57,5 +57,9 @@ jobs:
         run: mypy server.py app acs/board.py acs/claim.py acs/hotload.py
       - name: Compile
         run: python -m compileall -q -x '(\.venv|node_modules|\.cgm)' .
+      - name: Install Playwright Chromium so the browser tests gate
+        run: |
+          pip install playwright
+          python -m playwright install --with-deps chromium
       - name: Tests (no secrets, no data, no network)
         run: pytest -q -p no:cacheprovider tests -rs
