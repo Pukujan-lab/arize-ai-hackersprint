@@ -28,8 +28,9 @@ const CAP={alabama:[32.377,-86.300],alaska:[58.302,-134.420],arizona:[33.448,-11
 const CIRC={first:[42.352,-71.050,"1st Cir. (Boston)"],second:[40.714,-74.002,"2d Cir. (New York)"],third:[39.951,-75.150,"3d Cir. (Philadelphia)"],fourth:[37.539,-77.434,"4th Cir. (Richmond)"],fifth:[29.951,-90.071,"5th Cir. (New Orleans)"],sixth:[39.103,-84.512,"6th Cir. (Cincinnati)"],seventh:[41.878,-87.630,"7th Cir. (Chicago)"],eighth:[38.627,-90.199,"8th Cir. (St. Louis)"],ninth:[37.780,-122.416,"9th Cir. (San Francisco)"],tenth:[39.745,-104.992,"10th Cir. (Denver)"],eleventh:[33.749,-84.388,"11th Cir. (Atlanta)"]};
 const STATES=Object.keys(CAP).sort((a,b)=>b.length-a.length);
 const tc=s=>s.replace(/\b\w/g,x=>x.toUpperCase());
-function locate(c){ const t=(c.type||"").toLowerCase(), court=(c.court||""), lc=court.toLowerCase();
-  if(t.includes("statute")||t.includes("cfr")||/c\.r\.s\./i.test(c.id)) return /u\.s\.c|cfr/i.test(c.id+t)?{key:"dc-stat",ll:DC,label:"U.S. Code / CFR (Washington, DC)",cat:"federal"}:{key:"capitol",ll:CAPITOL,label:"Colorado State Capitol (C.R.S.)",cat:"statute"};
+function locate(c){ const kind=(window.citeType?String(citeType(c)):"").toLowerCase(), t=kind+" "+String(c.type||"").toLowerCase(), court=(c.court||""), lc=court.toLowerCase();
+  const fed=/federal/.test(kind)||/u\.s\.c|cfr/i.test([c.id,c.title,c.citation].filter(Boolean).join(" "));
+  if(t.includes("statute")||t.includes("regulation")||t.includes("cfr")||/c\.r\.s\./i.test(String(c.id||""))) return fed?{key:"dc-stat",ll:DC,label:"U.S. Code / CFR (Washington, DC)",cat:"federal"}:{key:"capitol",ll:CAPITOL,label:"Colorado State Capitol (C.R.S.)",cat:"statute"};
   if(/supreme court of the united states/.test(lc)||(!court&&/ U\.S\. \d/.test(c.id))) return {key:"scotus",ll:DC,label:"U.S. Supreme Court (Washington, DC)",cat:"federal"};
   let m=lc.match(/court of appeals for the (\w+) circuit/); if(m){ if(m[1]==="federal"||m[1]==="district") return {key:"dccir",ll:DC,label:"D.C./Federal Circuit",cat:"federal"};
     const C=CIRC[m[1]]; if(C) return {key:"cir:"+m[1],ll:C,label:"U.S. Court of Appeals, "+C[2],cat:m[1]==="tenth"?"state":"federal"}; }
@@ -45,11 +46,12 @@ const xy=([la,lo])=>{ const p=proj([lo,la])||proj([-104.98,39.74]); return [(p[0
 const COL={county:0x34d399,state:0x818cf8,statute:0xf59e0b,federal:0xf472b6}, ARC={cc:0x34d399,cs:0x60a5fa,st:0xf59e0b,fed:0xf472b6,other:0x94a3b8};
 const panel=document.createElement("div"); panel.id="docpanel"; panel.className="absolute left-4 bottom-14 w-[340px] hidden [perspective:1000px] z-30"; panel.addEventListener("pointerdown",e=>e.stopPropagation()); panel.addEventListener("click",e=>e.stopPropagation()); host.parentElement.appendChild(panel);
 function openDoc(c){ panel.classList.remove("hidden"); try{ api._layoutTr&&api._layoutTr(); }catch(e){} const E=t=>String(t||"").replace(/</g,"&lt;"); const q=window.cleanPassage?cleanPassage(c.passage):(c.passage||"").slice(0,300);
- panel.innerHTML=`<div id="pg" class="w-full max-h-[50vh] overflow-auto rounded-xl p-4 text-slate-100 origin-left transition-transform duration-500 border border-white/10 shadow-2xl" style="transform:rotateY(-95deg);background:rgba(15,18,30,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)">
+ const L=window.citeLabels?citeLabels(c):{type:c.type||"Authority",jurisdiction:c.court||"Jurisdiction not given"},note=window.citeNote?citeNote(c):(c.passage||c.url?"":"Linked through the citation graph; no passage on file."),num=window.citeRef?citeRef(c):String(c.ref||"").replace(/\D/g,"");
+ panel.innerHTML=`<div id="pg" data-citation-card${num?` data-ref="${num}"`:""} class="w-full max-h-[50vh] overflow-auto rounded-xl p-4 text-slate-100 origin-left transition-transform duration-500 border border-white/10 shadow-2xl" style="transform:rotateY(-95deg);background:rgba(15,18,30,.55);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)">
  <button class="float-right text-slate-400 hover:text-white" onclick="this.closest('.absolute').classList.add('hidden')">✕</button>
- <div class="text-indigo-300 font-semibold text-xs">${c.ref||"related"} · ${E(c.type)}</div><div class="font-semibold text-base leading-snug mt-1">${E(c.title)}</div>
- <div class="text-[11px] text-slate-400 mt-1">${[c.court,c.date].filter(Boolean).map(E).join(" · ")}${c._loc?" · "+E(c._loc.label):""}</div>
- ${q?`<blockquote class="mt-3 text-[13px] leading-relaxed text-slate-200 border-l-2 border-indigo-400/70 pl-3 italic">${E(q)}</blockquote>`:`<div class="mt-3 text-xs text-slate-400">Graph-linked authority (no passage retrieved).</div>`}
+ <div class="text-indigo-300 font-semibold text-xs">${E(c.ref||"related")} · <span data-cite-type>${E(L.type)}</span></div><div class="font-semibold text-base leading-snug mt-1">${E(c.title)}</div>
+ <div class="text-[11px] text-slate-400 mt-1"><span data-cite-jurisdiction>${E(L.jurisdiction)}</span>${c.date?" · "+E(String(c.date)):""}${c._loc?" · "+E(c._loc.label):""}</div>
+ ${q?`<blockquote class="mt-3 text-[13px] leading-relaxed text-slate-200 border-l-2 border-indigo-400/70 pl-3 italic">${E(q)}</blockquote>`:(note?`<div class="mt-3 text-xs text-slate-400" data-cite-note>${E(note)}</div>`:"")}
  <div class="mt-2">${window.caseLinks?caseLinks(c):""}</div></div>`;
  requestAnimationFrame(()=>requestAnimationFrame(()=>{ const p=document.getElementById("pg"); if(p) p.style.transform="rotateY(0)"; })); }
 api.open=openDoc; api.closeDoc=()=>{ panel.classList.add("hidden"); try{ api._layoutTr&&api._layoutTr(); }catch(e){} }; new MutationObserver(()=>{ try{ api._layoutTr&&api._layoutTr(); }catch(e){} }).observe(panel,{attributes:true,attributeFilter:["class"]}); addEventListener("keydown",e=>{ if(e.key==="Escape") panel.classList.add("hidden"); });
