@@ -1,10 +1,14 @@
 name: CI
 on:
   pull_request:
+    # edited/labeled rerun the PR-body check (tools/pr_policy.py) when the body or labels change
+    types: [opened, synchronize, reopened, edited, labeled, unlabeled]
   push:
     branches: [main]
 permissions:
   contents: read
+  pull-requests: read
+  issues: read
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -29,10 +33,54 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
+      - name: Reuse before you write (PR body names the OSS considered, or is a confirmed bugfix; see AGENTS.md)
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/pr_policy.py --repo "${{ github.repository }}" --pr "${{ github.event.pull_request.number }}"
       - name: Install
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt pytest ruff mypy
+          pip install -r requirements.txt pytest ruff mypy uv==0.13.1 pip-audit pip-licenses
+      - name: Lock matches requirements.in (uv pip compile, diff)
+        run: |
+          cp requirements.txt /tmp/lock.txt
+          uv pip compile requirements.in --universal --python-version 3.9 -q \
+            --custom-compile-command "uv pip compile requirements.in --universal --python-version 3.9 -o requirements.txt" -o /tmp/lock.txt
+          diff -u requirements.txt /tmp/lock.txt || { echo "::error::requirements.txt is out of date; run the uv pip compile command at its top"; exit 1; }
+      - name: Dependency licenses (pip-licenses against the allowlist)
+        run: python tools/dep_policy.py licenses
+      - name: Dependency vulnerabilities (pip-audit on the pins CI installs; strict when the PR changes requirements)
+        env:
+          BASE: ${{ github.base_ref }}
+        run: |
+          python tools/dep_policy.py pins > /tmp/pins.txt
+          strict=0
+          if [ -n "$BASE" ]; then
+            git fetch --quiet --depth=1 origin "$BASE"
+            git diff --name-only "origin/$BASE" HEAD | grep -qE '^requirements\.(in|txt)$' && strict=1
+          fi
+          if ! pip-audit -r /tmp/pins.txt --no-deps --disable-pip --progress-spinner off; then
+            [ "$strict" = 1 ] && { echo "::error::this PR changes the requirements and a pinned package has a known vulnerability"; exit 1; }
+            echo "::warning::pip-audit found known vulnerabilities in existing pins; a Dependabot PR or a lock refresh should fix them"
+          fi
+          # The Pro's Python 3.9 pins, reported only: newer fixes need Python 3.10+ (see #20).
+          python tools/dep_policy.py pins --python 3.9 > /tmp/pins-py39.txt
+          if ! pip-audit -r /tmp/pins-py39.txt --no-deps --disable-pip --progress-spinner off >/tmp/audit-py39.txt 2>&1; then
+            cat /tmp/audit-py39.txt
+            echo "::warning::pip-audit found $(grep -cE '^[A-Za-z0-9_.-]+ +[0-9][^ ]* +[A-Z]+-' /tmp/audit-py39.txt) known vulnerabilities in the Python 3.9 pins the Pro runs ($(awk '/^[A-Za-z0-9_.-]+ +[0-9][^ ]* +[A-Z]+-/{print $1"=="$2}' /tmp/audit-py39.txt | sort -u | paste -sd ' ' -)); the fixes need Python 3.10+, see #20"
+          fi
+      - name: New dependencies are maintained (PyPI release in the last 12 months)
+        if: github.event_name == 'pull_request'
+        run: python tools/dep_policy.py maturity --base "origin/${{ github.base_ref }}"
+      - name: Dependency review with OpenSSF Scorecard (runs once the repo's dependency graph is on and vars.DEPENDENCY_REVIEW is 'on')
+        if: github.event_name == 'pull_request' && vars.DEPENDENCY_REVIEW == 'on'
+        uses: actions/dependency-review-action@v5
+        with:
+          fail-on-severity: moderate
+          allow-licenses: MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0, ISC, PSF-2.0, Python-2.0, MPL-2.0, Unlicense, 0BSD, Zlib, CC0-1.0
+          show-openssf-scorecard: true
+          warn-on-openssf-scorecard-level: 3
       - name: Check out the pinned OIO (see docs/continuity/oio-pin.md)
         uses: actions/checkout@v4
         with:

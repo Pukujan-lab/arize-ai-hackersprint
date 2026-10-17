@@ -93,7 +93,7 @@
       "path": ".github/",
       "kind": "dir",
       "owner": "ci",
-      "purpose": "Workflows: ci.yml (gates), automerge.yml (squash auto-merge), deploy.yml (self-hosted Pro deploy).",
+      "purpose": "Workflows: ci.yml (gates), automerge.yml (squash auto-merge), deploy.yml (self-hosted Pro deploy); pull_request_template.md and PULL_REQUEST_TEMPLATE/aba.md (PR bodies with the OSS-considered section); dependabot.yml (weekly pip and Actions updates).",
       "agents_may_edit": true,
       "runtime_data": "nothing (code only)"
     },
@@ -125,7 +125,15 @@
       "path": "requirements.txt",
       "kind": "file",
       "owner": "deploy",
-      "purpose": "Python dependencies installed by CI and by deploy.sh on the Pro.",
+      "purpose": "Lock file: exact pins made by `uv pip compile requirements.in` (command in its header), with a Python 3.9 branch for the Pro and a 3.10+ branch for CI. Installed by CI and by deploy.sh.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "requirements.in",
+      "kind": "file",
+      "owner": "deploy",
+      "purpose": "Direct Python dependencies, unpinned; requirements.txt is compiled from it.",
       "agents_may_edit": true,
       "runtime_data": "nothing (code only)"
     },
@@ -133,7 +141,7 @@
       "path": "tools/",
       "kind": "dir",
       "owner": "app",
-      "purpose": "Developer scripts: run_all.sh, ci_local.sh, validate_cgm_adoption.py, kokoro/ (local TTS service installer), screenshots, video, Arize helpers.",
+      "purpose": "Developer scripts: run_all.sh, ci_local.sh, validate_cgm_adoption.py, kokoro/ (local TTS service installer), screenshots, video, Arize helpers; pr_policy.py and dep_policy.py (CI glue for the reuse-first and dependency rules).",
       "agents_may_edit": true,
       "runtime_data": "run_all.sh writes logs/ (gitignored)"
     },

@@ -68,6 +68,7 @@
       "repo.manifest.json",
       "pyproject.toml",
       "requirements.txt",
+      "requirements.in",
       "server.py",
       ".gitignore",
       ".content-system/"
@@ -85,6 +86,10 @@
   "rules": [
     "Never write vendored ACS files (acs/seat_protocol.py, acs/watchdog_check.py, acs/LICENSE.acs, acs/assignment.schema.json)",
     "Never commit cache/, runs/, data/, logs/ or any secret",
-    "Check repo.manifest.json before adding a top-level file or folder"
+    "Check repo.manifest.json before adding a top-level file or folder",
+    "Never hand-write custom code when mature OSS or an existing tool plus thin glue code can do the job; manual coding is allowed only for confirmed debugging or fixing logic pipelines (AGENTS.md, Reuse before you write)",
+    "A PR that adds a source file or more than 150 non-test lines under app/, acs/ or tools/ needs an 'OSS considered' section naming a specific project or SDK and why it does not fit, or a bugfix label or line plus Closes #N for an issue with confirmed evidence; tools/pr_policy.py enforces it in gates",
+    "Call providers through their official SDK when one exists instead of raw httpx or requests (AGENTS.md, Dependencies and SDKs)",
+    "Add direct dependencies to requirements.in and regenerate the requirements.txt lock with the uv command in its header; new packages must pass the license allowlist, pip-audit and the 12-month release check (tools/dep_policy.py)"
   ]
 }
