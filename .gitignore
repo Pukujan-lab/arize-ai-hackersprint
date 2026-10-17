@@ -31,3 +31,4 @@ uvicorn.log
 tests/redteam/shots/*
 !tests/redteam/shots/evidence/
 !tests/redteam/shots/evidence/**
+.dyad/

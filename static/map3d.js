@@ -153,11 +153,14 @@ if(!webgl){
         else { const c0v=P(pa), ang=k*0.9, r=0.035+0.006*(k%4); a=mkArc(c0v.clone().add(new THREE.Vector3(Math.cos(ang)*0.008,Math.sin(ang)*0.008,0)),c0v.clone().add(new THREE.Vector3(Math.cos(ang)*r,Math.sin(ang)*r,0)),arcType(c[id[e.src]],c[id[e.dst]])); }
         a.start=performance.now()+1800+seq++*160; arcs.push(a); });
       document.getElementById("cnt").textContent=`${counties(c)} counties linked · ${states(c)} jurisdictions · ${arcs.length} links`; try{ pinTags(); }catch(e){}
-      coView(); clearTimeout(tour); tour=setTimeout(()=>api.tour(),1000+Math.min(6,g.size)*200); },
+      /* autostart only when nothing holds the voice (memo / answer summary still speaking: the page starts the tour itself) */
+      coView(); clearTimeout(tour); tour=setTimeout(()=>{ if(api.holdVoice||api.awaitSummary) return; api.tour(); },1000+Math.min(6,g.size)*200); },
     focus(k){ if(!cites[k]) return; cur=k; const p=pins.find(p=>p.userData.G.items.includes(k)); if(!p) return;
       label.innerHTML=`<b class="text-indigo-300">${cites[k].ref||"retrieved"}</b> ${cites[k].title.replace(/</g,"&lt;")}<br><span class="text-slate-400">${cites[k]._loc.label}</span>`;
       const cat=p.userData.G.cat, far=cat==="federal", d=far?2.6:(cat==="county"?0.75:1.0); lookT.copy(p.position); camT.set(p.position.x,p.position.y-d*0.25,d); if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ cam.position.copy(camT); look.copy(lookT); } },
-    order(){ const hp=c=>holding(c,(api.ctx||{}).question)?0:1; return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0,hp(c)]).filter(x=>x[1]>0&&(x[2]===0||citedBy(cites[x[0]]))).sort((a,b)=>a[2]-b[2]||a[1]-b[1]).map(x=>x[0]); },
+    /* Stops follow the memo's own numbering: every source with a numeric ref that has something to say
+       (a holding sentence, a cited-by line, or a line of the memo that mentions its ref), in [n] order — so stop 1 is [1]. */
+    order(){ const q=(api.ctx||{}).question; return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0,holding(c,q)||citedBy(c)||explain(i).rel]).filter(x=>x[1]>0&&x[2]).sort((a,b)=>a[1]-b[1]).map(x=>x[0]); },
     jump(k){ const O=api.order(); const n=O.indexOf(k); if(n<0){ api.focus(k); return; } api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; api.tour(n); },
     tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; const tg=api._tg=(api._tg||0)+1; if(!start) api._ttsDown=false; tbtn.innerHTML=(window.ICON?ICON("pause",16):"")+" Pause";
       if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.innerHTML=TOURH; return; }
