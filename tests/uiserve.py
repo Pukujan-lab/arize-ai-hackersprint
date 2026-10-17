@@ -9,7 +9,7 @@ from contextlib import contextmanager
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STATIC = ROOT / "static"
-PAGES = {"/": "index.html", "/map": "map.html", "/dashboard": "dashboard.html", "/slides": "slides.html", "/guide": "guide.html", "/observability": "observability.html"}  # fmt: skip
+PAGES = {"/": "v2.html", "/v1": "index.html", "/v2": "v2.html", "/map": "map.html", "/dashboard": "dashboard.html", "/slides": "slides.html", "/guide": "guide.html", "/observability": "observability.html"}  # fmt: skip
 TYPES = {".js": "text/javascript", ".css": "text/css", ".html": "text/html", ".json": "application/json", ".svg": "image/svg+xml", ".png": "image/png", ".jpg": "image/jpeg"}  # fmt: skip
 
 

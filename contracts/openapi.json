@@ -1570,6 +1570,24 @@
         "summary": "Slides"
       }
     },
+    "/v1": {
+      "get": {
+        "operationId": "v1_page_v1_get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "V1 Page"
+      }
+    },
     "/v2": {
       "get": {
         "operationId": "v2_page_v2_get",
