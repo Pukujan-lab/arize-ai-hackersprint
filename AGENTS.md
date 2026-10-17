@@ -37,6 +37,14 @@ Tests go in `tests/`, one file per behaviour, named `test_<thing>.py`. Docs go i
 
 Adding a new top-level file or folder? Add it to `repo.manifest.json` in the same PR, with its owner and where its runtime data lives. `tests/test_manifest.py` fails otherwise. The same test fails if code writes somewhere the manifest does not list under `runtime_writes`.
 
+## Reuse before you write
+
+Alex's rule: never hand-write custom code when mature OSS or an existing tool plus thin glue code can do the job. Manual coding is allowed only for confirmed debugging or fixing logic pipelines.
+
+Before you add a module, look for a maintained package, a tool already in `requirements.txt`, or a service the app already talks to. If one fits, write only the glue that connects it. Writing code by hand is fine when you are fixing a bug you have reproduced, or repairing a logic pipeline that already exists here (for example the agent steps in `app/agents.py` or the fallback chains in `app/llm.py` and `app/ttschain.py`).
+
+A PR that adds a new custom module must say which OSS options you considered and why none of them fit. The PR template has a line for it.
+
 ## What never goes in git
 
 Secrets stay in `~/.hack_env` on the Pro or in your own shell. Refer to them by variable name (`INFERHUB_API_KEY`, `ANTHROPIC_API_KEY`, `ELEVENLABS_API_KEY`, `ARIZE_API_KEY`, `OCTO_API_KEY`) and never print their values, even in logs or PR text.

@@ -93,7 +93,7 @@
       "path": ".github/",
       "kind": "dir",
       "owner": "ci",
-      "purpose": "Workflows: ci.yml (gates), automerge.yml (squash auto-merge), deploy.yml (self-hosted Pro deploy).",
+      "purpose": "Workflows: ci.yml (gates), automerge.yml (squash auto-merge), deploy.yml (self-hosted Pro deploy); pull_request_template.md (PR checklist, including the OSS-considered line).",
       "agents_may_edit": true,
       "runtime_data": "nothing (code only)"
     },
