@@ -34,7 +34,7 @@ def span(name, **attrs):
     if not _tracer:
         yield None
         return
-    import stats
+    from app import stats
 
     stats.bump("arize_spans")
     with _tracer.start_as_current_span(name) as s:

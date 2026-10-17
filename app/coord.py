@@ -2,7 +2,7 @@
 
 import json, time, fcntl, pathlib, os
 
-ROOT = pathlib.Path(__file__).parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent  # repo root (app/ lives one level down)
 CLAIM = ROOT / ".coord" / "assignment.json"
 
 
@@ -35,7 +35,7 @@ class Run:
             fcntl.flock(f, fcntl.LOCK_EX)
             f.write(json.dumps(rec) + "\n")
         try:
-            import acs_board
+            from acs import board as acs_board
 
             acs_board.event({"source": "demo-run", **rec})  # mirror into ACS
         except Exception:

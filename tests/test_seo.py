@@ -3,7 +3,7 @@ import os, sys, re, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 os.environ.setdefault("LLM_MODE", "fake")
 from fastapi.testclient import TestClient
-import server
+from app import server
 
 BASE = "https://arize.design-bakery.com"
 PAGES = ["/", "/dashboard", "/slides", "/map", "/observability", "/guide"]

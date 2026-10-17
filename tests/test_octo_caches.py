@@ -11,7 +11,7 @@ from schema.store import SqliteStore  # noqa: E402
 
 @pytest.fixture
 def octo(monkeypatch):
-    import octocache
+    from app import octocache
 
     store = SqliteStore(":memory:")
     migrate.apply(store)  # stands in for the Octo Postgres workspace
@@ -21,7 +21,7 @@ def octo(monkeypatch):
 
 @pytest.fixture
 def llm_env(monkeypatch, tmp_path):
-    import llm
+    from app import llm
 
     monkeypatch.setenv("LLM_MODE", "real")
     monkeypatch.setattr(llm, "CACHE", tmp_path / "box1")
@@ -38,7 +38,7 @@ def llm_env(monkeypatch, tmp_path):
 
 
 def test_llm_answer_shared_through_octo(octo, llm_env, monkeypatch, tmp_path):
-    import octocache
+    from app import octocache
 
     llm, calls = llm_env
     p = "question " + uuid.uuid4().hex
@@ -64,7 +64,7 @@ def test_llm_stream_uses_same_cache(octo, llm_env):
 
 
 def test_answers_linked_to_runs(octo, llm_env):
-    import octocache
+    from app import octocache
 
     llm, _ = llm_env
     p = "q " + uuid.uuid4().hex
@@ -88,7 +88,7 @@ def test_answers_linked_to_runs(octo, llm_env):
     ],
 )
 def test_stale_answers_never_served(octo, llm_env, bad):
-    import llm as L
+    from app import llm as L
 
     assert L.stale(bad)
     llm, calls = llm_env
@@ -101,7 +101,7 @@ def test_stale_answers_never_served(octo, llm_env, bad):
 
 
 def test_retrieval_shared_through_octo(octo, monkeypatch, tmp_path):
-    import octo_retriever, octocache
+    from app import octo_retriever, octocache
 
     live = []
     passages = [{"chunk_id": "c1", "work_id": "w1", "case_name": "A v B", "court": "colo", "date": "2001-01-01", "url": "", "score": 1.0, "text": "t"}]
@@ -123,7 +123,7 @@ def test_retrieval_shared_through_octo(octo, monkeypatch, tmp_path):
 
 def test_backfill_uploads_good_and_purges_stale(octo, tmp_path):
     from schema import backfill
-    import llm
+    from app import llm
 
     ldir, odir = tmp_path / "cache", tmp_path / "cache" / "octo"
     odir.mkdir(parents=True)
@@ -142,7 +142,7 @@ def test_backfill_uploads_good_and_purges_stale(octo, tmp_path):
 
 
 def test_octo_down_answers_still_cached_locally(monkeypatch, llm_env):
-    import octocache
+    from app import octocache
 
     class Down:
         def query(self, *a, **k):

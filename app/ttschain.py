@@ -9,11 +9,12 @@ Cache: every request checks the cache first, so each line hits a paid API at mos
        (managed Postgres, schema/ + migrations/). Clip key = sha256(provider|voice|text)."""
 
 import base64, datetime, hashlib, heapq, itertools, os, pathlib, threading, time
-import httpx, limits, octocache
+import httpx
+from app import limits, octocache
 from schema import validate
 from schema.store import SqliteStore, dumps, loads
 
-ROOT = pathlib.Path(__file__).parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent  # repo root
 FISH_URL = "https://api.fish.audio/v1/tts"
 ELEVEN_DEFAULT_VOICE = "21m00Tcm4TlvDq8ikWAM"
 FAST_START = 2  # tour steps generated on their own first so playback starts fast
@@ -366,7 +367,7 @@ def wait_idle(timeout=30):
 
 
 def _generate(text):
-    import stats
+    from app import stats
 
     hit = lookup(text)  # re-check: a prefetch or another box may have made it meanwhile
     if hit:
@@ -386,7 +387,7 @@ def _generate(text):
 
 def synth(text):
     """The clip for one line: cache first, else wait for the single worker (jumping the tour batch)."""
-    import stats
+    from app import stats
 
     text = str(text or "")[:400]
     if not text.strip():

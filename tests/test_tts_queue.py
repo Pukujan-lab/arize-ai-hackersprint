@@ -49,7 +49,7 @@ def tour(n=5):
 
 
 def drain(timeout=10):
-    import ttschain
+    from app import ttschain
 
     assert ttschain.wait_idle(timeout), "queue did not drain"
 
@@ -84,7 +84,7 @@ def test_inflight_dedupe_no_parallel_fish(env, monkeypatch):
 
 
 def test_fast_start_then_batch_order(env, monkeypatch):
-    import ttschain
+    from app import ttschain
 
     calls = counting_fish(monkeypatch, delay=0.05)
     rid, steps = tour(6)
@@ -121,7 +121,8 @@ def test_tour_metadata_exposed(env, monkeypatch):
 
 
 def test_clip_key_is_sha256_text_voice_provider():
-    import hashlib, ttschain
+    import hashlib
+    from app import ttschain
 
     assert ttschain.clip_key("hi", "v1", "fish") == hashlib.sha256("fish|v1|hi".encode()).hexdigest()
     assert ttschain.clip_key("hi", "v1", "fish") != ttschain.clip_key("hi", "v2", "fish") != ttschain.clip_key("hi", "v1", "kokoro")
@@ -129,7 +130,7 @@ def test_clip_key_is_sha256_text_voice_provider():
 
 def test_octo_shared_layer(env, monkeypatch, tmp_path):
     """Clip made by one box lands in Octo; a box with an empty local cache serves it from Octo with zero provider calls."""
-    import octocache
+    from app import octocache
     from schema.store import SqliteStore
     from schema import migrate
 
@@ -149,7 +150,7 @@ def test_octo_shared_layer(env, monkeypatch, tmp_path):
 
 
 def test_octo_down_still_works(env, monkeypatch):
-    import octocache
+    from app import octocache
 
     class Down:
         def query(self, *a, **k):

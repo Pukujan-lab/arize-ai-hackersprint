@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """Teammate CLI for the ACS hackathon task board.
-acs_claim.py list | status
-acs_claim.py claim HACK-04 --agent bob-claude
-acs_claim.py release HACK-04 --agent bob-claude [--status done|blocked|open] [--note "..."]
-acs_claim.py log <task|topic> --title "..." --status open|resolved --note "..."
-acs_claim.py add HACK-09 "title" [--priority P1]
+python3 -m acs.claim list | status
+python3 -m acs.claim claim HACK-04 --agent bob-claude
+python3 -m acs.claim release HACK-04 --agent bob-claude [--status done|blocked|open] [--note "..."]
+python3 -m acs.claim log <task|topic> --title "..." --status open|resolved --note "..."
+python3 -m acs.claim add HACK-09 "title" [--priority P1]
 """
 
 import argparse, json, sys, pathlib
 
-sys.path.insert(0, str(pathlib.Path(__file__).parent))
-import acs_board as B
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))  # repo root, so `acs` imports
+from acs import board as B
 
 ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 ap.add_argument("cmd", choices=["list", "status", "claim", "release", "add", "log"])

@@ -3,7 +3,7 @@
 import json, re, sys, pathlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
-import acs_board as B
+from acs import board as B
 
 txt = pathlib.Path(sys.argv[1]).read_text()
 m = re.search(r"\{.*\}", txt, re.S)

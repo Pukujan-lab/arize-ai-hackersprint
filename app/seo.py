@@ -5,7 +5,7 @@ from fastapi.responses import PlainTextResponse, Response, FileResponse
 
 BASE = "https://arize.design-bakery.com"
 PAGES = ["/", "/dashboard", "/slides", "/map", "/observability", "/guide"]
-STATIC = pathlib.Path(__file__).parent / "static"
+STATIC = pathlib.Path(__file__).resolve().parent.parent / "static"
 
 
 def install(app):

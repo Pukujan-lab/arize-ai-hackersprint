@@ -1,7 +1,7 @@
 import json, os, sys, pathlib, time
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
-import acs_hotload
+from acs import hotload as acs_hotload
 
 
 def test_reload_picks_up_changes(tmp_path, monkeypatch):

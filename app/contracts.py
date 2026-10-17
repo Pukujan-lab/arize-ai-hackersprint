@@ -2,7 +2,7 @@
 
 Models are permissive (extra="allow", fields typed Any and optional) so adding them changes no runtime behavior;
 they document the API and pin the OpenAPI schema (contracts/openapi.json, checked in CI by tests/test_contracts.py).
-Regenerate after an intentional API change:  python contracts.py --write
+Regenerate after an intentional API change:  python -m app.contracts --write
 """
 
 import json
@@ -13,7 +13,7 @@ from typing import Any, Dict, List, Optional, Union
 from fastapi import Body
 from pydantic import BaseModel, ConfigDict
 
-SCHEMA_PATH = pathlib.Path(__file__).parent / "contracts" / "openapi.json"
+SCHEMA_PATH = pathlib.Path(__file__).resolve().parent.parent / "contracts" / "openapi.json"
 
 
 class Model(BaseModel):
@@ -159,7 +159,7 @@ if __name__ == "__main__":
 
     os.environ.setdefault("LLM_MODE", "fake")
     os.environ.setdefault("ACS_HOTLOAD", "0")
-    import server
+    from app import server
 
     text = json.dumps(openapi(server.app), indent=2, sort_keys=True) + "\n"
     if "--write" in sys.argv:

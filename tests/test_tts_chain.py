@@ -37,10 +37,10 @@ def make_client(monkeypatch, tmp_path):
     monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
     monkeypatch.delenv("TTS_DISABLE_FISH", raising=False)
     monkeypatch.delenv("OCTO_API_KEY", raising=False)  # shared Octo layer off unless a test injects a fake
-    import limits
+    from app import limits
 
     monkeypatch.setattr(limits, "take", lambda api: True)
-    import server
+    from app import server
     from fastapi.testclient import TestClient
 
     return TestClient(server.app)
@@ -95,7 +95,7 @@ def test_raw_tts_endpoint_names_provider(env, monkeypatch):
 
 
 def test_fish_cap_reached_skips_fish(env, monkeypatch):
-    import limits
+    from app import limits
 
     monkeypatch.setattr(limits, "take", lambda api: api != "fish_tts")
     calls = route(monkeypatch, None, Resp(200, KOKORO_MP3, {"X-Audio-Duration": "1.0"}))
@@ -127,7 +127,7 @@ def test_cache_hit_makes_no_provider_calls(env, monkeypatch):
     first = env.post("/api/tts_ts", json={"text": t}).json()
     assert first["provider"] == "fish"
     calls = route(monkeypatch, None, None)  # any provider call now raises
-    import limits
+    from app import limits
 
     def no_take(api):
         raise AssertionError("cache hit must not count against caps")
@@ -143,7 +143,7 @@ def test_cache_hit_makes_no_provider_calls(env, monkeypatch):
 
 
 def test_caps_read_from_env(monkeypatch):
-    import limits
+    from app import limits
 
     monkeypatch.setenv("FISH_TTS_PER_HOUR", "7")
     monkeypatch.setenv("KOKORO_TTS_PER_HOUR", "11")
@@ -161,7 +161,7 @@ def test_caps_read_from_env(monkeypatch):
 
 
 def test_health_lists_chain(env, monkeypatch):
-    import ttschain
+    from app import ttschain
 
     monkeypatch.setattr(ttschain, "kokoro_up", lambda: True)
     h = env.get("/api/health").json()

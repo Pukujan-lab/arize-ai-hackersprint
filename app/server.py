@@ -2,11 +2,12 @@ import re, json
 import os, time, uuid, threading, pathlib, httpx
 from fastapi import FastAPI, Depends
 from fastapi.responses import HTMLResponse, Response, JSONResponse
-import contracts
-import agents, tracing, acs_board, limits, ttschain, octocache
-from coord import Run, CLAIM
+from app import contracts
+from app import agents, tracing, limits, ttschain, octocache
+from acs import board as acs_board
+from app.coord import Run, CLAIM
 
-ROOT = pathlib.Path(__file__).parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent  # repo root: static/, runs/, cache/ live here
 app = FastAPI(title="Legal GraphRAG Agents")
 from fastapi.staticfiles import StaticFiles
 
@@ -260,7 +261,7 @@ def _agent_latency(rid):
 
 @app.get("/api/stack", response_model=contracts.AnyObject)
 def stack():
-    import stats
+    from app import stats
 
     S = dict(stats.S)
     g = agents._G
@@ -365,7 +366,7 @@ async def stt(file: UploadFile = File(...)):
         return JSONResponse({"error": "audio too long"}, 413)
     if not limits.take("elevenlabs_stt"):
         return JSONResponse({"error": "STT hourly cap reached"}, 429)
-    import stats
+    from app import stats
 
     stats.bump("stt_calls")
     stats.vlog("stt", len(data), False)
@@ -388,7 +389,8 @@ def api_limits():
 
 @app.get("/api/sponsor", response_model=contracts.AnyObject)
 def sponsor():
-    import stats, subprocess, socket
+    import subprocess, socket
+    from app import stats
 
     runs = sorted((ROOT / "runs").glob("*/result.json"), key=lambda p: p.stat().st_mtime)
     last = json.loads(runs[-1].read_text()) if runs else None
@@ -516,11 +518,11 @@ def guide_page():
     return (ROOT / "static" / "guide.html").read_text()
 
 
-import seo
+from app import seo
 
 seo.install(app)
 
 # ACS hot-loader: reload claims/config on change (no uvicorn --reload)
-import acs_hotload
+from acs import hotload as acs_hotload
 
 acs_hotload.mount(app)

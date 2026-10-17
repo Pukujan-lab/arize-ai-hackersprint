@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Local CI mirror of .github/workflows/ci.yml (offline), plus demo tests and offline issue triage.
-set -u; cd "$(dirname "$0")"; DEMO=$PWD; REPO=~/hack/legal-graphrag-starter; rc=0
+set -u; cd "$(dirname "$0")/.."; DEMO=$PWD; REPO=~/hack/legal-graphrag-starter; rc=0
 echo "== [1/3] upstream repo tests (pytest -m 'not live and not integration') =="
 (cd $REPO && python3 -m pytest -q -m "not live and not integration" -p no:cacheprovider 2>&1 | tail -5) || rc=1
 echo "== [2/3] demo agent tests (LLM_MODE=fake) =="

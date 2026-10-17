@@ -1,6 +1,6 @@
 import os, json, hashlib, httpx, time
 
-D = os.path.join(os.environ.get("GRAPH_DATA_DIR") or os.path.join(os.path.dirname(os.path.abspath(__file__)), "data"), "")
+D = os.path.join(os.environ.get("GRAPH_DATA_DIR") or os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "data"), "")
 H = {"surreal-ns": "legal", "surreal-db": "graph", "Accept": "application/json"}
 c = httpx.Client(base_url="http://127.0.0.1:8000", auth=("root", "root"), headers=H, timeout=120)
 

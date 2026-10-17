@@ -2,8 +2,8 @@
 
 import re, time, uuid, json, math, sys, os
 from concurrent.futures import ThreadPoolExecutor
-from coord import Run
-import tracing
+from app.coord import Run
+from app import tracing
 
 _G = None
 
@@ -11,7 +11,7 @@ _G = None
 def graph():
     global _G
     if _G is None:
-        from graph_store import Graph
+        from app.graph_store import Graph
 
         _G = Graph()
     return _G
@@ -33,7 +33,7 @@ def retriever(run, question, extra_seeds=None):
         passages, psrc = ([], None)
         if os.environ.get("USE_OCTO", "1") == "1":
             try:
-                import octo_retriever
+                from app import octo_retriever
 
                 passages, psrc = octo_retriever.search(question)
             except Exception as e:
@@ -75,7 +75,7 @@ def retriever(run, question, extra_seeds=None):
                 d.update(passage=pz["text"], chunk_id=pz["chunk_id"], url=d["url"] or pz["url"])
             cites.append(d)
         try:
-            import octo_retriever
+            from app import octo_retriever
 
             docs = [dict(g.info(p["work_id"]), passage=p["text"], ref="") for p in passages if p["work_id"] not in top][:10]
             heads = octo_retriever.first_chunks([c["id"] for c in cites + docs if c["type"] == "caselaw"])
@@ -184,7 +184,7 @@ def answer(run, question, ret, prior=None):
             except Exception:
                 pass
 
-        import llm as _llm
+        from app import llm as _llm
 
         _llm.LAST_ERR.clear()
         text, provider = _llm.complete_stream(sys_p, umsg, 400, on_delta=_delta, fallback=lambda: template_answer(question, cites))
@@ -312,7 +312,7 @@ def _graph_unavailable(run, question, session, prev, t0, err):
 
 def run_pipeline(question, run_id=None, prev=None):
     """Runs the pipeline with the run id in context so cache rows (answers, retrievals) are linked to this run in Octo."""
-    import octocache
+    from app import octocache
 
     rid = run_id or time.strftime("%H%M%S-") + uuid.uuid4().hex[:6]
     with octocache.run_context(rid):
@@ -385,7 +385,7 @@ def _run_pipeline(question, run_id, prev=None):
 if __name__ == "__main__":
     r = run_pipeline(" ".join(sys.argv[1:]) or "When can police search a vehicle without a warrant?")
     try:
-        import acs_board
+        from acs import board as acs_board
 
         sg = r["safeguard"]
         acs_board.oio_record(

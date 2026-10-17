@@ -30,7 +30,7 @@ def _missing(store, table, key):
 
 
 def run(store, llm_dir, octo_dir):
-    import llm, octocache
+    from app import llm, octocache
 
     out = {"answers": 0, "retrievals": 0, "purged_local": 0, "purged_octo": 0}
     purged = pathlib.Path(llm_dir) / "_purged"

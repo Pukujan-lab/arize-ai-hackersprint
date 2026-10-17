@@ -5,7 +5,7 @@ import json, csv, os, sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 os.environ["USE_OCTO"] = "0"
-import agents
+from app import agents
 
 rids = json.load(open("/tmp/arize_rids.json"))
 rows = []
@@ -21,7 +21,7 @@ g = agents.graph()
 out = []
 for row in rows:
     exp = set(json.loads(row["expected_citations"]))
-    from coord import Run
+    from app.coord import Run
 
     for k in ("seeds_only_k6", "graph_expansion"):
         if k == "seeds_only_k6":

@@ -48,11 +48,11 @@ def test_tts_returns_fish_audio(monkeypatch, tmp_path):
     import httpx
 
     monkeypatch.setattr(httpx, "post", fake_post)
-    import limits
+    from app import limits
 
     monkeypatch.setattr(limits, "take", lambda api: True)
 
-    import server
+    from app import server
     from fastapi.testclient import TestClient
 
     client = TestClient(server.app)

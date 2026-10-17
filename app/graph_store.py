@@ -2,8 +2,8 @@
 
 import os, json, hashlib, re, math, pathlib, pickle, httpx, collections
 
-D = pathlib.Path(os.environ.get("GRAPH_DATA_DIR") or (pathlib.Path(__file__).resolve().parent / "data"))
-CACHE = pathlib.Path(__file__).parent / "cache" / "graph_meta.pkl"
+D = pathlib.Path(os.environ.get("GRAPH_DATA_DIR") or (pathlib.Path(__file__).resolve().parent.parent / "data"))
+CACHE = pathlib.Path(__file__).resolve().parent.parent / "cache" / "graph_meta.pkl"
 STOP = set(
     "a an the of to in on for and or is are was be by with what when how does do can under law legal court colorado who which my i if it that this from as at".split()
 )
@@ -62,7 +62,8 @@ class Graph:
                 self.g.add_edge(e["src"], e["dst"], kind=e["kind"])
 
     def q(self, sql):
-        import time as _t, stats
+        import time as _t
+        from app import stats
 
         t0 = _t.perf_counter()
         r = self.c.post("/sql", content=sql)

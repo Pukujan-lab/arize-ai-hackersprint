@@ -3,10 +3,10 @@ legal_graph.chunk (804,646 passages). Fallback: local SQLite FTS5 snapshot of Oc
 (the sandbox network cannot reach octodb.design-bakery.com). Responses cached by query hash: local cache/octo/<key>.json first, shared Octo `retrieval` table second (synced back)."""
 
 import os, json, re, time, hashlib, sqlite3, pathlib, urllib.request
-import octocache
+from app import octocache
 from schema.store import loads
 
-ROOT = pathlib.Path(__file__).parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent
 CACHE = ROOT / "cache" / "octo"
 CACHE.mkdir(parents=True, exist_ok=True)
 SNAP = ROOT / "data" / "octo_snapshot.sqlite"
@@ -113,7 +113,7 @@ def _cache_put(h, question, source, passages):
 def search(question, k=12):
     """Returns (passages, source). Source: 'octo-live' | 'octo-snapshot' | None."""
     h = hashlib.sha256(question.strip().lower().encode()).hexdigest()[:24]
-    import stats
+    from app import stats
 
     stats.bump("octo_searches")
     d = _cache_get(h)

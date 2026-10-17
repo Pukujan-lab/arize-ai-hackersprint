@@ -5,7 +5,7 @@ import os, sys, json, pathlib, threading
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
 os.environ["LLM_MODE"] = "fake"
-import agents, graph_store
+from app import agents, graph_store
 
 
 def test_missing_graph_returns_data_not_loaded(tmp_path, monkeypatch):
@@ -21,5 +21,5 @@ def test_missing_graph_returns_data_not_loaded(tmp_path, monkeypatch):
     assert r, "pipeline raised instead of returning a result"
     assert "data not loaded" in r["answer"].lower()
     assert r["citations"] == [] and r["backend"] == "unavailable" and not r["safeguard"]["pass"]
-    res = pathlib.Path(agents.__file__).parent / "runs" / r["run_id"] / "result.json"
+    res = pathlib.Path(agents.__file__).resolve().parent.parent / "runs" / r["run_id"] / "result.json"
     assert json.loads(res.read_text())["run_id"] == r["run_id"]  # /api/run/<id> sees a finished result

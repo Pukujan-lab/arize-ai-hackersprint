@@ -32,7 +32,7 @@ jobs:
       - name: Format (ruff format --check)
         run: ruff format --check .
       - name: Types (mypy)
-        run: mypy *.py
+        run: mypy server.py app acs/board.py acs/claim.py acs/hotload.py
       - name: Compile
         run: python -m compileall -q -x '(\.venv|node_modules)' .
       - name: Tests (no secrets, no data, no network)

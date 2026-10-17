@@ -2,10 +2,10 @@
 Cache by prompt hash: local cache/<key>.json first, shared Octo llm_answer table second (synced back); template/empty never cached."""
 
 import os, json, hashlib, pathlib, httpx, logging
-import octocache
+from app import octocache
 
 log = logging.getLogger("llm")
-CACHE = pathlib.Path(__file__).parent / "cache"
+CACHE = pathlib.Path(__file__).resolve().parent.parent / "cache"
 CACHE.mkdir(exist_ok=True)
 COUNT = CACHE / "_real_calls.json"
 
@@ -64,7 +64,7 @@ def _anthropic(system, prompt, mt):
     key = os.environ.get("ANTHROPIC_API_KEY")
     if not key:
         return None
-    import limits
+    from app import limits
 
     if not limits.take("anthropic"):
         raise CapReached("anthropic hourly cap")
@@ -170,7 +170,7 @@ def _anthropic_stream(system, prompt, mt, on_delta):
     key = os.environ.get("ANTHROPIC_API_KEY")
     if not key:
         return None
-    import limits
+    from app import limits
 
     if not limits.take("anthropic"):
         raise CapReached("anthropic hourly cap")

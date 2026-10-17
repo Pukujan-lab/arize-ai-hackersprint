@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Starts SurrealDB + graph load + web app in parallel; prints summary.
-cd "$(dirname "$0")"; source ~/.bashrc 2>/dev/null; [ -f ~/.hack_env ] && source ~/.hack_env; mkdir -p logs
+cd "$(dirname "$0")/.."; source ~/.bashrc 2>/dev/null; [ -f ~/.hack_env ] && source ~/.hack_env; mkdir -p logs
 # acs-demo-key:start
 # Reuse the private ACS key without copying it into the repository.
 if [ -z "$ANTHROPIC_API_KEY" ]; then
@@ -25,12 +25,12 @@ fi
 if ! curl -sf localhost:8000/health >/dev/null; then
   nohup ./bin/surreal start --bind 0.0.0.0:8000 --user root --pass root memory > logs/surreal.log 2>&1 &
   for i in $(seq 30); do curl -sf localhost:8000/health >/dev/null && break; sleep 0.5; done
-  python3 load_surreal.py > logs/load.log 2>&1 &
+  python3 -m app.load_surreal > logs/load.log 2>&1 &
   LOADPID=$!
 fi
-pkill -f "uvicorn server:app" 2>/dev/null; sleep 0.5
+pkill -f "uvicorn (app\.)?server:app" 2>/dev/null; sleep 0.5
 [ -n "$LOADPID" ] && wait $LOADPID
-nohup python3 -m uvicorn server:app --host 0.0.0.0 --port 3000 > logs/web.log 2>&1 &
+nohup python3 -m uvicorn app.server:app --host 0.0.0.0 --port 3000 > logs/web.log 2>&1 &
 for i in $(seq 60); do curl -sf localhost:3000/api/health >/dev/null && break; sleep 0.5; done
 echo "=== Legal GraphRAG demo ==="
 echo "SurrealDB : $(curl -sf localhost:8000/health >/dev/null && echo up :8000) $(tail -1 logs/load.log 2>/dev/null)"

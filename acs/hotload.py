@@ -1,8 +1,8 @@
-"""ACS hot-loader: reload ACS claims/config on file change without restarting uvicorn (see acs/SOURCE.md)."""
+"""ACS hot-loader: reload ACS claims/config on file change without restarting uvicorn (see acs/SOURCE.md). Mounted by app/server.py."""
 
 import json, os, pathlib, threading, time
 
-ROOT = pathlib.Path(__file__).parent
+ROOT = pathlib.Path(__file__).resolve().parent.parent  # repo root
 _lock = threading.Lock()
 _state: dict = {"version": 0, "loaded_at": None, "files": {}, "data": {}, "errors": {}}
 _thread = None
@@ -89,7 +89,7 @@ def start(interval=None):
 
 
 def mount(app):
-    import contracts
+    from app import contracts
 
     @app.get("/api/acs/hotload", response_model=contracts.HotloadStatus, response_model_exclude_unset=True)
     def _acs_hotload():

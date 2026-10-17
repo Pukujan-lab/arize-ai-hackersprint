@@ -3,7 +3,7 @@
 import sqlite3, json, gzip, sys, pathlib, time
 
 src = pathlib.Path(sys.argv[1])
-out = pathlib.Path(__file__).parent / "data" / "octo_snapshot.sqlite"
+out = pathlib.Path(__file__).resolve().parent.parent / "data" / "octo_snapshot.sqlite"
 out.parent.mkdir(exist_ok=True)
 tmp = out.with_suffix(".tmp")
 tmp.unlink(missing_ok=True)
