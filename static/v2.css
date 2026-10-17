@@ -1,0 +1,221 @@
+/* Precedent v2 home (/v2). Plain CSS, no build step.
+   Dark is the default theme; html[data-theme="light"] swaps the tokens.
+   Layout: one icon rail, then a grid with the 3D map on the left and the
+   answer column (answer + collapsed panels + composer) on the right.
+   Below 900px it stacks: head, answer, map, pills + composer. */
+
+:root{
+  --v2-bg:radial-gradient(1100px 560px at 8% -10%,#1b1f4d 0,#0b1020 52%,#070b16 100%);
+  --v2-solid:#0b1020;
+  --v2-rail:#070c19;
+  --v2-panel:rgba(255,255,255,.045);
+  --v2-soft:rgba(255,255,255,.07);
+  --v2-line:rgba(255,255,255,.1);
+  --v2-ink:#e6ebf5;
+  --v2-muted:#94a3b8;
+  --v2-accent:#8b93f8;
+  --v2-accent-ink:#0b1020;
+  --v2-sheet:rgba(11,16,32,.98);
+  --v2-quote:rgba(139,147,248,.13);
+  color-scheme:dark;
+}
+
+html[data-theme="light"]{
+  --v2-bg:linear-gradient(180deg,#f6f8fd 0,#eaeef8 100%);
+  --v2-solid:#f6f8fd;
+  --v2-rail:#ffffff;
+  --v2-panel:rgba(255,255,255,.88);
+  --v2-soft:rgba(15,23,42,.06);
+  --v2-line:rgba(15,23,42,.13);
+  --v2-ink:#121a2b;
+  --v2-muted:#4c5a77;
+  --v2-accent:#4f46e5;
+  --v2-accent-ink:#ffffff;
+  --v2-sheet:#ffffff;
+  --v2-quote:rgba(79,70,229,.1);
+  color-scheme:light;
+}
+
+*,*::before,*::after{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;
+  overflow:hidden;
+  background:var(--v2-bg);
+  background-attachment:fixed;
+  color:var(--v2-ink);
+  font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+[hidden]{display:none!important}
+
+/* ---------- icon rail (links only, no top navbar) ---------- */
+.v2-app{display:flex;height:100vh;height:100dvh;overflow:hidden}
+.v2-rail{
+  flex:0 0 56px;width:56px;display:flex;flex-direction:column;align-items:center;gap:6px;
+  padding:10px 0;border-right:1px solid var(--v2-line);background:var(--v2-rail);overflow:hidden;
+}
+.v2-rail-btn{
+  width:44px;height:44px;display:grid;place-items:center;flex:0 0 auto;
+  border:1px solid transparent;border-radius:12px;background:transparent;
+  color:var(--v2-muted);font-size:18px;line-height:1;text-decoration:none;cursor:pointer;
+}
+.v2-rail-btn:hover{background:var(--v2-soft);color:var(--v2-ink)}
+.v2-rail-btn:focus-visible{outline:2px solid var(--v2-accent);outline-offset:2px}
+.v2-rail-spacer{flex:1 1 auto}
+.v2-i-sun{display:none}
+html[data-theme="light"] .v2-i-moon{display:none}
+html[data-theme="light"] .v2-i-sun{display:block}
+
+/* ---------- grid: map left, answer column right ---------- */
+.v2-main{
+  flex:1 1 auto;min-width:0;min-height:0;display:grid;gap:10px;padding:10px;overflow:hidden;
+  grid-template-columns:minmax(0,1fr) minmax(300px,384px);
+  grid-template-rows:auto minmax(0,1fr) auto;
+  grid-template-areas:"map head" "map answer" "map foot";
+}
+.v2-head{grid-area:head;display:flex;align-items:center;gap:8px;min-width:0}
+.v2-brand{font-size:15px;font-weight:600;letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v2-brand em{font-style:normal;font-weight:500;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--v2-accent);margin-left:6px}
+.v2-ghost{
+  margin-left:auto;width:44px;height:44px;flex:0 0 auto;display:grid;place-items:center;
+  border:1px solid var(--v2-line);border-radius:12px;background:var(--v2-panel);color:var(--v2-muted);
+  font-size:14px;font-weight:600;cursor:pointer;
+}
+.v2-ghost:hover{color:var(--v2-ink);background:var(--v2-soft)}
+
+/* ---------- memo ---------- */
+.v2-answer{
+  grid-area:answer;min-width:0;min-height:0;overflow:auto;
+  padding:14px 16px;border:1px solid var(--v2-line);border-radius:16px;background:var(--v2-panel);
+  font-size:15px;line-height:1.6;overflow-wrap:anywhere;
+}
+.v2-answer>*+*{margin-top:.7em}
+.v2-answer p{margin:0}
+.v2-answer h3{margin:0;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--v2-accent)}
+.v2-answer ul,.v2-answer ol{margin:0;padding-left:1.15em}
+.v2-answer li+li{margin-top:.35em}
+.v2-answer blockquote{margin:0;padding:8px 12px;border-left:3px solid var(--v2-accent);border-radius:0 10px 10px 0;background:var(--v2-quote);color:var(--v2-muted);font-style:italic}
+.v2-answer code{padding:1px 5px;border-radius:6px;background:var(--v2-soft);font-size:.92em}
+.v2-lead{margin:0;font-size:16px;font-weight:600}
+.v2-sub{margin:.4em 0 0;color:var(--v2-muted);font-size:13px}
+.v2-working,.v2-caret{color:var(--v2-muted)}
+.v2-err{color:#f0b45f;margin:0}
+.v2-ref{
+  display:inline-block;padding:0 4px;margin:0 1px;border:0;border-radius:6px;
+  background:var(--v2-quote);color:var(--v2-accent);font:inherit;font-size:.82em;font-weight:700;
+  line-height:1.4;text-decoration:none;cursor:pointer;vertical-align:super;
+}
+.v2-ref:hover{background:var(--v2-accent);color:var(--v2-accent-ink)}
+
+/* ---------- map ---------- */
+.v2-mapcol{grid-area:map;min-width:0;min-height:0}
+.v2-mapwrap{
+  position:relative;width:100%;height:100%;min-height:180px;overflow:hidden;
+  border:1px solid var(--v2-line);border-radius:16px;background:#060a15;
+}
+#docs3d{position:absolute;inset:0}
+/* the map's own legend is moved behind the Legend pill */
+.v2-mapwrap>.absolute.top-3.left-4{display:none}
+/* tour controls created by map3d.js (styles live in audio.js, which v2 does not load) */
+.v2-mapwrap .abtn{
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  min-width:34px;height:34px;padding:0 9px;border-radius:999px;
+  border:1px solid rgba(129,140,248,.5);background:rgba(15,23,42,.82);color:#e2e8f0;
+  font-size:12px;line-height:1;cursor:pointer;
+}
+.v2-mapwrap .abtn:hover{background:rgba(79,70,229,.62)}
+
+/* ---------- pills + composer ---------- */
+.v2-foot{grid-area:foot;display:flex;flex-direction:column;gap:8px;min-width:0}
+.v2-pills{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+.v2-pill{
+  display:inline-flex;align-items:center;gap:5px;min-height:40px;padding:0 13px;
+  border:1px solid var(--v2-line);border-radius:999px;background:var(--v2-panel);
+  color:var(--v2-ink);font-size:13px;font-weight:500;cursor:pointer;
+}
+.v2-pill:hover{background:var(--v2-soft)}
+.v2-pill[aria-expanded="true"]{border-color:var(--v2-accent);color:var(--v2-accent)}
+.v2-composer{display:flex;gap:8px;min-width:0}
+#q{
+  flex:1 1 auto;min-width:0;height:48px;padding:0 14px;
+  border:1px solid var(--v2-line);border-radius:14px;background:var(--v2-panel);
+  color:var(--v2-ink);font-size:16px;font-family:inherit;
+}
+#q::placeholder{color:var(--v2-muted)}
+#q:focus{outline:none;border-color:var(--v2-accent);box-shadow:0 0 0 3px var(--v2-quote)}
+#go{
+  flex:0 0 auto;height:48px;padding:0 20px;border:1px solid transparent;border-radius:14px;
+  background:var(--v2-accent);color:var(--v2-accent-ink);font-size:15px;font-weight:600;cursor:pointer;
+}
+#go:hover{filter:brightness(1.08)}
+#go:disabled{opacity:.55;cursor:default;filter:none}
+.v2-hint{margin:0;padding:0 2px;font-size:13px;color:#e2b872}
+
+/* ---------- bottom sheets ---------- */
+#sheet-backdrop{position:fixed;inset:0;z-index:65;background:rgba(3,7,18,.55)}
+.v2-sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:70;max-height:72vh;overflow:auto;
+  padding:14px 14px 20px;border-top:1px solid var(--v2-line);border-radius:18px 18px 0 0;
+  background:var(--v2-sheet);box-shadow:0 -12px 40px rgba(0,0,0,.45);
+  animation:v2-up .16s ease-out;
+}
+@keyframes v2-up{from{transform:translateY(14px);opacity:.5}to{transform:none;opacity:1}}
+.v2-sheet-head{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.v2-sheet-head h2{margin:0;font-size:13px;letter-spacing:.09em;text-transform:uppercase;color:var(--v2-muted)}
+.v2-sheet-x{
+  margin-left:auto;width:44px;height:44px;display:grid;place-items:center;
+  border:1px solid var(--v2-line);border-radius:12px;background:transparent;color:var(--v2-muted);
+  font-size:14px;cursor:pointer;
+}
+.v2-sheet-x:hover{color:var(--v2-ink);background:var(--v2-soft)}
+.v2-cites{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.v2-src{padding:10px 12px;border:1px solid var(--v2-line);border-radius:12px;background:var(--v2-panel);overflow-wrap:anywhere}
+.v2-src-head{display:flex;gap:8px;align-items:flex-start;font-size:14px;font-weight:600}
+.v2-src-ref{
+  flex:0 0 auto;min-width:26px;padding:2px 6px;border:1px solid var(--v2-line);border-radius:8px;
+  background:var(--v2-quote);color:var(--v2-accent);font:inherit;font-size:12px;font-weight:700;cursor:pointer;
+}
+.v2-src-ref:hover{background:var(--v2-accent);color:var(--v2-accent-ink)}
+.v2-src-title{min-width:0}
+.v2-src-meta{margin-top:3px;font-size:12px;color:var(--v2-muted)}
+.v2-quote{margin:6px 0 0;padding:6px 10px;border-left:2px solid var(--v2-accent);font-size:13px;color:var(--v2-muted)}
+.v2-src-note{margin:6px 0 0;font-size:12px;color:var(--v2-muted)}
+.v2-chips{display:flex;flex-direction:column;gap:8px}
+.v2-chip{
+  display:block;width:100%;min-height:44px;padding:10px 12px;text-align:left;
+  border:1px solid var(--v2-line);border-radius:12px;background:var(--v2-panel);
+  color:var(--v2-ink);font-size:14px;cursor:pointer;
+}
+.v2-chip:hover{border-color:var(--v2-accent);color:var(--v2-accent)}
+.v2-legend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;font-size:14px}
+.v2-legend li{display:flex;align-items:center;gap:9px}
+.v2-swatch{flex:0 0 auto;width:16px;height:4px;border-radius:2px}
+.v2-legend-note{margin:10px 0 0;font-size:12px;color:var(--v2-muted)}
+.v2-dl{display:grid;grid-template-columns:auto minmax(0,1fr);gap:6px 14px;margin:0;font-size:13px}
+.v2-dl dt{color:var(--v2-muted)}
+.v2-dl dd{margin:0;overflow-wrap:anywhere}
+.v2-empty{margin:0;font-size:13px;color:var(--v2-muted)}
+
+/* ---------- stacked layout: head, answer, map, pills + composer ---------- */
+@media (max-width:899px){
+  .v2-rail{flex-basis:48px;width:48px;gap:4px;padding:8px 0}
+  .v2-main{
+    padding:8px;gap:8px;
+    grid-template-columns:minmax(0,1fr);
+    grid-template-rows:auto minmax(0,1fr) minmax(0,1fr) auto;
+    grid-template-areas:"head" "answer" "map" "foot";
+  }
+  .v2-pill{min-height:44px}
+  .v2-sheet{max-height:76vh}
+  /* keep the map's source card inside the clipped map wrapper on phones */
+  .v2-mapwrap #docpanel{left:8px;right:8px;width:auto}
+}
+
+@media (min-width:900px){
+  .v2-sheet{
+    left:auto;right:12px;bottom:12px;width:min(420px,calc(100% - 24px));
+    max-height:min(70vh,560px);border:1px solid var(--v2-line);border-radius:16px;
+    box-shadow:0 18px 44px rgba(0,0,0,.45);
+  }
+}
