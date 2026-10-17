@@ -149,6 +149,19 @@ def _bottom_line(a):
     t = (m.group(1) if m else (a or ""))
     return _re.sub(r"\*\*|\[\d+\]|[*#>`]", "", t).strip()[:300]
 
+def _graph_unavailable(run, question, session, prev, t0, err):
+    """Empty/missing graph (data/nodes.jsonl, edges.jsonl): finish the run with a clear answer instead of raising."""
+    run.event("retriever", "graph_unavailable", f"legal graph data not loaded ({err[:200]})")
+    text = ("**Short answer:** Legal graph data not loaded - the citation graph (data/nodes.jsonl, data/edges.jsonl) is missing or empty, "
+            "so no authorities could be retrieved. Restore the graph data and restart the server, then ask again.")
+    sg = {"pass": False, "used": [], "invalid": [], "unknown_authorities": [], "unsupported_claims": [], "disclaimer": DISCLAIMER}
+    res = {"run_id": run.id, "question": question, "session_id": session, "prev_run_id": (prev or {}).get("run_id"), "standalone_query": None,
+           "answer": text, "provider": "template:graph-unavailable", "safeguard": sg, "citations": [], "edges": [], "seeds": [], "backend": "unavailable",
+           "elapsed_s": round(time.time() - t0, 2), "passage_source": None, "documents": [], "error": "graph_data_not_loaded"}
+    (run.dir / "result.json").write_text(json.dumps(res, indent=2))
+    run.event("planner", "done", f"pipeline stopped in {res['elapsed_s']}s - graph data not loaded")
+    return res
+
 def run_pipeline(question, run_id=None, prev=None):
     run = Run(run_id or time.strftime("%H%M%S-") + uuid.uuid4().hex[:6]); t0 = time.time()
     run.claim("planner", "orchestrator"); run.event("planner", "plan", "plan: retrieve -> answer -> safeguard", question=question)
@@ -159,6 +172,11 @@ def run_pipeline(question, run_id=None, prev=None):
         extra = [x for x in extra if x]
         run.event("planner", "rewrite", f"follow-up rewritten to standalone query: {query[:160]}", question=query)
     run.release("planner", handoff_to="retriever", summary="dispatched retriever")
+    try:
+        _g = graph(); _gerr = None if _g.nodes else "graph has 0 nodes"
+    except Exception as e:
+        _gerr = f"{type(e).__name__}: {e}"
+    if _gerr: return _graph_unavailable(run, question, session, prev, t0, _gerr)
     with tracing.span("pipeline", question=question) as _sp:
         ret = retriever(run, query, extra); ans = answer(run, question, ret, prior); sg = safeguard(run, question, ret, ans)
         tracing.oi(_sp, input__value=question, output__value=ans["text"], session__id=session, metadata={"run_id": run.id, "prev_run_id": (prev or {}).get("run_id"), "followup": bool(prev), "safeguard": "PASS" if sg["pass"] else "FAIL", "provider": ans["provider"]})

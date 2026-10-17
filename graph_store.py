@@ -57,6 +57,7 @@ class Graph:
             arrow = "->cites->node" if direction == "out" else "<-cites<-node"
             res = self.q(f"SELECT VALUE {arrow}.name FROM node:{key(nid)};")[0]
             return [x for x in (res[0] if res else []) if x]
+        if nid not in self.g: return []   # authority with no citation edges (networkx graph is built from edges only)
         return list(self.g.successors(nid) if direction == "out" else self.g.predecessors(nid))
     def info(self, nid):
         n = self.nodes.get(nid, {"id": nid})

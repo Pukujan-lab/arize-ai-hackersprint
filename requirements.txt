@@ -6,3 +6,5 @@ httpx
 networkx
 arize-otel
 openinference-instrumentation
+numpy
+scipy
