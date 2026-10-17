@@ -1,4 +1,5 @@
 """Every HTML page route in contracts/openapi.json has a section in docs/FRONTEND_INVENTORY.md (#87)."""
+
 import json
 import re
 from pathlib import Path
