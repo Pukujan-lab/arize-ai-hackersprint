@@ -143,6 +143,18 @@
             ],
             "title": "Backend"
           },
+          "data_schema": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Data Schema"
+          },
           "elevenlabs": {
             "anyOf": [
               {
@@ -153,6 +165,28 @@
               }
             ],
             "title": "Elevenlabs"
+          },
+          "fish": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fish"
+          },
+          "kokoro": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kokoro"
           },
           "nodes": {
             "anyOf": [
@@ -186,6 +220,32 @@
               }
             ],
             "title": "Sandbox"
+          },
+          "tts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tts"
+          },
+          "tts_cache": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tts Cache"
           }
         },
         "title": "HealthResponse",
@@ -470,6 +530,223 @@
         "title": "TaskResponse",
         "type": "object"
       },
+      "TourPrefetchRequest": {
+        "additionalProperties": true,
+        "properties": {
+          "run_id": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "additionalProperties": true,
+                  "type": "object"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          }
+        },
+        "title": "TourPrefetchRequest",
+        "type": "object"
+      },
+      "TourResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "fast_start": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fast Start"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "steps": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/TourStep"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Steps"
+          }
+        },
+        "title": "TourResponse",
+        "type": "object"
+      },
+      "TourStep": {
+        "additionalProperties": true,
+        "properties": {
+          "cite_ids": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cite Ids"
+          },
+          "clip_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clip Key"
+          },
+          "coords": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Coords"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "node_ids": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Node Ids"
+          },
+          "phase": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phase"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "ready": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ready"
+          },
+          "refs": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Refs"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "step_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Step Index"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "TourStep",
+        "type": "object"
+      },
       "TtsRequest": {
         "additionalProperties": true,
         "properties": {
@@ -478,6 +755,83 @@
           }
         },
         "title": "TtsRequest",
+        "type": "object"
+      },
+      "TtsTsResponse": {
+        "additionalProperties": true,
+        "properties": {
+          "audio_b64": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audio B64"
+          },
+          "cache": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cache"
+          },
+          "chars": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chars"
+          },
+          "duration_s": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration S"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "starts": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "number"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts"
+          }
+        },
+        "title": "TtsTsResponse",
         "type": "object"
       },
       "ValidationError": {
@@ -970,8 +1324,88 @@
         "summary": "Api Tasks"
       }
     },
+    "/api/tour/prefetch": {
+      "post": {
+        "description": "Queue a tour's narration: {run_id, steps:[{step_index, text, cite_ids, refs, node_ids, coords}]}; returns per-step metadata.",
+        "operationId": "tour_prefetch_api_tour_prefetch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TourPrefetchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TourResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tour Prefetch"
+      }
+    },
+    "/api/tour/{run_id}": {
+      "get": {
+        "description": "Per-step clip metadata (clip_key, provider, duration_s, cite_ids, refs, node_ids, coords, ready) for highlighting while a clip plays.",
+        "operationId": "tour_steps_api_tour__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TourResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Tour Steps"
+      }
+    },
     "/api/tts": {
       "post": {
+        "description": "mp3 from the provider chain (Fish -> Kokoro); 429 {fallback:'browser'} tells the client to use speechSynthesis.",
         "operationId": "tts_api_tts_post",
         "requestBody": {
           "content": {
@@ -1009,6 +1443,7 @@
     },
     "/api/tts_ts": {
       "post": {
+        "description": "JSON audio + per-character start times (real from ElevenLabs, even approximations from Kokoro, empty from Fish).",
         "operationId": "tts_ts_api_tts_ts_post",
         "requestBody": {
           "content": {
@@ -1025,7 +1460,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/AnyObject"
+                  "$ref": "#/components/schemas/TtsTsResponse"
                 }
               }
             },

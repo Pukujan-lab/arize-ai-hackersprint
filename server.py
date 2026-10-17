@@ -3,7 +3,7 @@ import os, time, uuid, threading, pathlib, httpx
 from fastapi import FastAPI, Depends
 from fastapi.responses import HTMLResponse, Response, JSONResponse
 import contracts
-import agents, tracing, acs_board, limits
+import agents, tracing, acs_board, limits, ttschain
 from coord import Run, CLAIM
 
 ROOT = pathlib.Path(__file__).parent
@@ -28,6 +28,7 @@ def health():
         "nodes": len(g.nodes) if g else 0,
         "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
         "elevenlabs": bool(os.environ.get("ELEVENLABS_API_KEY")),
+        **ttschain.health(),
         "arize": tracing.enabled(),
         "sandbox": os.environ.get("DAYTONA_SANDBOX_ID", ""),
     }
@@ -147,106 +148,52 @@ def seats():
     return json.loads(CLAIM.read_text()) if CLAIM.exists() else {}
 
 
+def _tts_fallback(tried):
+    body = {"error": "tts unavailable", "fallback": "browser", "provider": "browser", "tried": tried}
+    return JSONResponse(body, 429, headers={"X-TTS-Provider": "browser"})
+
+
 @app.post("/api/tts", responses=contracts.AUDIO)
 def tts(q: dict = Depends(contracts.body(contracts.TtsRequest))):
-    voice = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
-    h = _tts_key(str(q.get("text", ""))[:400], voice)
-    with _tts_lock(h):
-        return _tts(q)
+    """mp3 from the provider chain (Fish -> Kokoro); 429 {fallback:'browser'} tells the client to use speechSynthesis."""
+    res, tried = ttschain.synth(q.get("text", ""))
+    if not res:
+        return _tts_fallback(tried)
+    return Response(res["audio"], media_type="audio/mpeg", headers={"X-TTS-Cache": res["cache"], "X-TTS-Provider": res["provider"]})
 
 
-def _tts(q):
-    key = os.environ.get("ELEVENLABS_API_KEY")
-    if not key:
-        return JSONResponse({"error": "ELEVENLABS_API_KEY not set"}, 503)
-    text = q["text"][:400]
-    f = ROOT / "cache" / "tts" / (_tts_key(text, os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")) + ".mp3")
-    f.parent.mkdir(parents=True, exist_ok=True)
-    import stats
-
-    if f.exists():
-        stats.bump("tts_cache_hits")
-        stats.vlog("tts", len(text), True)
-        return Response(f.read_bytes(), media_type="audio/mpeg", headers={"X-TTS-Cache": "hit"})
-    if not limits.take("elevenlabs_tts"):
-        return JSONResponse({"error": "TTS hourly cap reached", "fallback": "browser"}, 429)
-    stats.bump("tts_calls")
-    stats.vlog("tts", len(text), False)
-    voice = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
-    r = httpx.post(
-        f"https://api.elevenlabs.io/v1/text-to-speech/{voice}", timeout=60, headers={"xi-api-key": key}, json={"text": text, "model_id": "eleven_flash_v2_5"}
-    )
-    if r.status_code != 200:
-        return JSONResponse({"error": r.text[:200]}, 502)
-    f.write_bytes(r.content)
-    return Response(r.content, media_type="audio/mpeg", headers={"X-TTS-Cache": "miss"})
-
-
-@app.post("/api/tts_ts", response_model=contracts.AnyObject)
+@app.post("/api/tts_ts", response_model=contracts.TtsTsResponse, response_model_exclude_unset=True)
 def tts_ts(q: dict = Depends(contracts.body(contracts.TtsRequest))):
-    voice = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
-    h = _tts_key(str(q.get("text", ""))[:400], voice)
-    with _tts_lock(h):
-        return _tts_ts(q)
+    """JSON audio + per-character start times (real from ElevenLabs, even approximations from Kokoro, empty from Fish)."""
+    import base64
+
+    res, tried = ttschain.synth(q.get("text", ""))
+    if not res:
+        return _tts_fallback(tried)
+    body = {
+        "audio_b64": base64.b64encode(res["audio"]).decode(),
+        "chars": res["chars"],
+        "starts": res["starts"],
+        "cache": res["cache"],
+        "provider": res["provider"],
+        "duration_s": res.get("duration_s"),
+    }
+    return JSONResponse(body, headers={"X-TTS-Cache": res["cache"], "X-TTS-Provider": res["provider"]})
 
 
-def _tts_ts(q):
-    """TTS with character alignment (ElevenLabs /with-timestamps), cached as JSON next to the mp3 cache."""
-    import base64, json as _j, stats
-
-    key = os.environ.get("ELEVENLABS_API_KEY")
-    text = q["text"][:400]
-    h = _tts_key(text, os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM"))
-    d = ROOT / "cache" / "tts"
-    d.mkdir(parents=True, exist_ok=True)
-    fj = d / (h + ".align.json")
-    fm = d / (h + ".mp3")
-    if fj.exists():
-        stats.bump("tts_cache_hits")
-        return _j.loads(fj.read_text())
-    if key and limits.take("elevenlabs_tts"):
-        voice = os.environ.get("ELEVENLABS_VOICE_ID", "21m00Tcm4TlvDq8ikWAM")
-        try:
-            r = httpx.post(
-                f"https://api.elevenlabs.io/v1/text-to-speech/{voice}/with-timestamps",
-                timeout=60,
-                headers={"xi-api-key": key},
-                json={"text": text, "model_id": "eleven_flash_v2_5"},
-            )
-            if r.status_code == 200:
-                j = r.json()
-                al = j.get("alignment") or {}
-                out = {
-                    "audio_b64": j["audio_base64"],
-                    "chars": al.get("characters", []),
-                    "starts": al.get("character_start_times_seconds", []),
-                    "cache": "miss",
-                }
-                stats.bump("tts_calls")
-                fm.write_bytes(base64.b64decode(j["audio_base64"]))
-                fj.write_text(_j.dumps(dict(out, cache="hit")))
-                return out
-        except Exception:
-            pass
-    if fm.exists():  # cached audio without alignment -> client paces by currentTime/duration
-        return {"audio_b64": base64.b64encode(fm.read_bytes()).decode(), "chars": [], "starts": [], "cache": "audio-only"}
-    return JSONResponse({"error": "tts unavailable", "fallback": "browser"}, 429)
+@app.post("/api/tour/prefetch", response_model=contracts.TourResponse, response_model_exclude_unset=True)
+def tour_prefetch(q: dict = Depends(contracts.body(contracts.TourPrefetchRequest))):
+    """Queue a tour's narration: {run_id, steps:[{step_index, text, cite_ids, refs, node_ids, coords}]}; returns per-step metadata."""
+    return ttschain.prefetch(q.get("run_id"), q.get("steps") or [])
 
 
-_tts_locks: dict = {}
-_tts_ll = threading.Lock()
+@app.get("/api/tour/{run_id}", response_model=contracts.TourResponse, response_model_exclude_unset=True)
+def tour_steps(run_id: str):
+    """Per-step clip metadata (clip_key, provider, duration_s, cite_ids, refs, node_ids, coords, ready) for highlighting while a clip plays."""
+    return ttschain.tour(run_id)
 
 
-def _tts_key(text, voice):
-    import hashlib
-
-    base = text if voice == "21m00Tcm4TlvDq8ikWAM" else text + "|" + voice
-    return hashlib.sha256(base.encode()).hexdigest()[:24]
-
-
-def _tts_lock(h):
-    with _tts_ll:
-        return _tts_locks.setdefault(h, threading.Lock())
+threading.Thread(target=ttschain.octo_check, daemon=True).start()  # startup: Octo schema_version must match the repo
 
 
 def _run_and_log(question, rid, prev=None):
@@ -369,7 +316,8 @@ def stack():
             "enabled": bool(os.environ.get("ELEVENLABS_API_KEY")),
             "tts_calls": S["tts_calls"],
             "cache_hits": S["tts_cache_hits"],
-            "cached_files": len(list((ROOT / "cache" / "tts").glob("*.mp3"))) if (ROOT / "cache" / "tts").exists() else 0,
+            "cached_files": len(list(ttschain.cache_dir().glob("*.mp3"))),
+            "chain": ttschain.chain(),
             "how": "eleven_flash_v2_5 reads the short answer aloud; hands-free mode; audio cached by hash.",
         },
         "acs": {
