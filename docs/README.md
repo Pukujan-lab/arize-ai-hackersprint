@@ -5,6 +5,7 @@ Most of these files were written during the HackSprint NYC build on 2026-10-16, 
 Current:
 
 - `continuity/cgm-pin.md`: which writing-helper commit this repo pins, what `.content-system/` holds, and how CI checks it.
+- `continuity/oio-pin.md`: which OIO commit this repo pins, the installer layout under `.oio/`, and how CI checks it.
 - `voice-and-data-model.md`: the TTS provider chain and queue, the local-then-Octo answer, retrieval and clip caches, and how the Octo tables are versioned and migrated.
 - `issues/NETWORK_EGRESS_INFERHUB.md`: notes on the sandbox's blocked egress to InferHub, kept because it explains why model calls failed from the sandbox that day.
 
