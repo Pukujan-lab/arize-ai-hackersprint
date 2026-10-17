@@ -170,7 +170,7 @@ def test_health_lists_chain(env, monkeypatch):
     monkeypatch.setattr(ttschain, "kokoro_up", lambda: False)
     monkeypatch.setenv("TTS_DISABLE_FISH", "1")
     h = env.get("/api/health").json()
-    assert h["tts"] == ["kokoro", "browser"] and h["kokoro"] is False and h["fish"] is False
+    assert h["tts"] == ["browser"] and h["kokoro"] is False and h["fish"] is False  # kokoro down is not listed (#32)
 
 
 def test_fish_timeout_default_is_5s(env, monkeypatch):
