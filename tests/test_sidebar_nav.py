@@ -39,16 +39,11 @@ def test_top_bar_has_only_logo_ask_and_toggle(base, browser, path):
     assert page.get_attribute("#sidebar-toggle", "aria-controls") == "sidebar"
     if path == "/":
         # the home page keeps its own ask box in the page body (it becomes a chat composer in #49)
-        assert (
-            page.locator("#ask-form #q").count() == 1
-            and page.locator("#ask-form #go").count() == 1
-        )
+        assert page.locator("#ask-form #q").count() == 1 and page.locator("#ask-form #go").count() == 1
     else:
         assert page.locator("#topbar #ask-form #q").count() == 1
         assert page.locator("#topbar #ask-form #go").count() == 1
-    links = page.eval_on_selector_all(
-        "#topbar a[href]", "els => els.map(e => e.getAttribute('href'))"
-    )
+    links = page.eval_on_selector_all("#topbar a[href]", "els => els.map(e => e.getAttribute('href'))")
     assert all(h == "/" for h in links), links
     ctx.close()
 
@@ -56,14 +51,10 @@ def test_top_bar_has_only_logo_ask_and_toggle(base, browser, path):
 @pytest.mark.parametrize("path", PAGES)
 def test_sidebar_links_and_current_page(base, browser, path):
     ctx, page = open_page(browser, base, path, DESKTOP)
-    hrefs = page.eval_on_selector_all(
-        "#sidebar a[href]", "els => els.map(e => e.getAttribute('href'))"
-    )
+    hrefs = page.eval_on_selector_all("#sidebar a[href]", "els => els.map(e => e.getAttribute('href'))")
     for p in PAGES:
         assert p in hrefs, p
-    cur = page.eval_on_selector_all(
-        "#sidebar a[aria-current=page]", "els => els.map(e => e.getAttribute('href'))"
-    )
+    cur = page.eval_on_selector_all("#sidebar a[aria-current=page]", "els => els.map(e => e.getAttribute('href'))")
     assert cur == [path]
     ctx.close()
 
