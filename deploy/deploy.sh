@@ -7,7 +7,10 @@ cd "$APP" || exit 1
 ts=$(date +%Y%m%d%H%M%S)
 dirty=$(git status --porcelain --untracked-files=no -- . ':(exclude).coord' ':(exclude)uvicorn.log')
 if [ -n "$dirty" ]; then
-  git diff > "$HOME/precedent-uncommitted-$ts.patch"
+  git diff > "/tmp/precedent-uncommitted.$$"
+  last=$(ls -t "$HOME"/precedent-uncommitted-*.patch 2>/dev/null | head -1)
+  if [ -n "$last" ] && cmp -s "$last" "/tmp/precedent-uncommitted.$$"; then rm -f "/tmp/precedent-uncommitted.$$"; ts=${last##*uncommitted-}; ts=${ts%.patch}
+  else mv "/tmp/precedent-uncommitted.$$" "$HOME/precedent-uncommitted-$ts.patch"; fi
   echo "::error::~/precedent has uncommitted changes (saved to ~/precedent-uncommitted-$ts.patch). Merge them upstream first; not deploying."
   echo "$dirty"; exit 1
 fi
