@@ -1,9 +1,15 @@
 name: Close linked issues
 # After a PR merges into main: close any issue it names with Closes/Fixes/Resolves #N that is still open,
 # tick it off on the UI cleanup tracker, and close the tracker once every issue it lists is closed.
-# A merge made with the built-in GITHUB_TOKEN does not trigger other workflows, so a schedule and a manual run
+# Auto-merge merges as github-actions with the built-in GITHUB_TOKEN, and GitHub does not start workflows for
+# events that token causes (pull_request closed, pull_request_target closed, push). So the main trigger is the end of
+# the PR's CI run (workflow_run fires for that): the job waits for auto-merge to land, closes the linked issues,
+# then starts deploy.yml (workflow_dispatch is the one event GITHUB_TOKEN may start). A schedule and a manual run
 # sweep recently merged PRs as a backstop.
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
   pull_request:
     types: [closed]
     branches: [main]
@@ -15,9 +21,16 @@ on:
 permissions:
   issues: write
   pull-requests: read
+  actions: write
+concurrency:
+  group: close-linked-issues
+  cancel-in-progress: false
 jobs:
   close:
-    if: github.event_name != 'pull_request' || github.event.pull_request.merged == true
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.merged == true) &&
+      (github.event_name != 'workflow_run' ||
+       (github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success'))
     runs-on: ubuntu-latest
     env:
       TRACKER: "58"
@@ -27,8 +40,19 @@ jobs:
           script: |
             const { owner, repo } = context.repo;
             let prs = [];
+            let deploy = false;
             if (context.payload.pull_request) prs = [context.payload.pull_request];
-            else {
+            else if (context.payload.workflow_run) {
+              // CI passed on a PR: wait up to 10 minutes for auto-merge to land it.
+              for (const ref of context.payload.workflow_run.pull_requests || []) {
+                for (let i = 0; i < 20; i++) {
+                  const { data: pr } = await github.rest.pulls.get({ owner, repo, pull_number: ref.number });
+                  if (pr.merged_at) { prs.push(pr); deploy = pr.base.ref === "main"; break; }
+                  if (pr.state === "closed" || pr.draft || !pr.auto_merge) break;
+                  await new Promise(r => setTimeout(r, 30000));
+                }
+              }
+            } else {
               const { data } = await github.rest.pulls.list({ owner, repo, state: "closed", base: "main", sort: "updated", direction: "desc", per_page: 30 });
               const since = Date.now() - 3 * 24 * 3600 * 1000;
               prs = data.filter(p => p.merged_at && Date.parse(p.merged_at) > since);
@@ -41,6 +65,11 @@ jobs:
                 await github.rest.issues.createComment({ owner, repo, issue_number: n, body: `Closed by #${pr.number}, merged into main.` });
                 await github.rest.issues.update({ owner, repo, issue_number: n, state: "closed", state_reason: "completed" });
               }
+            }
+            if (deploy) {
+              // The merge itself starts no workflows, so start the deploy here.
+              await github.rest.actions.createWorkflowDispatch({ owner, repo, workflow_id: "deploy.yml", ref: "main" });
+              core.info("Started deploy.yml on main");
             }
             const tracker = +process.env.TRACKER;
             const { data: t } = await github.rest.issues.get({ owner, repo, issue_number: tracker });
