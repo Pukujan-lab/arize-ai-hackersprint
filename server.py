@@ -283,3 +283,7 @@ def runs_list(request: Request, n: int = 15):
 def guide_page(): return (ROOT / "static" / "guide.html").read_text()
 
 import seo; seo.install(app)
+
+# ACS hot-loader: reload claims/config on change (no uvicorn --reload)
+import acs_hotload
+acs_hotload.mount(app)

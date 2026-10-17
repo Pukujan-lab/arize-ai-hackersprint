@@ -1,0 +1,20 @@
+name: automerge
+on:
+  pull_request_target:
+    types: [opened, reopened, ready_for_review]
+permissions:
+  contents: write
+  pull-requests: write
+jobs:
+  enable-automerge:
+    if: >-
+      github.event.pull_request.draft == false &&
+      (github.event.pull_request.user.login == github.repository_owner ||
+       github.event.pull_request.user.type == 'Bot')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Enable auto-merge (squash); merges once required check 'gates' passes
+        env:
+          # Optional AUTOMERGE_TOKEN (fine-grained PAT) makes the merge fire push events; GITHUB_TOKEN works but does not.
+          GH_TOKEN: ${{ secrets.AUTOMERGE_TOKEN || secrets.GITHUB_TOKEN }}
+        run: gh pr merge --auto --squash "${{ github.event.pull_request.number }}" --repo "${{ github.repository }}"

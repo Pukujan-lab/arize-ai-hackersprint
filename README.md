@@ -57,3 +57,10 @@ Note: the case data (`data/nodes.jsonl`, `data/edges.jsonl`) isn't in the repo y
 ## How it was built
 
 Built with ABA. See `ABA_BUILD_LOG.md` for the build log.
+
+## CI/CD
+
+- **CI** (`.github/workflows/ci.yml`, required job `gates`): Python 3.11, ruff (non-blocking), pytest. Live/data tests are skipped in CI (`RUN_LIVE=1` and `data/nodes.jsonl` turn them on).
+- **Auto-merge** (`automerge.yml`): PRs by the owner or bots are set to squash auto-merge, and merge when `gates` passes. No approval is needed.
+- **Deploy** (`deploy.yml`): after CI passes on `main`, the self-hosted runner `precedent-pro` on the Pro runs `deploy/deploy.sh`. It resets to origin/main, installs deps, runs `launchctl kickstart -k com.precedent.app`, health-checks local and public, and rolls back on failure. It refuses to deploy over uncommitted changes.
+- **ACS hot-loader**: `acs_hotload.py` plus the vendored runtime in `acs/` (see `acs/SOURCE.md`). Endpoints: `GET /api/acs/hotload`, `POST /api/acs/reload`.
