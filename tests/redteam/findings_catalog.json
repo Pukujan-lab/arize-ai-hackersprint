@@ -1,104 +1,4 @@
 {
-  "test_acs_reload_requires_auth": {
-    "title": "POST /api/acs/reload is unauthenticated",
-    "area": "security",
-    "severity": "high",
-    "affected": "Precedent ACS hot-load surface on arize.design-bakery.com; any anonymous client",
-    "expected": "Reload requires auth (token/signed request) or is disabled on the public host",
-    "actual": "POST /api/acs/reload returns 200 without credentials and forces a reload",
-    "repro": "1. `curl -s -o /dev/null -w '%{http_code}\\n' -X POST https://arize.design-bakery.com/api/acs/reload`\n2. Observe 200 and hotload version bump",
-    "acceptance": "Unauthenticated reload returns 401/403; regression in tests/redteam/test_security.py stays green.",
-    "extra_labels": [],
-    "unresolved_risk": "Anyone can force ACS config/board reload and observe timing; opens an abuse path next to unauthenticated claim/release."
-  },
-  "test_acs_claim_requires_auth": {
-    "title": "POST /api/claim and /api/release are unauthenticated",
-    "area": "security",
-    "severity": "high",
-    "affected": "ACS task board behind the public demo API",
-    "expected": "Claim/release require shared secret or network isolation",
-    "actual": "Anonymous POST /api/claim is accepted at the auth layer (409 only for unknown task id)",
-    "repro": "1. `curl -s -X POST https://arize.design-bakery.com/api/claim -H 'content-type: application/json' -d '{\"task\":\"RT-PROBE\",\"agent\":\"redteam\"}'`",
-    "acceptance": "Unauthenticated claim/release return 401/403; tests/redteam stays green.",
-    "extra_labels": []
-  },
-  "test_sponsor_does_not_leak_space_id": {
-    "title": "/api/sponsor leaks ARIZE_SPACE_ID",
-    "area": "security",
-    "severity": "high",
-    "affected": "Public /api/sponsor consumers; Arize space confidentiality",
-    "expected": "space_id never appears in public JSON (boolean connected only)",
-    "actual": "arize.space_id is returned as a live value",
-    "repro": "1. `curl -s https://arize.design-bakery.com/api/sponsor | jq .arize`\n2. Note space_id is set (do not paste the value into issues)",
-    "acceptance": "Response omits space_id and any other secret-bearing fields; red-team test green.",
-    "extra_labels": []
-  },
-  "test_xff_alone_does_not_reset_rate_limit": {
-    "title": "Ask rate limit bypass via client X-Forwarded-For",
-    "area": "security",
-    "severity": "high",
-    "affected": " /api/ask abuse controls on the public demo",
-    "expected": "Only a trusted proxy may set client IP; forged XFF must not reset the budget",
-    "actual": "Rotating X-Forwarded-For allows continuing asks after the per-IP cap",
-    "repro": "1. Burn 6+ asks without session from one IP\n2. Retry with a new X-Forwarded-For value and observe 200 instead of 429",
-    "acceptance": "Forged XFF cannot bypass; prefer socket client host unless a trusted proxy hop is configured.",
-    "extra_labels": []
-  },
-  "test_run_id_rejects_path_traversal_and_arbitrary_mkdir": {
-    "title": "GET /api/run/{rid} creates directories for arbitrary ids",
-    "area": "security",
-    "severity": "moderate",
-    "affected": "runs/ on the Pro host; disk and session isolation",
-    "expected": "Unknown or malformed run ids return 404 without mkdir",
-    "actual": "Run() mkdir's runs/<rid> on every GET, including probes",
-    "repro": "1. `curl -s http://127.0.0.1:PORT/api/run/redteam-probe-xyz`\n2. Observe runs/redteam-probe-xyz created",
-    "acceptance": "Validate rid against an allowlist pattern and require an existing run dir; no mkdir on GET.",
-    "extra_labels": []
-  },
-  "test_voice_caption_escapes_user_text": {
-    "title": "XSS sink in static/voice.js caption()",
-    "area": "security",
-    "severity": "high",
-    "affected": "Demo page voice/STT captions; any spoken or transcribed string",
-    "expected": "Caption text is textContent or HTML-escaped",
-    "actual": "caption() assigns unsanitized t to cap.innerHTML",
-    "repro": "1. Open static/voice.js caption()\n2. Note `cap.innerHTML=...${t}` with no esc",
-    "acceptance": "Escape or use textContent; tests/redteam/test_security.py::test_voice_caption_escapes_user_text green.",
-    "extra_labels": []
-  },
-  "test_map_pin_tags_escape_refs": {
-    "title": "XSS risk in map3d.js pinTags refs innerHTML",
-    "area": "security",
-    "severity": "moderate",
-    "affected": "/map overlay labels built from citation refs",
-    "expected": "refs and court strings fully escaped before innerHTML",
-    "actual": "pinTags interpolates ${refs} into innerHTML; court only strips '<'",
-    "repro": "1. Inspect pinTags() in static/map3d.js\n2. Confirm refs are not passed through esc()",
-    "acceptance": "Use esc()/textContent for refs and court; red-team test green.",
-    "extra_labels": []
-  },
-  "test_tour_prefetch_rejects_html_payload": {
-    "title": "Tour prefetch stores raw HTML in step text",
-    "area": "security",
-    "severity": "moderate",
-    "affected": "/api/tour/prefetch and /api/tour/{run_id} consumers",
-    "expected": "Reject or sanitize HTML/script in step text",
-    "actual": "Payload with <img onerror=...> is stored and returned",
-    "repro": "1. POST /api/tour/prefetch with HTML in steps[].text\n2. GET /api/tour/{run_id} and observe the same HTML",
-    "acceptance": "Strip/escape tags on write; never render tour text via unsanitized innerHTML.",
-    "extra_labels": []
-  },
-  "test_oversized_ask_rejected": {
-    "title": "Oversized /api/ask JSON body accepted",
-    "area": "security",
-    "severity": "moderate",
-    "affected": "Public /api/ask; worker memory/CPU",
-    "expected": "413/400 for bodies far beyond the 500-char question cap",
-    "actual": "Megabyte-scale JSON returns 200 (question later truncated)",
-    "repro": "1. POST /api/ask with a ~1MB JSON question field\n2. Observe 200",
-    "acceptance": "Reject early on Content-Length / parsed size before allocating work.",
-    "extra_labels": []
-  },
   "test_stack_survives_missing_proc": {
     "title": "/api/stack 500 on macOS host (no /proc)",
     "area": "fallback",
@@ -137,7 +37,10 @@
     "actual": "404 on production",
     "repro": "1. Open any page, Network panel\n2. Or `curl -s -o /dev/null -w '%{http_code}\\n' https://arize.design-bakery.com/static/theme/precedent-theme.css`",
     "acceptance": "Add the file or remove the link; no console 404.",
-    "extra_labels": []
+    "extra_labels": [
+      "ux",
+      "broken-button"
+    ]
   },
   "test_out_of_state_courts_not_silently_denver": {
     "title": "Map locate() silently pins unknown courts to Denver",
@@ -192,17 +95,6 @@
       "robustness"
     ]
   },
-  "test_acs_events_requires_auth": {
-    "title": "GET /api/acs/events is public",
-    "area": "security",
-    "severity": "moderate",
-    "affected": "ACS event log on the public host",
-    "expected": "Events require auth or are omitted from the public app",
-    "actual": "Anonymous GET returns recent agent events",
-    "repro": "curl -s 'https://arize.design-bakery.com/api/acs/events?n=2'",
-    "acceptance": "Auth-gate or remove; red-team green.",
-    "extra_labels": []
-  },
   "test_safeguard_fail_withholds_or_quarantines_answer": {
     "title": "Safeguard FAIL still returns the answer to the client",
     "area": "integrity",
@@ -226,6 +118,139 @@
     "extra_labels": [
       "fallback",
       "robustness"
+    ]
+  },
+  "test_every_page_loads_without_pageerror": {
+    "title": "Page load pageerror on a public page",
+    "area": "ux",
+    "severity": "high",
+    "affected": "First-time visitors on arize.design-bakery.com",
+    "expected": "Each public page loads with no pageerror",
+    "actual": "Playwright captured pageerror on load",
+    "repro": "REDTEAM_LIVE=1 pytest tests/redteam/test_ux_playwright.py::test_every_page_loads_without_pageerror",
+    "acceptance": "Fix the throwing script; keep the Playwright load check green.",
+    "extra_labels": [
+      "ux",
+      "broken-button"
+    ]
+  },
+  "test_click_every_visible_control_desk": {
+    "title": "Dead or erroring controls when clicking every visible button/link",
+    "area": "ux",
+    "severity": "high",
+    "affected": "All public pages \u2014 buttons, links, toggles",
+    "expected": "Every visible control either navigates, toggles state, or shows feedback; no pageerrors",
+    "actual": "Dead clicks or console errors while exercising controls",
+    "repro": "REDTEAM_LIVE=1 pytest ...::test_click_every_visible_control_desk \u2014 see tests/redteam/shots/",
+    "acceptance": "Repair dead controls; wire missing handlers; Playwright click suite green.",
+    "extra_labels": [
+      "ux",
+      "broken-button"
+    ]
+  },
+  "test_ask_memo_flow_first_time_user": {
+    "title": "Ask\u2192memo first-time flow fails or lacks feedback",
+    "area": "flow",
+    "severity": "high",
+    "affected": "Core demo path on /",
+    "expected": "Obvious input+Ask, loading feedback, memo or clear error within ~45s",
+    "actual": "Flow missing feedback or never produced a memo",
+    "repro": "Open / , type a Colorado search question, click Ask; watch for loading then memo",
+    "acceptance": "First-time Ask path works with clear loading and result states.",
+    "extra_labels": [
+      "ux",
+      "flow",
+      "intuitiveness"
+    ]
+  },
+  "test_map_and_tour_controls_exist_and_respond": {
+    "title": "Map tour/audio controls missing or unresponsive",
+    "area": "flow",
+    "severity": "high",
+    "affected": "/map guided tour and Listen/Mute",
+    "expected": "Visible Tour/Play control that starts the tour; audio controls respond",
+    "actual": "Tour/Play missing or click does nothing / errors",
+    "repro": "Open /map and click Tour/Play and Mute/Listen",
+    "acceptance": "Tour starts from an obvious control; audio toggles work.",
+    "extra_labels": [
+      "ux",
+      "flow",
+      "broken-button"
+    ]
+  },
+  "test_dashboard_not_stuck_on_error": {
+    "title": "Dashboard stuck on Internal Server Error / JSON parse",
+    "area": "fallback",
+    "severity": "high",
+    "affected": "/dashboard first-time operators",
+    "expected": "Dashboard renders stack panels or a clear degraded message \u2014 never raw 500 text",
+    "actual": "Console pageerror or Internal Server Error body",
+    "repro": "Open /dashboard \u2014 related to /api/stack 500 on macOS (#31)",
+    "acceptance": "Dashboard handles /api/stack failure with a user-visible fallback panel.",
+    "extra_labels": [
+      "ux",
+      "fallback",
+      "robustness"
+    ]
+  },
+  "test_mobile_home_usable": {
+    "title": "Mobile home layout unusable (overflow or missing Ask)",
+    "area": "ux",
+    "severity": "moderate",
+    "affected": "Phone-width visitors on /",
+    "expected": "Question input and Ask visible; no horizontal overflow",
+    "actual": "Missing controls or horizontal overflow at 390px",
+    "repro": "Playwright mobile viewport 390x844 on /",
+    "acceptance": "Mobile home usable without sideways scroll.",
+    "extra_labels": [
+      "ux",
+      "intuitiveness"
+    ]
+  },
+  "test_nav_links_between_pages": {
+    "title": "Broken in-app navigation link",
+    "area": "ux",
+    "severity": "moderate",
+    "affected": "Navbar / in-page links",
+    "expected": "Every same-origin path link returns <400",
+    "actual": "One or more in-app hrefs 404/5xx",
+    "repro": "Collect a[href^='/'] on / and GET each",
+    "acceptance": "Fix or remove broken hrefs.",
+    "extra_labels": [
+      "ux",
+      "broken-button",
+      "flow"
+    ]
+  },
+  "test_empty_loading_error_states_are_labeled": {
+    "title": "Observability empty/loading state gives no guidance",
+    "area": "intuitiveness",
+    "severity": "moderate",
+    "affected": "/observability first-time users",
+    "expected": "Page explains what to look at or shows an explicit empty state",
+    "actual": "Near-empty page with little guidance",
+    "repro": "Open /observability with a fresh session",
+    "acceptance": "Add empty/loading copy and next-step hints.",
+    "extra_labels": [
+      "ux",
+      "intuitiveness",
+      "flow"
+    ]
+  },
+  "test_empty_ask_shows_feedback": {
+    "title": "Ask with empty input is a silent no-op (no validation message)",
+    "area": "intuitiveness",
+    "severity": "moderate",
+    "affected": "First-time users on /",
+    "expected": "Validation message when Ask is empty",
+    "actual": "Silent no-op",
+    "repro": "Click Ask with empty input",
+    "acceptance": "Show validation copy.",
+    "extra_labels": [
+      "ux",
+      "intuitiveness",
+      "broken-button",
+      "flow"
     ]
   }
 }
