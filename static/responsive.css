@@ -1,6 +1,12 @@
 /* responsive.css: shared refinements for every page (first-screen cues, phone/tablet sizing, tap targets).
    Loaded after the inline navbar styles by navbar.js, so equal-specificity rules here win. */
 
+/* ---- Top bar never wider than the viewport ---- */
+nav,.nav{max-width:100%!important;min-width:0!important}
+nav .max-w-7xl{max-width:100%!important;min-width:0!important}
+#partner-strip{flex:0 1 auto!important;min-width:0!important;max-width:100%!important;overflow:hidden!important;flex-wrap:nowrap}
+#partner-strip>*{flex:0 1 auto;min-width:0}
+
 /* ---- First-screen cues (demo page) ---- */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 .fs-cue{border-color:rgba(129,140,248,.28)!important;background:rgba(99,102,241,.07)!important}
@@ -78,8 +84,8 @@
   a.btn{min-height:44px;display:inline-flex!important;align-items:center}
 }
 @media (max-width:760px){ .p>span:first-child{width:auto!important;flex:1 1 100%!important} }
-/* Map page at small-desktop widths: the search form needs the room the partner logos took */
-@media (max-width:1279px){ nav:has(form#f) #partner-strip{display:none!important} }
+/* The partner logo strip is one unwrappable row: hide it on every page below desktop width */
+@media (max-width:1279px){ #partner-strip{display:none!important} }
 /* Links inside running text stay inline; standalone links get a comfortable tap area */
 @media (max-width:1023px){
   a.inline-block,a.block{min-height:44px;display:inline-flex!important;align-items:center}
