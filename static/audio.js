@@ -1,29 +1,58 @@
 // Global audio manager: every Audio/TTS/speech goes through here so mute & stop always work.
 (function(){
-const KEY="precedent.mute", all=new Set(), ctrls=new Set();
+const KEY="precedent.mute.v2", all=new Set(), ctrls=new Set();   /* v2: sound ON by default; old saved mutes are ignored */
 let muted=false; try{ muted=localStorage.getItem(KEY)==="1"; }catch(e){}
 const NA=window.Audio;
+// ---- "Audio loading…" indicator: shown from TTS request until playback actually starts; one request token owns it ----
+const AUDIO_TIMEOUT_MS=8000; let tok=0, cur=0, tmr=null, hideT=null, el=null;
+function ui(){ if(el||!document.body) return el; const st=document.createElement("style"); st.textContent=`
+#audio-status{position:fixed;z-index:60;pointer-events:none;display:inline-flex;align-items:center;gap:6px;padding:3px 10px;border-radius:999px;font-size:12px;line-height:18px;color:#e2e8f0;background:rgba(15,18,30,.82);border:1px solid rgba(129,140,248,.45);backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,.35)}
+#audio-status[hidden]{display:none}#audio-status .as-spin{width:10px;height:10px;border-radius:50%;border:2px solid rgba(165,180,252,.3);border-top-color:#a5b4fc;animation:asspin .8s linear infinite}
+#audio-status .as-dot{width:8px;height:8px;border-radius:50%;background:#fbbf24}@keyframes asspin{to{transform:rotate(360deg)}}`; document.head.appendChild(st);
+  el=document.createElement("div"); el.id="audio-status"; el.setAttribute("role","status"); el.setAttribute("aria-live","polite"); el.hidden=true; document.body.appendChild(el); return el; }
+const MSG={loading:'<span class="as-spin"></span><span>Audio loading…</span>',fail:'<span class="as-dot"></span><span>Audio unavailable — continuing</span>',gesture:'<span class="as-dot"></span><span>Tap anywhere to enable sound</span>'};
+function show(kind){ const e=ui(); if(!e) return; clearTimeout(hideT); e.dataset.kind=kind; e.innerHTML=MSG[kind]; e.hidden=false; place(); }
+function hide(){ clearTimeout(hideT); if(el){ el.hidden=true; el.dataset.kind=""; } }
+function place(){ if(!el||el.hidden) return; const vis=x=>x&&x.offsetParent!==null&&!x.classList.contains("hidden"); let a=null;
+  for(const q of ["#transcript","#play","#sumplay","[data-abtn=mute]","#vorb"]){ const x=document.querySelector(q); if(vis(x)){ a=x; break; } }
+  let L=16, T=innerHeight-48; if(a){ const r=a.getBoundingClientRect(); L=r.left; T=r.top-el.offsetHeight-6; if(T<4) T=r.bottom+6; }
+  el.style.left=Math.max(4,Math.min(L,innerWidth-el.offsetWidth-4))+"px"; el.style.top=Math.max(4,Math.min(T,innerHeight-el.offsetHeight-4))+"px"; }
+function loadStart(){ const t=++tok; cur=t; clearTimeout(tmr); show("loading"); tmr=setTimeout(()=>loadFail(t,true),AUDIO_TIMEOUT_MS); return t; }
+function loadDone(t){ if(t!=null&&t!==cur) return; cur=0; clearTimeout(tmr); hide(); }          /* playback started (or caller finished) */
+function loadCancel(keepNotice){ cur=0; clearTimeout(tmr); if(!keepNotice||!el||el.dataset.kind==="loading") hide(); }   /* stop / pause / tour advanced */
+function loadFail(t,timedOut){ if(t!==cur) return; cur=0; clearTimeout(tmr);
+  if(timedOut) ctrls.forEach(c=>{ if(c.__t===t){ try{c.abort();}catch(e){} } });                 /* drop the slow clip so it can't start mid-caption */
+  window.AudioMgr&&(AudioMgr.failedAt=Date.now());                                                /* tour goes caption-only for a while */
+  show("fail"); hideT=setTimeout(hide,3000); }
+function started(a){ if(a&&a.__unlock) return; window.AudioMgr&&(AudioMgr.failedAt=0); loadDone(); }
+setInterval(()=>{ place(); if(cur&&[...all,...document.querySelectorAll("audio")].some(a=>!a.__unlock&&!a.paused&&a.currentTime>0)) loadDone(); },200);
 function A(src){ const a=new NA(src); all.add(a); return a; } A.prototype=NA.prototype; window.Audio=A;
 const play=HTMLMediaElement.prototype.play;
 HTMLMediaElement.prototype.play=function(){
   if(this.tagName==="VIDEO") return play.call(this);
+  if(this.__unlock) return play.call(this);
   all.add(this);
+  if(!this.__as){ this.__as=1; const a=this, on=()=>started(a);              /* hook BEFORE play so an instant 'playing' isn't missed */
+    a.addEventListener("playing",on); a.addEventListener("timeupdate",()=>{ if(a.currentTime>0&&!a.paused) on(); }); }
   try{ speechSynthesis.cancel(); }catch(e){}   /* one source: element audio cancels browser speech */
   all.forEach(o=>{ if(o!==this&&!o.paused){ try{ o.pause(); o.dispatchEvent(new Event("ended")); }catch(e){} } });   /* never two at once */
-  if(muted){ try{this.pause();}catch(e){} setTimeout(()=>this.dispatchEvent(new Event("ended")),0); return Promise.resolve(); }
-  return play.call(this); };
+  if(muted){ try{this.pause();}catch(e){} loadCancel(); setTimeout(()=>this.dispatchEvent(new Event("ended")),0); return Promise.resolve(); }
+  const a=this; if(!a.paused&&a.currentTime>0) started(a);
+  return play.call(a).then(v=>{ started(a); return v; },e=>{ if(e&&e.name==="NotAllowedError"&&!(window.AudioMgr&&AudioMgr.unlocked)){ cur=0; clearTimeout(tmr); show("gesture"); } else if(cur) loadFail(cur); throw e; }); };
 const of=window.fetch;
 window.fetch=function(u,o){ const url=String(u&&u.url||u);
   if(/\/api\/tts/.test(url)){ if(muted) return Promise.resolve(new Response("muted",{status:204}));
-    const c=new AbortController(); ctrls.add(c); o=Object.assign({},o||{},{signal:c.signal});
-    return of.call(this,u,o).finally(()=>ctrls.delete(c)); }
+    const c=new AbortController(), t=loadStart(); c.__t=t; ctrls.add(c); o=Object.assign({},o||{},{signal:c.signal});
+    return of.call(this,u,o).then(r=>{ if(!r.ok||r.status===204) setTimeout(()=>loadFail(t),1500); return r; },   /* grace: caller may fall back to browser voice */
+      e=>{ loadFail(t); throw e; }).finally(()=>ctrls.delete(c)); }
   return of.apply(this,arguments); };
 if("speechSynthesis" in window){ const sp=speechSynthesis.speak.bind(speechSynthesis);
-  speechSynthesis.speak=u=>{ all.forEach(o=>{ if(!o.paused){ try{ o.pause(); o.dispatchEvent(new Event("ended")); }catch(e){} } }); if(muted){ setTimeout(()=>u.onend&&u.onend(),0); return; } sp(u); }; }
+  speechSynthesis.speak=u=>{ all.forEach(o=>{ if(!o.paused){ try{ o.pause(); o.dispatchEvent(new Event("ended")); }catch(e){} } }); if(muted){ loadCancel(); setTimeout(()=>u.onend&&u.onend(),0); return; }
+    try{ u.addEventListener("start",()=>loadDone()); }catch(e){} sp(u); }; }
 function stopAll(fromVoice){ if(!fromVoice) window.AudioMgr&&(AudioMgr.gen=(AudioMgr.gen||0)+1);
   all.forEach(a=>{ try{ a.pause(); a.currentTime=0; a.dispatchEvent(new Event("ended")); }catch(e){} });
   document.querySelectorAll("audio").forEach(a=>{ try{a.pause();a.currentTime=0;}catch(e){} });
-  ctrls.forEach(c=>{ try{c.abort();}catch(e){} }); ctrls.clear();
+  loadCancel(); ctrls.forEach(c=>{ try{c.abort();}catch(e){} }); ctrls.clear();
   try{ speechSynthesis.cancel(); }catch(e){}
   window.__ttsLevel=0; try{ window.Docs3D&&Docs3D.pulse(0); }catch(e){}
   if(!fromVoice) try{ const V=window.PrecedentVoice; if(V&&/speaking|cooldown|thinking/.test(V.state())) V.stop(); }catch(e){}
@@ -32,7 +61,15 @@ function setMuted(m){ muted=!!m; try{ localStorage.setItem(KEY,muted?"1":"0"); l
   if(window.Docs3D) Docs3D.voice=!muted; if(muted) stopAll(); document.dispatchEvent(new CustomEvent("precedent:mute",{detail:muted})); }
 function playing(){ return [...all].some(a=>!a.paused&&!a.ended) || ("speechSynthesis" in window && speechSynthesis.speaking); }
 addEventListener("keydown",e=>{ if(e.key==="Escape"){ try{ window.Docs3D&&Docs3D.stopTour&&Docs3D.stopTour(); }catch(_){} stopAll(); } });
-window.AudioMgr={stopAll,setMuted,isMuted:()=>muted,playing,instances:()=>[...all]};
+// One user gesture (any click, tap or key anywhere) unlocks audio for the rest of the visit.
+const SILENT="data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
+function unlock(){ const M=window.AudioMgr; if(!M||M.unlocked) return; M.unlocked=true;
+  try{ const C=window.AudioContext||window.webkitAudioContext; if(C){ const c=M.ctx||(M.ctx=new C()); c.resume&&c.resume(); const n=c.createBufferSource(); n.buffer=c.createBuffer(1,1,22050); n.connect(c.destination); n.start(0); } }catch(e){}
+  try{ const a=new NA(SILENT); a.__unlock=true; a.volume=0; const p=play.call(a); p&&p.catch&&p.catch(()=>{}); }catch(e){}
+  if(el&&el.dataset.kind==="gesture") hide();
+  ["pointerdown","touchstart","keydown","click"].forEach(ev=>removeEventListener(ev,unlock,true)); }
+["pointerdown","touchstart","keydown","click"].forEach(ev=>addEventListener(ev,unlock,{capture:true,passive:true}));
+window.AudioMgr={stopAll,setMuted,isMuted:()=>muted,playing,instances:()=>[...all],unlocked:false,loadStart,loadDone,loadCancel,loadFail};
 })();
 
 // ---- Icons + button states (Lucide-style inline SVG) ----

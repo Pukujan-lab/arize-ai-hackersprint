@@ -43,7 +43,7 @@ async function fallbackRecord(){ if(!(await ensureMic())) return; if(mr&&mr.stat
     quiet=lvl<0.02?quiet+100:0; if(quiet>1200||!conv&&!ptt){ clearInterval(iv); if(mr.state==="recording") mr.stop(); } },100); setTimeout(()=>{ clearInterval(iv); if(mr.state==="recording") mr.stop(); },15000); }
 // Voice asks must ALWAYS be spoken: clear global mute + unlock autoplay using the tap gesture.
 let unlockCtx=null;
-function forceAudio(){ try{ if(window.AudioMgr&&AudioMgr.isMuted()) AudioMgr.setMuted(false); }catch(e){} try{ localStorage.setItem("precedent.mute","0"); localStorage.setItem("mapVoice","1"); }catch(e){}
+function forceAudio(){ try{ if(window.AudioMgr&&AudioMgr.isMuted()) AudioMgr.setMuted(false); }catch(e){} try{ localStorage.setItem("precedent.mute.v2","0"); localStorage.setItem("mapVoice","1"); }catch(e){}
   try{ if(window.Docs3D){ Docs3D.voice=true; } }catch(e){}
   try{ unlockCtx=unlockCtx||new (window.AudioContext||window.webkitAudioContext)(); if(unlockCtx.state==="suspended") unlockCtx.resume(); const b=unlockCtx.createBuffer(1,1,22050),n=unlockCtx.createBufferSource(); n.buffer=b; n.connect(unlockCtx.destination); n.start(0); }catch(e){}
   try{ const a=new Audio("data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA="); a.volume=0; const p=a.play(); p&&p.catch&&p.catch(()=>{}); }catch(e){} }
