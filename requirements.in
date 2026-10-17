@@ -1,0 +1,11 @@
+# Direct dependencies. After editing, regenerate the lock with the uv command at the top of requirements.txt.
+fastapi
+uvicorn[standard]
+python-multipart
+requests
+httpx
+networkx
+arize-otel
+openinference-instrumentation
+numpy
+scipy
