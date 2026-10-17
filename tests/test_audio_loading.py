@@ -137,7 +137,8 @@ def test_loading_shows_until_playing_then_hides(browser):
 
 def test_timeout_shows_unavailable_and_continues(browser):
     pg = harness(browser, "hang")
-    pg.evaluate("void (()=>{ window.__done=0; AudioMgr.say('hello there counsel').then(()=>window.__done=1) })()")
+    # a tour stop's request (memo/summary requests wait 30 s instead, see test_memo_then_tour.py)
+    pg.evaluate("void (()=>{ window.__done=0; fetch('/api/tts_ts',{method:'POST'}).catch(()=>{}).then(()=>window.__done=1) })()")
     pg.wait_for_timeout(1000)
     assert LOADING in status(pg)
     pg.wait_for_function("window.__done===1", timeout=11000)  # caller is released (~8s) so the tour keeps going

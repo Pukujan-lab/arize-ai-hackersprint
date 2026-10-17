@@ -265,7 +265,9 @@ if(!webgl){
       curAudio=new Audio(URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"}))); S.a=curAudio; S.starts=j.starts||[];
       const a=curAudio;
       // the step advances on 'ended'; safety timer from the clip's duration so a lost 'ended' can't stall the tour
-      return new Promise(res=>{ let sf=null; const arm=()=>{ clearTimeout(sf); if(a.duration&&isFinite(a.duration)) sf=setTimeout(()=>res(true),(a.duration-a.currentTime)*1000+2500); };
+      // fallback only for a clip that never ends: it re-checks while the clip is still playing (duration estimates for mp3 can be short)
+      return new Promise(res=>{ let sf=null, lastT=-1; const stillPlaying=()=>!a.paused&&!a.ended&&a.currentTime!==lastT;
+        const arm=()=>{ clearTimeout(sf); if(!(a.duration&&isFinite(a.duration))) return; sf=setTimeout(function chk(){ if(stillPlaying()){ lastT=a.currentTime; sf=setTimeout(chk,1000); return; } res(true); },(a.duration-a.currentTime)*1000+2500); };
         a.addEventListener("playing",()=>{ S.ok=true; arm(); }); a.onended=()=>{ clearTimeout(sf); res(true); }; a.onerror=()=>{ clearTimeout(sf); if(!S.ok) S.fail=true; res(!!S.ok); };
         a.play().then(()=>{ S.ok=true; },()=>{ clearTimeout(sf); res(!!S.ok); }); }); }).catch(()=>{ S.fail=true; return false; }).finally(()=>{ S.ended=true; });
     return S; }

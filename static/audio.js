@@ -17,7 +17,7 @@ function place(){ if(!el||el.hidden) return; const vis=x=>x&&x.offsetParent!==nu
   for(const q of ["#transcript","#play","#sumplay","[data-abtn=mute]","#vorb"]){ const x=document.querySelector(q); if(vis(x)){ a=x; break; } }
   let L=16, T=innerHeight-48; if(a){ const r=a.getBoundingClientRect(); L=r.left; T=r.top-el.offsetHeight-6; if(T<4) T=r.bottom+6; }
   el.style.left=Math.max(4,Math.min(L,innerWidth-el.offsetWidth-4))+"px"; el.style.top=Math.max(4,Math.min(T,innerHeight-el.offsetHeight-4))+"px"; }
-function loadStart(){ const t=++tok; cur=t; clearTimeout(tmr); show("loading"); tmr=setTimeout(()=>loadFail(t,true),AUDIO_TIMEOUT_MS); return t; }
+function loadStart(ms){ const t=++tok; cur=t; clearTimeout(tmr); show("loading"); tmr=setTimeout(()=>loadFail(t,true),ms||AUDIO_TIMEOUT_MS); return t; }   /* timer only runs until playback starts */
 function loadDone(t){ if(t!=null&&t!==cur) return; cur=0; clearTimeout(tmr); hide(); }          /* playback started (or caller finished) */
 function loadCancel(keepNotice){ cur=0; clearTimeout(tmr); if(!keepNotice||!el||el.dataset.kind==="loading") hide(); }   /* stop / pause / tour advanced */
 function loadFail(t,timedOut){ if(t!==cur) return; cur=0; clearTimeout(tmr);
@@ -55,7 +55,8 @@ window.fetch=function(u,o){ const url=String(u&&u.url||u);
     const h=o&&o.headers, pre=!!(h&&(h["X-Prefetch"]||(h.get&&h.get("X-Prefetch"))));          /* prefetch: silent, no indicator/timeout */
     const c=new AbortController(); ctrls.add(c); o=Object.assign({},o||{},{signal:c.signal});
     if(pre) return of.call(this,u,o).finally(()=>ctrls.delete(c));
-    const t=loadStart(); c.__t=t;
+    const w=+(h&&(h["X-Audio-Wait"]||(h.get&&h.get("X-Audio-Wait"))))||0;                       /* memo/summary: worth waiting longer than a tour stop */
+    const t=loadStart(w); c.__t=t;
     return of.call(this,u,o).then(r=>{ if(!r.ok||r.status===204) setTimeout(()=>loadFail(t),1500); return r; },   /* grace: caller may fall back to browser voice */
       e=>{ loadFail(t); throw e; }).finally(()=>ctrls.delete(c)); }
   return of.apply(this,arguments); };
@@ -124,7 +125,7 @@ M.paint=paint; setInterval(paint,200);
 M.say=function(text,btn,opt){ if(!text||M.isMuted()) return Promise.resolve(); const Q=opt&&opt.queue; if(!Q) M.stopAll(true); const ep=M.epoch;   /* queue:true = auto narration, waits its turn */
   const D=window.Docs3D; if(D){ D.holdVoice=true; D.stopTour&&D.stopTour(Q); } M.saying=true; if(btn){ btn.dataset.loading="1"; btn.dataset.owner="1"; paint(); }
   const done=()=>{ if(btn){ btn.dataset.loading="0"; paint(); } };
-  return fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})})
+  return fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json","X-Audio-Wait":"30000"},body:JSON.stringify({text:text.slice(0,400)})})   /* uncached memo on Fish can take 10-20 s */
    .then(r=>r.ok&&r.status!==204?r.json():null).then(j=>{ done(); if(btn) btn.dataset.owner="1"; if(M.epoch!==ep) return;   /* stopped / new question meanwhile: stale clip never plays */
      if(j&&j.audio_b64){ const s=atob(j.audio_b64),u=new Uint8Array(s.length); for(let k=0;k<s.length;k++) u[k]=s.charCodeAt(k);
        const a=new Audio(URL.createObjectURL(new Blob([u],{type:"audio/mpeg"}))); return new Promise(res=>{ a.onended=res; a.onerror=res; a.play().catch(res); }); }
