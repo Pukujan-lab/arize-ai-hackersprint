@@ -30,6 +30,11 @@ class TtsRequest(Model):
     text: Any = None
 
 
+class TourPrefetchRequest(Model):
+    run_id: Optional[Any] = None
+    steps: Optional[List[Dict[str, Any]]] = None
+
+
 class ClaimRequest(Model):
     task: Any = None
     agent: Optional[Any] = None
@@ -61,6 +66,41 @@ class HealthResponse(Model):
     elevenlabs: Optional[bool] = None
     arize: Optional[Any] = None
     sandbox: Optional[str] = None
+    tts: Optional[List[str]] = None  # ordered provider chain, e.g. ["fish", "kokoro", "browser"]
+    fish: Optional[bool] = None
+    kokoro: Optional[bool] = None
+    tts_cache: Optional[Dict[str, Any]] = None
+    data_schema: Optional[Dict[str, Any]] = None  # {repo, store, ok, pending}: Octo schema_version vs schema.SCHEMA_VERSION
+
+
+class TtsTsResponse(Model):
+    audio_b64: Optional[str] = None
+    chars: Optional[List[Any]] = None
+    starts: Optional[List[float]] = None
+    cache: Optional[str] = None
+    provider: Optional[str] = None
+    duration_s: Optional[float] = None
+
+
+class TourStep(Model):
+    run_id: Optional[str] = None
+    step_index: Optional[int] = None
+    text: Optional[str] = None
+    clip_key: Optional[str] = None
+    provider: Optional[str] = None
+    duration_s: Optional[float] = None
+    cite_ids: Optional[List[Any]] = None
+    refs: Optional[List[Any]] = None
+    node_ids: Optional[List[Any]] = None
+    coords: Optional[List[Any]] = None
+    phase: Optional[str] = None
+    ready: Optional[bool] = None
+
+
+class TourResponse(Model):
+    run_id: Optional[str] = None
+    steps: Optional[List[TourStep]] = None
+    fast_start: Optional[int] = None
 
 
 class AskResponse(Model):

@@ -82,9 +82,11 @@ def test_claim_unknown_task_and_bad_body():
 def test_tts_without_key(monkeypatch):
     monkeypatch.delenv("ELEVENLABS_API_KEY", raising=False)
     r = c.post("/api/tts", json={"text": "contract test phrase that is not cached zq"})
-    assert r.status_code in (200, 503)
+    assert r.status_code in (200, 429)
     if r.status_code == 200:
-        assert r.headers["content-type"] == "audio/mpeg"
+        assert r.headers["content-type"] == "audio/mpeg" and r.headers["X-TTS-Provider"]
+    else:
+        assert r.json()["fallback"] == "browser"
 
 
 def test_stt_without_key(monkeypatch):

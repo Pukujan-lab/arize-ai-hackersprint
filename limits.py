@@ -2,8 +2,15 @@
 
 import threading, time, collections
 
-CAPS = {"anthropic": 40, "elevenlabs_tts": 30, "elevenlabs_stt": 20}
 import os
+
+CAPS = {
+    "anthropic": 40,
+    "elevenlabs_tts": 30,
+    "elevenlabs_stt": 20,
+    "fish_tts": int(os.environ.get("FISH_TTS_PER_HOUR", "200")),
+    "kokoro_tts": int(os.environ.get("KOKORO_TTS_PER_HOUR", "1000")),  # Kokoro is local + free; cap only as a runaway guard
+}
 
 PER_IP_PER_MIN = int(os.environ.get("ASK_PER_IP_PER_MIN", "30"))  # backstop per IP (many devices may share one)
 ASK_PER_MIN = int(os.environ.get("ASK_PER_MIN", "6"))  # per session (or per IP if no session)

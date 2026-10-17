@@ -233,11 +233,24 @@ if(!webgl){
         rel=t; } }
     return {sum, rel}; }
   api.explainText=k=>{ const {sum,rel}=explain(k); return sum+(rel?" "+rel:""); }
+  /* Queue every tour clip server-side (summary + stops; first 2 fast, rest batched) so each is ready when the previous ends.
+     Same text the tour speaks, so each line is generated once; the response (also GET /api/tour/<run>) links clip -> cites / map pin. */
+  api.prefetchTour=(runId,summary)=>{ try{ if(window.AudioMgr&&AudioMgr.isMuted()) return null; const steps=[];
+    if(summary) steps.push({step_index:0,text:String(summary).slice(0,400),cite_ids:[],refs:[],node_ids:["summary"]});
+    api.order().forEach(k=>{ const c=cites[k]||{}, L=c._loc||{}, ll=Array.isArray(L.ll)?L.ll.slice(0,2).filter(x=>typeof x==="number"):[];
+      steps.push({step_index:steps.length,text:api.explainText(k).slice(0,400),cite_ids:[String(c.id||c.ref||k)],refs:c.ref?[String(c.ref)]:[],node_ids:L.key?[L.key]:[],coords:ll}); });
+    const sig=(runId||"")+"|"+steps.map(s=>s.text).join("|"); if(!steps.length||api._pf===sig) return null; api._pf=sig;
+    return fetch("/api/tour/prefetch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({run_id:runId||"",steps})}).then(r=>r.ok?r.json():null).then(j=>{ api.tourMeta=j; return j; }).catch(()=>null); }catch(e){ return null; } };
   let curAudio=null; api.voice=!(window.AudioMgr&&AudioMgr.isMuted());   /* sound on by default; manual mute lives in AudioMgr */
   let sync=null; // {a:Audio, starts:[...]} for the stop currently speaking
+  function speakBrowser(text,S){ if(!("speechSynthesis" in window)||(window.AudioMgr&&AudioMgr.isMuted())){ S.fail=true; return false; }
+    try{ window.AudioMgr&&AudioMgr.loadCancel&&AudioMgr.loadCancel(); }catch(e){}
+    return new Promise(res=>{ const u=new SpeechSynthesisUtterance(text); S.sp=0; u.onstart=()=>{ S.ok=true; }; u.onboundary=e=>{ S.sp=e.charIndex; }; u.onend=()=>res(true); u.onerror=()=>res(!!S.ok); speechSynthesis.speak(u); }); }
   function sayTTS(text){ const M=window.AudioMgr; if(!api.voice||api.holdVoice||api._ttsDown||(M&&(M.isMuted()||Date.now()-(M.failedAt||0)<60000))) return null;   /* after a failure the rest of this tour is caption-only */
     const S={a:null,starts:[],dead:false}; sync=S;
-    S.done=fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.ok&&r.status!==204?r.json():null).then(j=>{ if(S.dead||api.holdVoice||(window.AudioMgr&&AudioMgr.saying)) return false; if(!j||!j.audio_b64){ S.fail=true; return false; }
+    S.done=fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.status===204?null:r.json().catch(()=>null)).then(j=>{ if(S.dead||api.holdVoice||(window.AudioMgr&&AudioMgr.saying)) return false;
+      if(j&&!j.audio_b64&&j.fallback==="browser") return speakBrowser(text,S);   /* server voices all failed (429): browser voice, not silence */
+      if(!j||!j.audio_b64){ S.fail=true; return false; }
       try{curAudio&&curAudio.pause();}catch(e){}
       const bin=atob(j.audio_b64), u8=new Uint8Array(bin.length); for(let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
       curAudio=new Audio(URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"}))); S.a=curAudio; S.starts=j.starts||[];
@@ -257,6 +270,7 @@ if(!webgl){
     const tick=()=>{ if(S.dead||S.fb) return; let n=0; const a=S.a;
       if(S.ended){ if(!S.ok) return; n=txt.length; }
       else if(a&&a.duration){ const t=a.currentTime; if(S.starts.length){ while(n<S.starts.length&&S.starts[n]<=t) n++; if(n>=S.starts.length&&a.ended) n=txt.length; } else n=Math.round(t/a.duration*txt.length); }
+      else if(S.sp!=null) n=Math.max(last,S.sp);
       if(n!==last){ paint(n); last=n; } if(n<txt.length) api._raf=requestAnimationFrame(tick); };
     tick(); return 0; }
   coView(); cam.position.copy(camT); look.copy(lookT); cam.lookAt(look);

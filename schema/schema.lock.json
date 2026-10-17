@@ -1,0 +1,12 @@
+{
+  "history": [
+    {
+      "version": 2,
+      "fingerprint": "cd66ccd396eaa639526f323ea8b855356aafa39645db2aad9fc4e1ff868e78e4"
+    }
+  ],
+  "migrations": {
+    "0001_init.sql": "903a009fdf440f781145fc76a6d7fd8d8c6846b396a494052b43bb0e35e07659",
+    "0002_tour_step.sql": "c4770a35c7760456f5bf4f85f1634b54affb64f05354ec281035091925616035"
+  }
+}
