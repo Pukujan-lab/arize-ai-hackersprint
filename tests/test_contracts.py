@@ -11,15 +11,15 @@ os.environ["ACS_HOTLOAD"] = "0"
 import pytest
 from fastapi.testclient import TestClient
 
-import contracts
-import server
+from app import contracts
+from app import server
 
 c = TestClient(server.app)
 
 
 def test_openapi_schema_has_no_drift():
     committed = json.loads(contracts.SCHEMA_PATH.read_text())
-    assert server.app.openapi() == committed, "API changed: run `python contracts.py --write` and commit contracts/openapi.json"
+    assert server.app.openapi() == committed, "API changed: run `python -m app.contracts --write` and commit contracts/openapi.json"
 
 
 def test_every_api_route_has_a_contract():

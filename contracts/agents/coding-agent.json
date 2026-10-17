@@ -1,0 +1,90 @@
+{
+  "schema_version": "precedent.agent-contract.v1",
+  "role": "coding-agent",
+  "kind": "coding",
+  "purpose": "Any coding agent working in this repo: claims a task, changes code on a branch, opens a PR that CI gates and auto-merges.",
+  "implemented_in": "AGENTS.md",
+  "seat": null,
+  "handoff_to": null,
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "task"
+    ],
+    "properties": {
+      "task": {
+        "type": "string",
+        "description": "ACS task id (HACK-NN) or GitHub issue"
+      },
+      "agent": {
+        "type": "string"
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "branch",
+      "pull_request"
+    ],
+    "properties": {
+      "branch": {
+        "type": "string"
+      },
+      "pull_request": {
+        "type": "string",
+        "format": "uri"
+      },
+      "tests": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "allowed_paths": {
+    "read": [
+      "*"
+    ],
+    "write": [
+      "app/",
+      "schema/",
+      "migrations/",
+      "acs/board.py",
+      "acs/claim.py",
+      "acs/hotload.py",
+      "static/",
+      "tests/",
+      "tools/",
+      "docs/",
+      "contracts/",
+      "ci/",
+      "deploy/",
+      ".github/",
+      "arize/",
+      "README.md",
+      "AGENTS.md",
+      "repo.manifest.json",
+      "pyproject.toml",
+      "requirements.txt",
+      "server.py",
+      ".gitignore",
+      ".content-system/"
+    ]
+  },
+  "data_stores": {
+    "reads": [
+      "coord-claims",
+      "acs-board"
+    ],
+    "writes": [
+      "acs-board"
+    ]
+  },
+  "rules": [
+    "Never write vendored ACS files (acs/seat_protocol.py, acs/watchdog_check.py, acs/LICENSE.acs, acs/assignment.schema.json)",
+    "Never commit cache/, runs/, data/, logs/ or any secret",
+    "Check repo.manifest.json before adding a top-level file or folder"
+  ]
+}

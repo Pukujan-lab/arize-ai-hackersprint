@@ -39,5 +39,30 @@
       "summary": "PASS"
     }
   },
-  "updated_at": "2026-10-17T04:07:10Z"
+  "updated_at": "2026-10-17T04:07:10Z",
+  "pins": {
+    "cgm": {
+      "repo": "https://github.com/Pukujan/content-generation-modules",
+      "revision": "6831f91e165b62d719c05eb492f7375fa932b560",
+      "version": "0.5.12",
+      "role": "full_stack",
+      "modules": [
+        "brand-foundation",
+        "content-context",
+        "writing-direction",
+        "human-sounding-writing",
+        "human-output-naming",
+        "visual-direction",
+        "image-generation",
+        "html-demo"
+      ],
+      "routing": {
+        "readme_product_entry": "writing-direction (MUST load)",
+        "pr_issue_docs_commits": "human-sounding-writing / hsw (MUST load)",
+        "generated_artifact_filenames": "human-output-naming / hon (MUST)",
+        "contract": "docs/writing-routing.json + docs/ACS_VERIFY.md; acs_prompt_inject after VALID"
+      },
+      "notes": "Same pin as Pukujan/hades-v2. Do not vendor CGM source. Adapter: .content-system/. Validated in CI by tools/validate_cgm_adoption.py against a checkout of this revision."
+    }
+  }
 }

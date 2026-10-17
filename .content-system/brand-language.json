@@ -1,0 +1,32 @@
+{
+  "schema_version": "content-generation.brand-language.v1",
+  "name": "Precedent",
+  "personality": [
+    "plain-spoken",
+    "careful about what is verified",
+    "specific about sources",
+    "short"
+  ],
+  "audience_feeling": "I can see which cases the answer rests on and where it stops.",
+  "promise": "Short research memos where every citation comes from what the agents actually retrieved, with the checks shown.",
+  "preferred_terms": {
+    "run": "one question through the four agents, logged under runs/<run_id>/",
+    "safeguard": "the deterministic citation check, not a model",
+    "seat": "an agent's claim in .coord/assignment.json",
+    "the Pro": "the MacBook Pro that serves https://arize.design-bakery.com"
+  },
+  "avoid": [
+    "saying the system understands or guarantees legal correctness",
+    "calling an answer legal advice",
+    "printing or committing secrets or .hack_env contents",
+    "claiming a merge deployed itself without a passing deploy run",
+    "inventing features the code does not have"
+  ],
+  "good_examples": [
+    "The safeguard failed this draft because it cited [7], and only six authorities were retrieved."
+  ],
+  "bad_examples": [
+    "Precedent guarantees accurate legal answers."
+  ],
+  "status_note": "Written from the code and README during the app/ layout change; owner review pending."
+}

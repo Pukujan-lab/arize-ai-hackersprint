@@ -1,0 +1,113 @@
+{
+  "schema_version": "precedent.agent-contract.v1",
+  "kind": "pipeline",
+  "role": "retriever",
+  "purpose": "Finds seed authorities, pulls Octo passages, expands one hop over the citation graph and ranks the top authorities.",
+  "implemented_in": "app/agents.py::retriever",
+  "seat": "retriever",
+  "handoff_to": "answer",
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "question"
+    ],
+    "properties": {
+      "question": {
+        "type": "string"
+      },
+      "extra_seeds": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "items": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "citations",
+      "edges",
+      "seeds",
+      "passage_source",
+      "documents"
+    ],
+    "properties": {
+      "citations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "required": [
+            "ref",
+            "title"
+          ],
+          "properties": {
+            "id": {},
+            "ref": {},
+            "title": {},
+            "type": {},
+            "court": {},
+            "date": {},
+            "url": {},
+            "passage": {},
+            "cited_by": {}
+          }
+        }
+      },
+      "edges": {
+        "type": "array"
+      },
+      "seeds": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "passage_source": {
+        "enum": [
+          "octo-live",
+          "octo-snapshot",
+          null
+        ]
+      },
+      "documents": {
+        "type": "array"
+      }
+    }
+  },
+  "allowed_paths": {
+    "read": [
+      "data/",
+      "cache/"
+    ],
+    "write": [
+      "runs/<run_id>/",
+      "cache/octo/",
+      "cache/graph_meta.pkl",
+      ".coord/"
+    ]
+  },
+  "data_stores": {
+    "reads": [
+      "octo-legal-graph",
+      "octo-snapshot",
+      "octo-cache",
+      "octo-app-tables",
+      "surrealdb-graph",
+      "graph-files",
+      "graph-meta-cache"
+    ],
+    "writes": [
+      "octo-cache",
+      "octo-app-tables",
+      "graph-meta-cache",
+      "run-log",
+      "coord-claims",
+      "acs-board",
+      "arize-traces"
+    ]
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Pukujan/arize-ai-hackersprint/contracts/agents/agent-contract.schema.json",
+  "title": "Precedent agent contract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "role",
+    "kind",
+    "purpose",
+    "implemented_in",
+    "input_schema",
+    "output_schema",
+    "allowed_paths",
+    "data_stores"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "precedent.agent-contract.v1"
+    },
+    "role": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "kind": {
+      "enum": [
+        "pipeline",
+        "coding"
+      ]
+    },
+    "purpose": {
+      "type": "string",
+      "minLength": 10
+    },
+    "implemented_in": {
+      "type": "string",
+      "description": "path or path::function"
+    },
+    "seat": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Seat name claimed in .coord/assignment.json"
+    },
+    "handoff_to": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "input_schema": {
+      "type": "object"
+    },
+    "output_schema": {
+      "type": "object"
+    },
+    "allowed_paths": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "read",
+        "write"
+      ],
+      "properties": {
+        "read": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "write": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "data_stores": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "reads",
+        "writes"
+      ],
+      "properties": {
+        "reads": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "writes": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

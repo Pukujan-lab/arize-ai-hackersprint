@@ -1,0 +1,123 @@
+{
+  "schema_version": "precedent.agent-contract.v1",
+  "kind": "pipeline",
+  "role": "answer",
+  "purpose": "Drafts a short cited memo from the ranked authorities only, via the LLM chain (InferHub, then Anthropic, then a template).",
+  "implemented_in": "app/agents.py::answer",
+  "seat": "answer",
+  "handoff_to": "safeguard",
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "question",
+      "retrieval"
+    ],
+    "properties": {
+      "question": {
+        "type": "string"
+      },
+      "retrieval": {
+        "type": "object",
+        "required": [
+          "citations",
+          "edges",
+          "seeds",
+          "passage_source",
+          "documents"
+        ],
+        "properties": {
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "ref",
+                "title"
+              ],
+              "properties": {
+                "id": {},
+                "ref": {},
+                "title": {},
+                "type": {},
+                "court": {},
+                "date": {},
+                "url": {},
+                "passage": {},
+                "cited_by": {}
+              }
+            }
+          },
+          "edges": {
+            "type": "array"
+          },
+          "seeds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "passage_source": {
+            "enum": [
+              "octo-live",
+              "octo-snapshot",
+              null
+            ]
+          },
+          "documents": {
+            "type": "array"
+          }
+        }
+      },
+      "prior": {
+        "type": [
+          "array",
+          "null"
+        ],
+        "description": "[earlier question, earlier bottom line]"
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "text",
+      "provider"
+    ],
+    "properties": {
+      "text": {
+        "type": "string"
+      },
+      "provider": {
+        "type": "string"
+      }
+    }
+  },
+  "allowed_paths": {
+    "read": [
+      "cache/"
+    ],
+    "write": [
+      "runs/<run_id>/",
+      "cache/",
+      ".coord/"
+    ]
+  },
+  "data_stores": {
+    "reads": [
+      "llm-cache",
+      "octo-app-tables"
+    ],
+    "writes": [
+      "llm-cache",
+      "octo-app-tables",
+      "run-log",
+      "coord-claims",
+      "acs-board",
+      "arize-traces"
+    ]
+  },
+  "rules": [
+    "Cite only the numbered authorities it was given",
+    "Fall back to the honest template when every model call fails"
+  ]
+}

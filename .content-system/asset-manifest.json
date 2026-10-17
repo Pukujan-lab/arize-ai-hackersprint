@@ -1,0 +1,17 @@
+{
+  "schema_version": "content-generation.asset-manifest.v1",
+  "system_version": "0.5.12",
+  "assets": [
+    {
+      "id": "precedent-adapter-placeholder",
+      "path": ".content-system/assets/adapter-placeholder.txt",
+      "role": "documentation",
+      "description": "Non-narrative placeholder so the adapter validates while README art is deferred.",
+      "usage": "adapter completeness only; not a README hero",
+      "review_decision": "accepted-as-placeholder",
+      "provider": "hand-written",
+      "prompt_record": ".content-system/prompts/adapter-placeholder.json",
+      "hash": "0f1ac8af453026fd6b0a2f720673eddf617e53d05ff7455a0f6223b1324b3b73"
+    }
+  ]
+}

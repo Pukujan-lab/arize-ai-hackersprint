@@ -1,0 +1,140 @@
+{
+  "schema_version": "precedent.agent-contract.v1",
+  "kind": "pipeline",
+  "role": "safeguard",
+  "purpose": "Checks the draft: every [n] maps to a retrieved authority, no unknown authorities, and flags sentences without a citation.",
+  "implemented_in": "app/agents.py::safeguard",
+  "seat": "safeguard",
+  "handoff_to": null,
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "question",
+      "retrieval",
+      "answer"
+    ],
+    "properties": {
+      "question": {
+        "type": "string"
+      },
+      "retrieval": {
+        "type": "object",
+        "required": [
+          "citations",
+          "edges",
+          "seeds",
+          "passage_source",
+          "documents"
+        ],
+        "properties": {
+          "citations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "ref",
+                "title"
+              ],
+              "properties": {
+                "id": {},
+                "ref": {},
+                "title": {},
+                "type": {},
+                "court": {},
+                "date": {},
+                "url": {},
+                "passage": {},
+                "cited_by": {}
+              }
+            }
+          },
+          "edges": {
+            "type": "array"
+          },
+          "seeds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "passage_source": {
+            "enum": [
+              "octo-live",
+              "octo-snapshot",
+              null
+            ]
+          },
+          "documents": {
+            "type": "array"
+          }
+        }
+      },
+      "answer": {
+        "type": "object",
+        "required": [
+          "text",
+          "provider"
+        ],
+        "properties": {
+          "text": {
+            "type": "string"
+          },
+          "provider": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "pass",
+      "used",
+      "invalid",
+      "unknown_authorities",
+      "unsupported_claims",
+      "disclaimer"
+    ],
+    "properties": {
+      "pass": {
+        "type": "boolean"
+      },
+      "used": {
+        "type": "array"
+      },
+      "invalid": {
+        "type": "array"
+      },
+      "unknown_authorities": {
+        "type": "array"
+      },
+      "unsupported_claims": {
+        "type": "array"
+      },
+      "disclaimer": {
+        "type": "string"
+      }
+    }
+  },
+  "allowed_paths": {
+    "read": [],
+    "write": [
+      "runs/<run_id>/",
+      ".coord/"
+    ]
+  },
+  "data_stores": {
+    "reads": [],
+    "writes": [
+      "run-log",
+      "coord-claims",
+      "acs-board",
+      "arize-traces"
+    ]
+  },
+  "rules": [
+    "No model call; deterministic checks only",
+    "A run with zero citations fails"
+  ]
+}

@@ -23,3 +23,5 @@ node_modules/
 .venv/
 venv/
 .tts_cache/
+.cgm/
+uvicorn.log

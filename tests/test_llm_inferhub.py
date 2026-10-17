@@ -4,7 +4,7 @@ llm.complete must then retry once with a non-reasoning model and return a real (
 import sys, pathlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
-import llm
+from app import llm
 
 
 class _Resp:

@@ -1,0 +1,122 @@
+{
+  "schema_version": "precedent.agent-contract.v1",
+  "kind": "pipeline",
+  "role": "planner",
+  "purpose": "Orchestrates one run: rewrites follow-ups into a standalone query, dispatches retriever, answer and safeguard, writes result.json.",
+  "implemented_in": "app/agents.py::run_pipeline",
+  "seat": "planner",
+  "handoff_to": "retriever",
+  "input_schema": {
+    "type": "object",
+    "required": [
+      "question"
+    ],
+    "properties": {
+      "question": {
+        "type": "string",
+        "minLength": 3,
+        "maxLength": 500
+      },
+      "run_id": {
+        "type": [
+          "string",
+          "null"
+        ]
+      },
+      "prev": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "description": "previous result.json for follow-ups"
+      }
+    }
+  },
+  "output_schema": {
+    "type": "object",
+    "required": [
+      "run_id",
+      "question",
+      "answer",
+      "provider",
+      "safeguard",
+      "citations",
+      "backend",
+      "elapsed_s"
+    ],
+    "properties": {
+      "run_id": {
+        "type": "string"
+      },
+      "question": {
+        "type": "string"
+      },
+      "answer": {
+        "type": "string"
+      },
+      "provider": {
+        "type": "string"
+      },
+      "safeguard": {
+        "type": "object",
+        "required": [
+          "pass",
+          "used",
+          "invalid",
+          "unknown_authorities",
+          "unsupported_claims",
+          "disclaimer"
+        ],
+        "properties": {
+          "pass": {
+            "type": "boolean"
+          },
+          "used": {
+            "type": "array"
+          },
+          "invalid": {
+            "type": "array"
+          },
+          "unknown_authorities": {
+            "type": "array"
+          },
+          "unsupported_claims": {
+            "type": "array"
+          },
+          "disclaimer": {
+            "type": "string"
+          }
+        }
+      },
+      "citations": {
+        "type": "array"
+      },
+      "backend": {
+        "type": "string"
+      },
+      "elapsed_s": {
+        "type": "number"
+      }
+    }
+  },
+  "allowed_paths": {
+    "read": [
+      "runs/<run_id>/"
+    ],
+    "write": [
+      "runs/<run_id>/",
+      ".coord/"
+    ]
+  },
+  "data_stores": {
+    "reads": [
+      "run-log"
+    ],
+    "writes": [
+      "run-log",
+      "coord-claims",
+      "acs-board",
+      "arize-traces"
+    ]
+  }
+}

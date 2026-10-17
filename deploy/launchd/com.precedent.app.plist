@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
+  <!-- deploy/run_app.sh starts `uvicorn app.server:app` (backend lives in the app/ package) -->
   <key>Label</key><string>com.precedent.app</string>
   <key>ProgramArguments</key><array><string>/bin/bash</string><string>__HOME__/precedent/deploy/run_app.sh</string></array>
   <key>WorkingDirectory</key><string>__HOME__/precedent</string>
