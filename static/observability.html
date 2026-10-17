@@ -2,15 +2,36 @@
 <script src="/static/vendor/logos.js"></script><script src="/static/partners.js"></script><script src="/static/session.js"></script>
 <style>*{box-sizing:border-box}body{margin:0;background:#0a0a0b;color:#ededed;font-family:Inter,ui-sans-serif,system-ui,sans-serif;font-size:15px;line-height:1.5}
 a{color:inherit;text-decoration:none}.nav{position:sticky;top:0;z-index:5;display:flex;gap:28px;align-items:center;height:56px;padding:0 40px;border-bottom:1px solid #1f1f22;background:rgba(10,10,11,.85);backdrop-filter:blur(8px)}.nav a{color:#a1a1aa;font-size:14px}.nav a.on,.nav a:hover{color:#fff}
-.wrap{max-width:1200px;margin:0 auto;padding:32px 40px}h1{font-size:38px;letter-spacing:-.03em;margin:0 0 6px}h2{font-size:20px;margin:0 0 12px}.s{color:#8f8f95;font-size:13px}
+.wrap{max-width:1200px;margin:0 auto;padding:32px 40px}h1{font-size:38px;letter-spacing:-.03em;margin:0 0 6px}h2{font-size:20px;margin:0 0 12px}h3{font-size:16px;font-weight:600;letter-spacing:-.01em;margin:0 0 2px}
+.s{color:#8f8f95;font-size:13px}.up{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#6b6b72}
 .card{background:#111113;border:1px solid #1f1f22;border-radius:16px;padding:22px;margin-top:16px}
-.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-top:20px}.kpi{background:#111113;border:1px solid #1f1f22;border-radius:14px;padding:16px}.kpi b{display:block;font-size:26px;font-variant-numeric:tabular-nums}
-table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:8px 6px;border-top:1px solid #1f1f22;text-align:left;vertical-align:top}th{color:#8f8f95;font-weight:500}
-tr.r{cursor:pointer}tr.r:hover{background:#16161a}.bar{height:8px;border-radius:4px;background:#222;width:90px;overflow:hidden;margin-top:3px}.bar i{display:block;height:100%}
-.ex{display:none;background:#0d0d10}.ex.open{display:table-row}.ex div{margin:4px 0;color:#c4c4c8}
-.wf{position:relative}.wrow{display:grid;grid-template-columns:260px 1fr;gap:10px;align-items:center;font-size:12px;padding:3px 0}.track{position:relative;height:18px;background:#141417;border-radius:4px}.track i{position:absolute;top:2px;height:14px;border-radius:3px;min-width:2px}
-select{background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8px;padding:6px;max-width:100%}
-.btn{background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:999px;padding:6px 14px;cursor:pointer;font:inherit;font-size:13px}.btn:disabled{opacity:.4;cursor:default}.lbl{font-size:11px;padding:1px 6px;border-radius:999px;border:1px solid #2a2a2e}</style><!-- SEO -->
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-top:16px}
+.kpi{background:#111113;border:1px solid #1f1f22;border-radius:14px;padding:16px}.kpi .lbl{font-size:13px;color:#a1a1aa}.kpi .val{display:block;font-size:28px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;margin:6px 0 4px;overflow-wrap:anywhere}.kpi .sub{font-size:13px;color:#7a7a82}
+.charts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;margin-top:16px}
+figure.chart{background:#111113;border:1px solid #1f1f22;border-radius:16px;padding:18px;margin:0;min-width:0}
+figure.chart .note{font-size:13px;color:#7a7a82;margin:10px 0 0}
+.plot{margin-top:12px;min-width:0}.plot svg{display:block;width:100%;height:auto}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:13px;color:#a1a1aa}.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px}
+.nodata{font-size:14px;color:#7a7a82;border:1px dashed #2a2a2e;border-radius:10px;padding:18px 14px;text-align:center;margin-top:12px}
+.term{border-bottom:1px dotted #52525b;cursor:help}
+.bar-row{display:grid;grid-template-columns:1fr auto;gap:10px;font-size:13px;padding:7px 0;border-top:1px solid #1a1a1d}.bar-row b{font-variant-numeric:tabular-nums;font-weight:600;text-align:right}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}td,th{padding:8px 6px;border-top:1px solid #1f1f22;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{color:#8f8f95;font-weight:500}
+tr.r{cursor:pointer}tr.r:hover{background:#16161a}tr.r.sel{background:#1a1a20}
+.pill{font-size:12px;padding:2px 9px;border-radius:999px;border:1px solid #2a2a2e;white-space:nowrap}
+select,input{background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8px;padding:10px;font:inherit;font-size:14px;width:100%;min-width:0}
+.fgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.fgrid label{display:flex;flex-direction:column;gap:6px;font-size:13px;color:#a1a1aa}
+.btn{background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:999px;padding:0 18px;cursor:pointer;font:inherit;font-size:13px;min-height:44px;display:inline-flex;align-items:center}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
+details.card{padding:0}details.card>summary{list-style:none;cursor:pointer;padding:18px 22px;font-weight:600;font-size:15px;display:flex;align-items:center;gap:10px;min-height:44px}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary::before{content:"›";color:#8f8f95;font-size:18px;transition:transform .15s}
+details.card[open]>summary::before{transform:rotate(90deg)}
+details.card>.pad{padding:0 22px 22px}
+.wrow{display:grid;grid-template-columns:110px 1fr 66px;gap:10px;align-items:center;font-size:13px;padding:4px 0}
+.track{position:relative;height:18px;background:#141417;border-radius:4px}.track i{position:absolute;top:2px;height:14px;border-radius:3px;min-width:2px}
+dl.info{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;font-size:13px;margin:12px 0 0}dl.info dt{color:#8f8f95}dl.info dd{margin:0;overflow-wrap:anywhere}
+#obs-empty{text-align:center;padding:40px 22px}</style><!-- SEO -->
 <meta name="description" content="See every Precedent run traced end to end with Arize: planner, retriever, writer and safeguard agents, latency, claims and verification results.">
 <link rel="canonical" href="https://arize.design-bakery.com/observability">
 <meta name="theme-color" content="#0b1020">
@@ -29,69 +50,359 @@ select{background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8
 <meta name="twitter:image" content="https://arize.design-bakery.com/og.png">
 </head><body>
 <nav class="nav"><b>⚖ Precedent</b><a href="/">Demo</a><a href="/map">Map</a><a href="/dashboard">Dashboards</a><a href="/slides">Slides</a><a href="/guide">Guide</a><a href="/observability" class="on">Observability</a></nav>
-<div class="wrap"><div class="s" style="text-transform:uppercase;letter-spacing:.08em">Arize snapshot · project <span id="proj"></span></div><h1>Observability</h1>
-<div class="s">Traces, LLM-as-judge evals and experiments exported from Arize, embedded here so you can inspect them without an account.</div>
-<div style="display:flex;gap:10px;align-items:center;margin-top:16px"><button id="rf" class="btn">↻ Refresh</button><span class="s" id="st"></span></div><div class="kpis" id="kpis"></div>
-<div class="card"><h2>Runs &amp; judge evals</h2><div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap"><input id="q" placeholder="Search question, run id, case name…" style="flex:1;min-width:240px;background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8px;padding:8px"><select id="flt" style="background:#18181b;color:#ededed;border:1px solid #2a2a2e;border-radius:8px;padding:7px"><option value="all">All</option><option value="judged">Judged</option><option value="live">Live</option></select><button id="prev" class="btn">‹ Prev</button><span class="s" id="pg"></span><button id="next" class="btn">Next ›</button></div><div class="s" style="margin-bottom:8px">Newest first. Click a row for judge explanations and its waterfall.</div><table id="ev"></table></div>
-<div class="card"><h2>Trace waterfall</h2><select id="sel"></select><div class="wf" id="wf" style="margin-top:14px"></div></div>
-<div class="card" id="dx"></div>
-<div class="s" id="foot" style="margin:24px 0"></div></div>
+<div class="wrap">
+<div class="up">Every question asked here · <span id="st">Loading…</span></div>
+<h1>What people asked</h1>
+<div class="s">Each question, how long the answer took, where the answer came from, and whether the <span class="term" title="Before an answer is shown we check that every case it cites really exists and really supports what the answer says. A pass means the citations held up.">citation check</span> passed. Every number below is read from this server; nothing is estimated.</div>
+
+<div class="row"><button id="rf" class="btn" type="button">↻ Refresh</button><span class="s" id="src"></span></div>
+
+<div id="obs-empty" class="card" hidden>
+  <h3 style="font-size:18px">No answers to show yet</h3>
+  <div class="s" style="margin-top:8px">Nothing has been asked in this session, and there is no saved <span class="term" title="A copy of the traces and judge scores kept from Arize, so this page still has something to read when no live runs exist.">snapshot</span> either. Ask a question on the <a href="/" style="color:#fff;text-decoration:underline">demo page</a> and it will appear here.</div>
+</div>
+
+<div id="panel">
+  <div class="cards" id="cards">
+    <div class="kpi" data-card="answered-today"><div class="lbl">Questions answered today</div><span class="val" id="v-today">No data yet</span><div class="sub" id="s-today"></div></div>
+    <div class="kpi" data-card="cache"><div class="lbl">Answers from cache</div><span class="val" id="v-cache">No data yet</span><div class="sub" id="s-cache"></div></div>
+    <div class="kpi" data-card="avg-time"><div class="lbl">Average answer time</div><span class="val" id="v-time">No data yet</span><div class="sub" id="s-time"></div></div>
+    <div class="kpi" data-card="voice-share"><div class="lbl">Voice: <span class="term" title="Fish Speech, the voice we try first when an answer is read aloud.">Fish</span> / <span class="term" title="Kokoro, the second voice, used when Fish is off or busy.">Kokoro</span> / browser</div><span class="val" id="v-voice">No data yet</span><div class="sub" id="s-voice"></div></div>
+    <div class="kpi" data-card="pass-rate"><div class="lbl">Citation check pass rate</div><span class="val" id="v-pass">No data yet</span><div class="sub" id="s-pass"></div></div>
+  </div>
+
+  <div class="card">
+    <h2>Choose what to look at</h2>
+    <div class="fgrid">
+      <label for="f-range">Time range<select id="f-range"><option value="today">Today</option><option value="7d">Last 7 days</option><option value="all" selected>All time</option></select></label>
+      <label for="f-run">One question<select id="f-run"><option value="all">All questions</option></select></label>
+      <label for="f-provider">Answer source<select id="f-provider"><option value="all">All sources</option></select></label>
+      <label for="q">Search words<input id="q" type="search" placeholder="Question, case, run id…"></label>
+    </div>
+    <div class="s" id="fcount" style="margin-top:12px"></div>
+  </div>
+
+  <div class="charts">
+    <figure class="chart" data-chart="answers-over-time"><h3 id="t-time">Answers over time</h3><div class="plot" id="p-time"></div><p class="note" id="n-time"></p></figure>
+    <figure class="chart" data-chart="cache"><h3 id="t-cache">Answers that came from cache</h3><div class="plot" id="p-cache"></div><p class="note" id="n-cache"></p></figure>
+    <figure class="chart" data-chart="step-time"><h3 id="t-steps">Time per step</h3><div class="plot" id="p-steps"></div><p class="note" id="n-steps"></p></figure>
+    <figure class="chart" data-chart="providers"><h3 id="t-prov">Where the answers came from</h3><div class="plot" id="p-prov"></div><p class="note" id="n-prov"></p></figure>
+    <figure class="chart" data-chart="judges"><h3 id="t-judge">Judge scores</h3><div class="plot" id="p-judge"></div><p class="note" id="n-judge"></p></figure>
+  </div>
+
+  <details id="pipeline-steps" class="card">
+    <summary>How long each step takes</summary>
+    <div class="pad">
+      <div class="s">A step's seconds come from the timestamps on its own events: when the agent picks the work up, until it hands it on. Saved <span class="term" title="Arize records each step as a span with a start time and a length; for snapshot rows we read those numbers.">traces</span> use their recorded step lengths.</div>
+      <div id="step-rows" style="margin-top:10px"></div>
+      <h3 style="margin-top:20px">One question, step by step</h3>
+      <div class="s" id="wf-what"></div>
+      <div class="s" id="wf-hint" style="margin-top:4px">Pick a question in the list above, or click a row in the raw table, to change this.</div>
+      <div id="wf" style="margin-top:12px"></div>
+    </div>
+  </details>
+
+  <details id="raw-details" class="card">
+    <summary>The raw numbers behind this page</summary>
+    <div class="pad">
+      <div style="overflow-x:auto"><table id="ev"></table></div>
+      <div class="s" id="ev-note" style="margin-top:10px"></div>
+      <h3 style="margin-top:20px">Snapshot file</h3>
+      <div id="snap"></div>
+    </div>
+  </details>
+
+  <div class="s" id="foot" style="margin:24px 0"></div>
+</div>
+</div>
+
 <script>
-const J=["groundedness","citation_relevance","legal_safety"];
-const el=(t,a={},...c)=>{const e=document.createElement(t);for(const k in a){if(k=="style")e.style.cssText=a[k];else if(k=="class")e.className=a[k];else e[k]=a[k];}c.forEach(x=>e.append(x instanceof Node?x:document.createTextNode(x??"")));return e;};
-const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:null, p95=a=>{if(!a.length)return null;const s=[...a].sort((x,y)=>x-y);return s[Math.min(s.length-1,Math.ceil(.95*s.length)-1)];};
-const f=(x,d=2)=>x==null?"–":(+x).toFixed(d), ms=x=>x==null?"–":(x>=1000?(x/1000).toFixed(2)+" s":Math.round(x)+" ms");
-const good=e=>e&&e.label?["grounded","relevant","safe","factual"].includes(e.label):null;
-const col={LLM:"#d97757",RETRIEVER:"#ff00a0",CHAIN:"#6366f1",TOOL:"#f59e0b",AGENT:"#22d3a6",GUARDRAIL:"#22d3a6",planner:"#6366f1",retriever:"#ff00a0",answer:"#d97757",safeguard:"#22d3a6"};
-const fmtT=s=>{try{return new Date(s).toLocaleString("en-US",{timeZone:"America/New_York",month:"short",day:"numeric",hour:"numeric",minute:"2-digit",second:"2-digit"})+" ET"}catch(e){return s||""}};
-let SNAP=null, ROWS=[], page=0, cache={};
-const PER=10, $=id=>document.getElementById(id);
-async function detail(id){ if(cache[id])return cache[id]; try{const d=await (await fetch("/api/run/"+encodeURIComponent(id))).json(); if(d&&d.result)cache[id]=d; return d;}catch(e){return null;} }
-function liveRow(r,d){const res=d&&d.result||{},ev=(d&&d.events)||[];const ts=ev.map(e=>e.t).filter(x=>x!=null);const t0=ts.length?Math.min(...ts):0,t1=ts.length?Math.max(...ts):0;
- const ag={};ev.forEach(e=>{const a=ag[e.agent]||(ag[e.agent]={s:e.t,e:e.t});a.s=Math.min(a.s,e.t);a.e=Math.max(a.e,e.t);});
- const spans=[{name:"pipeline",kind:"CHAIN",start_ms:0,dur_ms:(t1-t0)*1000,id:"root"}].concat(Object.entries(ag).map(([k,a])=>({name:k,kind:k,start_ms:(a.s-t0)*1000,dur_ms:Math.max(1,(a.e-a.s)*1000),parent:"root",model:k=="answer"?res.provider:null})));
- const lat=ts.length>1?(t1-t0)*1000:(res.elapsed_s!=null?res.elapsed_s*1000:null);
- return {run_id:r.run_id,question:r.question||res.question,start_time:r.ts,latency_ms:lat,model:res.provider,safeguard:res.safeguard?!!res.safeguard.pass:null,cases:(res.citations||[]).map(c=>c.title||c.id).join(" · "),n:r.n,spans,live:true,evals:null};}
-async function load(){ $("st").textContent="Refreshing…";
- if(!SNAP){SNAP=await fetch("/static/data/observability.json").then(r=>r.json()).catch(()=>({traces:[]}));$("proj").textContent=SNAP.project||"precedent-legal-graphrag";}
- let runs=[];try{runs=await (await fetch("/api/runs?n=50",{cache:"no-store"})).json();}catch(e){}
- if(!Array.isArray(runs))runs=[];
- const ds=await Promise.all(runs.map((r,i)=>i<30?detail(r.run_id):null));
- const snapBy={};SNAP.traces.forEach(t=>{if(t.run_id)snapBy[t.run_id]=t;});
- const rows=runs.map((r,i)=>{const L=liveRow(r,ds[i]),S=snapBy[r.run_id];if(S){L.evals=S.evals;L.trace_id=S.trace_id;if(S.spans&&S.spans.length)L.spans=S.spans;L.tokens=S.tokens;}return L;});
- const seen=new Set(runs.map(r=>r.run_id));
- SNAP.traces.forEach(t=>{if(!t.run_id||!seen.has(t.run_id))rows.push(Object.assign({},t,{live:false}));});
- rows.sort((a,b)=>new Date(b.start_time)-new Date(a.start_time)); ROWS=rows;
- kpis(runs.length); render(); $("st").textContent="Updated "+fmtT(new Date())+" · auto-refresh 30 s"; }
-function kpis(nLive){const live=ROWS.filter(r=>r.live),base=live.length?live:ROWS;const L=base.map(r=>r.latency_ms).filter(x=>x!=null&&!isNaN(x));const S=base.map(r=>r.safeguard).filter(x=>x!=null);
- const judged=ROWS.filter(r=>r.evals);const k=[["Live runs",nLive],["Rows shown",ROWS.length],["Safeguard pass",S.length?Math.round(100*S.filter(Boolean).length/S.length)+"%":"–"],["Avg latency",ms(avg(L))],["p95 latency",ms(p95(L))]];
- J.forEach(j=>k.push(["Avg "+j.replace("_"," ")+" (Arize)",f(avg(judged.map(t=>t.evals[j]?.score).filter(x=>x!=null)))]));
- const K=$("kpis");K.replaceChildren();k.forEach(([a,b])=>K.append(el("div",{class:"kpi"},el("span",{class:"s"},a),el("b",{},String(b)))));
- K.append(el("div",{class:"s",style:"grid-column:1/-1"},"Latency & safeguard from "+(live.length?"live /api/runs":"Arize snapshot")+". Judge scores: Arize snapshot "+fmtT(SNAP.generated_at)+"."));}
-function render(){const q=$("q").value.trim().toLowerCase();const fl=$("flt").value;const F=ROWS.filter(r=>(fl=="all"||(fl=="judged"?!!r.evals:r.live))&&(!q||[r.question,r.run_id,r.cases,r.trace_id].some(x=>(x||"").toLowerCase().includes(q))));
- const pages=Math.max(1,Math.ceil(F.length/PER));page=Math.min(page,pages-1);const P=F.slice(page*PER,page*PER+PER);
- $("pg").textContent=F.length?`${page*PER+1}–${page*PER+P.length} of ${F.length}`:"0 results";$("prev").disabled=page==0;$("next").disabled=page>=pages-1;
- const E=$("ev");E.replaceChildren(el("tr",{},el("th",{},"Time"),el("th",{},"Question / run"),el("th",{},"Latency"),el("th",{},"Safeguard"),...J.map(j=>el("th",{},j.replace("_"," ")))));
- const sel=$("sel"),cur=sel.value;sel.replaceChildren();
- P.forEach((t,i)=>{const sg=t.safeguard==null?el("span",{class:"s"},"–"):el("span",{class:"lbl",style:"color:"+(t.safeguard?"#22d3a6":"#f87171")},t.safeguard?"pass":"fail");
-  const tr=el("tr",{class:"r"},el("td",{class:"s",style:"white-space:nowrap"},fmtT(t.start_time)),el("td",{},t.question||t.trace_id,el("div",{class:"s"},(t.run_id||"")+(t.live?" · live":" · snapshot"))),el("td",{},ms(t.latency_ms)),el("td",{},sg));
-  if(t.evals)J.forEach(j=>{const e=t.evals[j]||{},g=good(e),c=g==null?"#555":g?"#22d3a6":"#f87171";tr.append(el("td",{},el("span",{class:"lbl",style:"color:"+c+";border-color:"+c},e.label||"n/a")," ",f(e.score),el("div",{class:"bar"},el("i",{style:"width:"+(100*(e.score||0))+"%;background:"+c}))));});
-  else tr.append(el("td",{colSpan:3,class:"s"},"not yet judged"));
-  const ex=el("tr",{class:"ex"},el("td",{colSpan:7},...(t.evals?J.map(j=>el("div",{},el("b",{},j+": "),(t.evals[j]||{}).explanation||"—")).concat([el("div",{class:"s"},"Judge scores: Arize snapshot "+fmtT(SNAP.generated_at))]):[el("div",{},"Not yet judged (judges run on the Arize snapshot).")]),
-   el("div",{class:"s"},[t.trace_id&&"trace "+t.trace_id,"model "+(t.model||"–"),t.tokens&&"tokens "+t.tokens,t.cases&&"cases: "+t.cases].filter(Boolean).join(" · "))));
-  tr.onclick=()=>{ex.classList.toggle("open");sel.value=String(i);draw();};E.append(tr,ex);
-  sel.append(el("option",{value:i},fmtT(t.start_time)+" · "+(t.question||t.trace_id||"").slice(0,90)));});
- sel._P=P;if(cur&&cur<P.length)sel.value=cur;draw();}
-function draw(){const sel=$("sel"),W=$("wf");W.replaceChildren();const t=(sel._P||[])[sel.value];if(!t||!t.spans)return;const sp=t.spans,end=Math.max(1,...sp.map(s=>s.start_ms+s.dur_ms));
- const byId=Object.fromEntries(sp.map(s=>[s.id,s]));const dep=s=>{let n=0,p=s.parent;while(p&&byId[p]&&n<8){n++;p=byId[p].parent;}return n;};
- sp.forEach(s=>{const c=col[s.kind]||"#8f8f95";W.append(el("div",{class:"wrow"},el("div",{style:"padding-left:"+dep(s)*12+"px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis"},el("b",{},s.name)," ",el("span",{class:"s"},[s.kind!=s.name?s.kind:null,s.model,s.tokens?s.tokens+" tok":null,ms(s.dur_ms)].filter(Boolean).join(" · "))),
-  el("div",{class:"track"},el("i",{style:"left:"+(100*s.start_ms/end)+"%;width:"+(100*s.dur_ms/end)+"%;background:"+c}))));});}
-function dx(){const ds=SNAP.dataset||{},xp=SNAP.experiment||{},D=$("dx");D.replaceChildren(el("h2",{},"Dataset & experiment"),
-  el("div",{},el("b",{},"Dataset: "),ds.name+" · "+(ds.rows??"?")+" rows · columns: "+(ds.columns||[]).join(", ")),
-  el("div",{style:"margin-top:6px"},el("b",{},"Experiment: "),xp.name+(xp.examples?" · "+xp.examples+" runs · metric "+xp.metric:"")));
- if(xp.by_setting){const tb=el("table",{style:"margin-top:8px;max-width:500px"},el("tr",{},el("th",{},"Setting"),el("th",{},"Avg "+xp.metric)));Object.entries(xp.by_setting).forEach(([a,b])=>tb.append(el("tr",{},el("td",{},a),el("td",{},f(b,3)))));D.append(tb);}
- $("foot").textContent="Judge scores: snapshot from Arize at "+fmtT(SNAP.generated_at)+"; evaluator: deepseek-v4.1-flash via InferHub. Runs, latency and safeguard are live.";}
-$("flt").onchange=()=>{page=0;render();};$("q").oninput=()=>{page=0;render();};$("prev").onclick=()=>{page--;render();};$("next").onclick=()=>{page++;render();};$("rf").onclick=load;$("sel").onchange=draw;
-load().then(dx).catch(e=>$("st").textContent="Load failed: "+e);setInterval(load,30000);
+const $=id=>document.getElementById(id);
+const ND="No data yet";
+const C={grid:"#1f1f22",txt:"#8f8f95",good:"#22d3a6",bad:"#f87171",accent:"#818cf8",amber:"#f59e0b",indigo:"#6366f1",clay:"#d97757"};
+const GOOD=new Set(["grounded","relevant","safe","factual"]);
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const num=v=>(typeof v==="number"&&isFinite(v))?v:null;
+const str=v=>(typeof v==="string"&&v.trim())?v.trim():null;
+const boolv=v=>v===true?true:v===false?false:(typeof v==="string"?(/^(pass|true|ok|yes)$/i.test(v)?true:(/^(fail|false|no)$/i.test(v)?false:null)):null);
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const mean=a=>a.length?sum(a)/a.length:null;
+const pc=x=>Math.round(x*100)+"%";
+const secs=v=>v==null?"—":(v>=60?Math.floor(v/60)+" min "+Math.round(v%60)+" s":v.toFixed(1)+" s");
+const plural=(n,w)=>n+" "+w+(n===1?"":"s");
+let SNAP={traces:[]}, ROWS=[], HEALTH=null, LIVE=0;
+
+function parseTime(s){
+  if(s==null) return null;
+  if(typeof s==="number") return isFinite(s)?s*1000:null;
+  let t=String(s).trim(); if(!t) return null;
+  if(/^\d{4}-\d{2}-\d{2} \d/.test(t)) t=t.replace(" ","T");
+  if(!/(Z|[+-]\d{2}:?\d{2})$/.test(t)) t=t.replace(/\.\d+/,m=>m.slice(0,4))+"Z";
+  const d=new Date(t); return isNaN(d.getTime())?null:d.getTime();
+}
+const sameDay=(a,b)=>{const x=new Date(a),y=new Date(b);return x.getFullYear()===y.getFullYear()&&x.getMonth()===y.getMonth()&&x.getDate()===y.getDate();};
+const fmtWhen=ms=>ms==null?"unknown time":new Date(ms).toLocaleString("en-US",{month:"short",day:"numeric",hour:"numeric",minute:"2-digit"});
+const fmtDay=ms=>new Date(ms).toLocaleDateString("en-US",{month:"short",day:"numeric"});
+const fmtHour=ms=>new Date(ms).toLocaleTimeString("en-US",{hour:"numeric"});
+const fmtClock=ms=>new Date(ms).toLocaleTimeString("en-US",{hour:"numeric",minute:"2-digit"});
+async function getJSON(url,fallback){ try{ const r=await fetch(url,{cache:"no-store"}); if(!r.ok) return fallback; const j=await r.json(); return j==null?fallback:j; }catch(e){ return fallback; } }
+async function pool(items,work,limit){ const out=new Array(items.length); let i=0;
+  const run=async()=>{ for(;;){ const k=i++; if(k>=items.length) return; out[k]=await work(items[k],k); } };
+  await Promise.all(Array.from({length:Math.min(limit||8,items.length)},run)); return out; }
+function plotW(el){ return Math.max(240,(el&&el.clientWidth)?el.clientWidth:300); }
+
+// ---------- data from the endpoints ----------
+function buildRows(runs,details){
+  const traces=Array.isArray(SNAP.traces)?SNAP.traces:[];
+  const byRun={}; traces.forEach(t=>{ if(t&&t.run_id) byRun[t.run_id]=t; });
+  const seen={};
+  const rows=runs.map((r,i)=>{
+    const d=details[i]||{}, res=d.result||{}, ev=Array.isArray(d.events)?d.events:[], tr=byRun[r&&r.run_id]||null;
+    if(tr) seen[tr.run_id]=1;
+    const sg=res.safeguard&&typeof res.safeguard==="object"?boolv(res.safeguard.pass):(r.safeguard!=null?boolv(r.safeguard):(tr?boolv(tr.safeguard):null));
+    const el=num(res.elapsed_s)!=null?num(res.elapsed_s):(num(r.elapsed_s)!=null?num(r.elapsed_s):(num(tr&&tr.latency_ms)!=null?num(tr.latency_ms)/1000:null));
+    return { id:str(r&&r.run_id)||("run"+i), q:str(r&&r.question)||str(res.question)||str(tr&&tr.question)||"(no question recorded)",
+      when:parseTime(r&&r.ts!=null?r.ts:(tr&&tr.start_time)), from:"live",
+      provider:str(res.provider)||str(r&&r.model)||str(tr&&tr.model), secs:el, pass:sg, cites:num(r&&r.n),
+      events:ev, spans:(tr&&Array.isArray(tr.spans))?tr.spans:null, evals:(tr&&tr.evals)||null };
+  });
+  traces.forEach((t,i)=>{ if(!t||!t.run_id||seen[t.run_id]) return;
+    rows.push({ id:String(t.run_id), q:str(t.question)||"(no question recorded)", when:parseTime(t.start_time), from:"snapshot",
+      provider:str(t.model), secs:num(t.latency_ms)!=null?num(t.latency_ms)/1000:null, pass:boolv(t.safeguard), cites:null,
+      events:[], spans:Array.isArray(t.spans)?t.spans:null, evals:t.evals||null }); });
+  rows.sort((a,b)=>(b.when==null?-1:b.when)-(a.when==null?-1:a.when));
+  return rows;
+}
+function stepsOf(row){
+  const sp=(row&&row.spans)||[];
+  if(sp.length){
+    const kids=sp.filter(s=>s&&s.name&&String(s.name)!=="pipeline");
+    const steps=kids.map(s=>({name:String(s.name),start:(num(s.start_ms)||0)/1000,dur:Math.max(0,(num(s.dur_ms)||0)/1000)})).filter(s=>s.dur>0);
+    const total=Math.max.apply(null,[0.001].concat(kids.map(s=>((num(s.start_ms)||0)+(num(s.dur_ms)||0))/1000)));
+    if(steps.length) return {steps:steps,total:total};
+  }
+  const ev=((row&&row.events)||[]).filter(e=>e&&typeof e.t==="number"&&isFinite(e.t));
+  if(!ev.length) return null;
+  const ts=ev.map(e=>e.t), t0=Math.min.apply(null,ts), t1=Math.max.apply(null,ts);
+  if(!(t1>t0)) return null;
+  const by={}; ev.forEach(e=>{ const k=String(e.agent||"other"); const a=by[k]||(by[k]={s:e.t,e:e.t}); a.s=Math.min(a.s,e.t); a.e=Math.max(a.e,e.t); });
+  const list=Object.keys(by).map(k=>({name:k,start:by[k].s-t0,end:by[k].e-t0})).sort((a,b)=>a.start-b.start);
+  list.forEach(x=>{ if(!(x.end>x.start)){ const nx=ts.filter(t=>t>x.start+t0).sort((p,q)=>p-q)[0]; x.end=(nx==null?t1:nx)-t0; } });
+  const steps=list.filter(x=>x.end>x.start).map(x=>({name:x.name,start:x.start,dur:x.end-x.start}));
+  return steps.length?{steps:steps,total:t1-t0}:null;
+}
+function voiceCounts(rows){ let f=0,k=0,b=0;
+  (rows||[]).forEach(r=>{ const s=[r.provider].concat((r.events||[]).map(e=>[e.agent,e.kind,e.provider,e.msg,e.to].join(" "))).join(" ").toLowerCase();
+    if(/fish/.test(s)) f++; if(/kokoro/.test(s)) k++; if(/browser/.test(s)) b++; });
+  return (f+k+b)>0?{fish:f,kokoro:k,browser:b}:null;
+}
+function stepAgg(rows){ const agg={};
+  (rows||[]).forEach(r=>{ const st=stepsOf(r); if(!st) return; st.steps.forEach(s=>{ (agg[s.name]||(agg[s.name]=[])).push(s.dur); }); });
+  return Object.keys(agg).map(k=>({label:k,value:mean(agg[k]),n:agg[k].length})).filter(i=>i.value>0).sort((a,b)=>b.value-a.value);
+}
+
+// ---------- filters ----------
+function filtered(){
+  const range=$("f-range").value, one=$("f-run").value, prov=$("f-provider").value, q=$("q").value.trim().toLowerCase(), now=Date.now();
+  return ROWS.filter(r=>{
+    if(one!=="all"&&r.id!==one) return false;
+    if(prov!=="all"&&r.provider!==prov) return false;
+    if(q&&!((r.q||"")+" "+r.id+" "+(r.provider||"")).toLowerCase().includes(q)) return false;
+    if(range==="all") return true;
+    if(r.when==null) return false;
+    return range==="today"?sameDay(r.when,now):r.when>=now-7*864e5;
+  });
+}
+function fillSelect(sel,values,allLabel){
+  const keep=sel.value; sel.replaceChildren();
+  const o=document.createElement("option"); o.value="all"; o.textContent=allLabel; sel.append(o);
+  values.forEach(v=>{ const e=document.createElement("option"); e.value=v.value; e.textContent=v.label; sel.append(e); });
+  if(keep&&[].slice.call(sel.options).some(x=>x.value===keep)) sel.value=keep;
+}
+function buildFilterOptions(){
+  const cnt={}; ROWS.forEach(r=>{ if(r.provider) cnt[r.provider]=(cnt[r.provider]||0)+1; });
+  const provs=Object.keys(cnt).sort((a,b)=>cnt[b]-cnt[a]||a.localeCompare(b));
+  fillSelect($("f-provider"),provs.map(p=>({value:p,label:p})),"All sources ("+provs.length+")");
+  fillSelect($("f-run"),ROWS.slice(0,200).map(r=>({value:r.id,label:(r.q.length>60?r.q.slice(0,57)+"…":r.q)+" · "+fmtWhen(r.when)})),"All questions ("+ROWS.length+")");
+}
+
+// ---------- inline svg charts ----------
+function svg(body,wd,ht,aria){ return '<svg viewBox="0 0 '+wd+" "+ht+'" width="'+wd+'" height="'+ht+'" role="img" aria-label="'+esc(aria)+'">'+body+"</svg>"; }
+function noData(el,msg){ el.innerHTML='<div class="nodata">'+esc(msg||ND)+"</div>"; }
+function clip(s,n){ s=String(s); return s.length>n?s.slice(0,n-1)+"…":s; }
+function vbars(el,items,unit){
+  const wd=plotW(el),ht=190,p={l:30,r:8,t:18,b:30},iw=wd-p.l-p.r,ih=ht-p.t-p.b;
+  const max=Math.max.apply(null,[1].concat(items.map(i=>i.value)));
+  let g="";
+  [0,0.5,1].forEach(f=>{ const y=p.t+ih-ih*f;
+    g+='<line x1="'+p.l+'" y1="'+y.toFixed(1)+'" x2="'+(wd-p.r)+'" y2="'+y.toFixed(1)+'" stroke="'+C.grid+'" stroke-width="1"/>'
+      +'<text x="'+(p.l-6)+'" y="'+(y+4).toFixed(1)+'" fill="'+C.txt+'" font-size="12" text-anchor="end">'+Math.round(max*f)+"</text>"; });
+  const slot=iw/items.length, inner=Math.max(6,Math.min(48,slot-8));
+  items.forEach((it,i)=>{ const x=p.l+slot*i+(slot-inner)/2, h=ih*(it.value/max), y=p.t+ih-h;
+    g+='<rect x="'+x.toFixed(1)+'" y="'+y.toFixed(1)+'" width="'+inner.toFixed(1)+'" height="'+(it.value>0?Math.max(2,h):0).toFixed(1)+'" rx="4" fill="'+C.accent+'"/>'
+      +(it.value>0?'<text x="'+(x+inner/2).toFixed(1)+'" y="'+(y-5).toFixed(1)+'" fill="#ededed" font-size="12" text-anchor="middle">'+it.value+"</text>":"")
+      +'<text x="'+(x+inner/2).toFixed(1)+'" y="'+(ht-9)+'" fill="'+C.txt+'" font-size="12" text-anchor="middle">'+esc(clip(it.label,Math.max(4,Math.floor(inner/6.6))))+"</text>"; });
+  el.innerHTML=svg(g,wd,ht,"answers per "+unit);
+}
+function hbars(el,items,color,fmt,aria){
+  if(!items.length){ noData(el); return; }
+  const wd=plotW(el),rh=32,ht=rh*items.length+6,lw=Math.round(Math.min(150,Math.max(64,wd*0.34))),gap=52,bw=Math.max(20,wd-lw-gap);
+  const max=Math.max.apply(null,[0.0001].concat(items.map(i=>i.value)));
+  const chars=Math.max(6,Math.floor((lw-10)/6.6));
+  let g="";
+  items.forEach((it,i)=>{ const by=rh*i+6,h=14,tw=Math.min(bw,Math.max(2,it.value/max*bw));
+    g+='<text x="'+(lw-8)+'" y="'+(by+h-1)+'" fill="#c4c4c8" font-size="12" text-anchor="end">'+esc(clip(it.label,chars))+"</text>"
+      +'<rect x="'+lw+'" y="'+by+'" width="'+bw+'" height="'+h+'" rx="3" fill="#17171a"/>'
+      +'<rect x="'+lw+'" y="'+by+'" width="'+tw.toFixed(1)+'" height="'+h+'" rx="3" fill="'+(it.color||color)+'"/>'
+      +'<text x="'+(wd-2)+'" y="'+(by+h-1)+'" fill="#ededed" font-size="12" text-anchor="end">'+esc(fmt?fmt(it):it.value)+"</text>"; });
+  el.innerHTML=svg(g,wd,ht,aria||"bars");
+}
+function stack(el,parts){
+  const wd=plotW(el),ht=44,bw=wd-8,x0=4,total=sum(parts.map(p=>p.value))||1;
+  let x=x0,g="";
+  parts.forEach(p=>{ const tw=p.value/total*bw;
+    g+='<rect x="'+x.toFixed(1)+'" y="6" width="'+(p.value?Math.max(2,tw):0).toFixed(1)+'" height="30" rx="5" fill="'+p.color+'"/>'
+      +(tw>56?'<text x="'+(x+tw/2).toFixed(1)+'" y="26" fill="#0a0a0b" font-size="12" font-weight="700" text-anchor="middle">'+Math.round(p.value/total*100)+"%</text>":"");
+    x+=tw; });
+  el.innerHTML=svg(g,wd,ht,"share of answers")+
+    '<div class="legend">'+parts.map(p=>'<span><i style="background:'+p.color+'"></i>'+esc(p.label)+" "+p.value+"</span>").join("")+"</div>";
+}
+
+// ---------- rendering ----------
+function renderCards(rows){
+  const today=rows.filter(r=>r.when!=null&&sameDay(r.when,Date.now())).length;
+  const prov=rows.filter(r=>r.provider), cached=prov.filter(r=>/cached/i.test(r.provider)).length;
+  const times=rows.map(r=>r.secs).filter(v=>v!=null&&v>=0), m=mean(times);
+  const passes=rows.map(r=>r.pass).filter(v=>v!==null), ok=passes.filter(Boolean).length;
+  $("v-today").textContent=rows.length?String(today):ND;
+  $("s-today").textContent=rows.length?"of "+plural(rows.length,"question")+" in this selection":"";
+  $("v-cache").textContent=prov.length?pc(cached/prov.length):ND;
+  $("s-cache").textContent=prov.length?cached+" of "+prov.length+" reused an answer already saved":"";
+  $("v-time").textContent=m==null?ND:m.toFixed(1)+" s";
+  $("s-time").textContent=m==null?"":"mean of "+plural(times.length,"answer")+" with a recorded time";
+  const vc=voiceCounts(rows);
+  $("v-voice").textContent=vc?vc.fish+" / "+vc.kokoro+" / "+vc.browser:ND;
+  $("s-voice").textContent=vc?plural(sum([vc.fish,vc.kokoro,vc.browser]),"question")+" named a voice":
+    (HEALTH&&Array.isArray(HEALTH.tts)&&HEALTH.tts.length?"voices ready: "+HEALTH.tts.join(", "):"voices are not counted per question yet");
+  $("v-pass").textContent=passes.length?pc(ok/passes.length):ND;
+  $("s-pass").textContent=passes.length?ok+" passed, "+(passes.length-ok)+" did not":"";
+}
+function buckets(rows){
+  const ts=rows.map(r=>r.when).filter(t=>t!=null); if(!ts.length) return null;
+  const lo=Math.min.apply(null,ts), hi=Math.max.apply(null,ts);
+  const hourly=(hi-lo)<=26*3600e3, step=hourly?3600e3:864e5;
+  const start=hourly?new Date(lo).setMinutes(0,0,0):new Date(lo).setHours(0,0,0,0);
+  const out=[]; for(let t=start;t<=hi;t+=step) out.push({t:t,label:hourly?fmtHour(t):fmtDay(t),value:0});
+  rows.forEach(r=>{ if(r.when==null) return; let k=Math.floor((r.when-start)/step); if(k<0) k=0; if(k>=out.length) k=out.length-1; out[k].value++; });
+  return {items:out.slice(-12),unit:hourly?"hour":"day"};
+}
+function renderCharts(rows){
+  const bt=buckets(rows);
+  if(!bt){ noData($("p-time")); $("t-time").textContent="Answers over time"; $("n-time").textContent="Nothing in this selection has a recorded time yet."; }
+  else{
+    const top=bt.items.reduce((a,b)=>b.value>a.value?b:a,bt.items[0]);
+    vbars($("p-time"),bt.items,bt.unit);
+    $("t-time").textContent=bt.items.length===1?plural(top.value,"answer")+" around "+top.label:
+      "Most answers per "+bt.unit+": "+top.label+" ("+top.value+")";
+    $("n-time").textContent=plural(rows.length,"question")+" counted, newest on the right.";
+  }
+  const prov=rows.filter(r=>r.provider), cached=prov.filter(r=>/cached/i.test(r.provider)).length;
+  if(!prov.length){ noData($("p-cache")); $("t-cache").textContent="Answers that came from cache"; $("n-cache").textContent="No answer source was recorded yet."; }
+  else{ stack($("p-cache"),[{label:"from cache",value:cached,color:C.good},{label:"written fresh",value:prov.length-cached,color:C.indigo}]);
+    $("t-cache").textContent=pc(cached/prov.length)+" of answers came from cache";
+    $("n-cache").textContent="From cache means the same question was answered earlier, so no model was called this time."; }
+  const steps=stepAgg(rows);
+  if(!steps.length){ noData($("p-steps"),ND+" — no step times in this selection"); $("t-steps").textContent="Time per step"; $("n-steps").textContent="Step times appear once a run has written its events."; }
+  else{ hbars($("p-steps"),steps,C.amber,i=>i.value.toFixed(1)+" s","seconds per step");
+    $("t-steps").textContent=steps[0].label+" is the slowest step, about "+steps[0].value.toFixed(1)+" s";
+    $("n-steps").textContent="Mean over "+plural(steps[0].n,"run")+" with timestamps."; }
+  const cnt={}; rows.forEach(r=>{ if(r.provider) cnt[r.provider]=(cnt[r.provider]||0)+1; });
+  const items=Object.keys(cnt).map(k=>({label:k,value:cnt[k]})).sort((a,b)=>b.value-a.value);
+  if(!items.length){ noData($("p-prov")); $("t-prov").textContent="Where the answers came from"; $("n-prov").textContent="No answer source was recorded yet."; }
+  else{ hbars($("p-prov"),items,C.clay,i=>plural(i.value,"run"),"runs by answer source");
+    $("t-prov").textContent=items[0].value+" of "+sum(items.map(i=>i.value))+" answers used "+items[0].label;
+    $("n-prov").textContent=items.length>1?"Anything lower down is a fallback the pipeline dropped to.":"Only one source was used in this selection."; }
+  const traces=Array.isArray(SNAP.traces)?SNAP.traces:[], judged=traces.filter(t=>t&&t.evals);
+  const per={}; judged.forEach(t=>{ Object.keys(t.evals).forEach(k=>{ const e=t.evals[k]||{}, a=per[k]||(per[k]={flag:0,n:0}); a.n++;
+    if(e.label&&!GOOD.has(String(e.label).toLowerCase())) a.flag++; }); });
+  const jItems=Object.keys(per).map(k=>({label:k.replace(/_/g," "),value:per[k].flag/per[k].n,n:per[k].n,flag:per[k].flag})).sort((a,b)=>b.value-a.value);
+  if(!jItems.length){ noData($("p-judge"),ND+" — no judged traces saved"); $("t-judge").textContent="Judge scores"; $("n-judge").textContent="An Arize judge scores each saved answer; nothing has been scored yet."; }
+  else{ hbars($("p-judge"),jItems,C.bad,i=>pc(i.value)+" · "+i.n,"share flagged by judges");
+    $("t-judge").textContent="Judges flagged "+jItems[0].label+" most often: "+jItems[0].flag+" of "+jItems[0].n;
+    $("n-judge").textContent="Share of judged answers a judge marked as a problem, over "+plural(judged.length,"saved answer")+"."; }
+}
+function renderSteps(rows){
+  const steps=stepAgg(rows);
+  $("step-rows").innerHTML=steps.length?steps.map(s=>'<div class="bar-row"><span>'+esc(s.label)+"</span><b>"+esc(s.value.toFixed(1))+" s avg · "+plural(s.n,"run")+"</b></div>").join(""):'<div class="nodata">'+ND+"</div>";
+  const pick=$("f-run").value;
+  const row=pick!=="all"?ROWS.filter(r=>r.id===pick)[0]:(rows[0]||ROWS[0]);
+  $("wf-what").textContent=row?row.q+" · "+fmtWhen(row.when):"";
+  const st=stepsOf(row);
+  if(!st){ $("wf").innerHTML='<div class="nodata">'+ND+" — no step times for this question</div>"; return; }
+  const total=Math.max(st.total,0.001);
+  $("wf").innerHTML=st.steps.map(s=>'<div class="wrow"><div style="overflow:hidden;white-space:nowrap;text-overflow:ellipsis">'+esc(s.name)+
+    '</div><div class="track"><i style="left:'+(100*s.start/total).toFixed(1)+"%;width:"+Math.max(1,100*s.dur/total).toFixed(1)+"%;background:"+C.accent+
+    '"></i></div><b style="font-size:13px;font-variant-numeric:tabular-nums;text-align:right">'+s.dur.toFixed(1)+" s</b></div>").join("")+
+    '<div class="s" style="margin-top:8px">Total '+esc(secs(st.total))+" · "+esc(row.from)+"</div>";
+}
+function renderTable(rows){
+  const shown=rows.slice(0,100), sel=$("f-run").value;
+  const head="<tr><th style='width:20%'>When</th><th>Question</th><th style='width:20%'>Answer source</th><th style='width:11%'>How long</th><th style='width:13%'>Citation check</th></tr>";
+  $("ev").innerHTML=head+shown.map(r=>{
+    const pass=r.pass===null?'<span class="s">not checked</span>':'<span class="pill" style="color:'+(r.pass?C.good:C.bad)+";border-color:"+(r.pass?C.good:C.bad)+'">'+(r.pass?"pass":"fail")+"</span>";
+    const flagged=r.evals?Object.keys(r.evals).filter(k=>{ const e=r.evals[k]||{}; return e.label&&!GOOD.has(String(e.label).toLowerCase()); }).map(k=>k.replace(/_/g," ")):null;
+    return '<tr class="r'+(sel===r.id?" sel":"")+'" data-run-row="'+esc(r.id)+'"><td class="s">'+esc(fmtWhen(r.when))+
+      (r.from==="snapshot"?'<div class="s">saved trace</div>':"")+"</td><td>"+esc(r.q)+
+      '<div class="s">'+esc(r.id)+(r.cites!=null?" · "+plural(r.cites,"citation"):"")+(flagged&&flagged.length?" · judge flagged "+esc(flagged.join(", ")):"")+"</div></td><td>"+
+      (r.provider?esc(r.provider):'<span class="s">not recorded</span>')+"</td><td>"+(r.secs==null?"—":esc(secs(r.secs)))+"</td><td>"+pass+"</td></tr>";
+  }).join("");
+  [].slice.call($("ev").querySelectorAll("tr.r")).forEach(tr=>{ tr.onclick=()=>{ const s=$("f-run"); s.value=(s.value===tr.dataset.runRow)?"all":tr.dataset.runRow; render(); }; });
+  $("ev-note").textContent=rows.length>100?"The table lists the newest 100 of "+plural(rows.length,"question")+"; the cards and charts count them all.":"Click a row to focus every card and chart on that question.";
+}
+function renderSnap(){
+  const ds=SNAP.dataset||{}, xp=SNAP.experiment||{}, tr=Array.isArray(SNAP.traces)?SNAP.traces:[];
+  const pairs=[["Project",SNAP.project],["Saved at",SNAP.generated_at==null?null:fmtWhen(parseTime(SNAP.generated_at))],["Judged by",SNAP.evaluator],
+    ["Saved answers",plural(tr.length,"trace")],["Live questions read now",plural(LIVE,"run")],
+    ["Spans counted",SNAP.span_count_window],["Dataset",(ds.name||"")+(ds.rows!=null?" · "+ds.rows+" rows":"")],
+    ["Experiment",(xp.name||"")+(xp.examples?" · "+xp.examples+" runs · metric "+xp.metric:"")]];
+  const by=xp.by_setting||{};
+  $("snap").innerHTML='<dl class="info">'+pairs.filter(p=>p[1]!=null&&String(p[1]).trim()).map(p=>"<dt>"+esc(p[0])+"</dt><dd>"+esc(p[1])+"</dd>").join("")+"</dl>"+
+    (Object.keys(by).length?'<div style="margin-top:12px">'+Object.keys(by).map(k=>'<div class="bar-row"><span>'+esc(k)+"</span><b>"+esc(by[k])+"</b></div>").join("")+
+      '<div class="s">Metric: '+esc(xp.metric)+"</div></div>":"")+
+    '<div class="s" style="margin-top:12px">Live rows come from /api/runs and /api/run/&lt;id&gt;; saved rows come from /static/data/observability.json.</div>';
+}
+function render(){
+  const empty=!ROWS.length;
+  $("obs-empty").hidden=!empty; $("panel").hidden=empty;
+  if(empty){ $("fcount").textContent=""; $("foot").textContent=""; return; }
+  const rows=filtered();
+  renderCards(rows); renderCharts(rows); renderSteps(rows); renderTable(rows); renderSnap();
+  $("fcount").textContent="Showing "+plural(rows.length,"question")+" of "+plural(ROWS.length,"question")+($("q").value||$("f-range").value!=="all"?" (filtered)":"");
+  $("foot").textContent="Run times, answer sources and the citation check are read live from this server. Judge scores come from the saved snapshot"+
+    (SNAP.generated_at?" at "+fmtWhen(parseTime(SNAP.generated_at)):"")+".";
+}
+
+// ---------- load ----------
+async function load(){
+  $("st").textContent="Loading…";
+  const got=await Promise.all([getJSON("/api/runs?n=200",[]),getJSON("/static/data/observability.json",{traces:[]}),getJSON("/api/health",null)]);
+  const list=Array.isArray(got[0])?got[0]:[];
+  SNAP=(got[1]&&typeof got[1]==="object")?got[1]:{traces:[]}; if(!Array.isArray(SNAP.traces)) SNAP.traces=[];
+  HEALTH=got[2];
+  const details=await pool(list.slice(0,200),r=>getJSON("/api/run/"+encodeURIComponent(r&&r.run_id),null),8);
+  ROWS=buildRows(list,details); LIVE=list.length;
+  buildFilterOptions(); render();
+  const bits=[plural(list.length,"live question")];
+  bits.push(Array.isArray(SNAP.traces)?SNAP.traces.length+" saved trace"+(SNAP.traces.length===1?"":"s"):"snapshot: "+ND);
+  if(HEALTH&&HEALTH.ok) bits.push("server healthy");
+  $("src").textContent=bits.join(" · ");
+  $("st").textContent="Updated "+fmtClock(Date.now())+" · reloads every 30 s";
+}
+$("rf").addEventListener("click",load);
+["f-range","f-run","f-provider"].forEach(id=>$(id).addEventListener("change",render));
+$("q").addEventListener("input",render);
+let rt=null; window.addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(()=>{ if(!$("panel").hidden) render(); },250); });
+load().catch(e=>{ $("st").textContent="Could not read the run data: "+(e&&e.message?e.message:e); });
+setInterval(()=>{ load().catch(()=>{}); },30000);
 </script>
 <script src="/static/navbar.js?v=ux1"></script></body></html>
