@@ -473,10 +473,12 @@ def tour(run_id):
 
 def health():
     st = octocache.status()
+    kokoro_reachable = kokoro_on() and kokoro_up()
     return {
-        "tts": chain(),
+        # what health reports: only providers we can actually reach (#32). The real fallback chain, chain(), is untouched.
+        "tts": [p for p in chain() if p != "kokoro" or kokoro_reachable],
         "fish": fish_on(),
-        "kokoro": kokoro_on() and kokoro_up(),
+        "kokoro": kokoro_reachable,
         "tts_cache": {"local": True, "octo": octocache.up()},
         "data_schema": st,
     }
