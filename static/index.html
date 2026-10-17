@@ -1,6 +1,6 @@
 <!doctype html><html><head><script src="/static/session.js"></script><meta charset="utf-8"><title>Precedent · Verified legal research memos from multi-agent AI</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<script src="/static/audio.js?v=mt1"></script><script src="/static/vendor/tailwind.js"></script>
+<script src="/static/audio.js?v=ux1"></script><script src="/static/vendor/tailwind.js"></script>
 <script src="/static/vendor/vis-network.min.js"></script>
 <style>body{background:radial-gradient(1200px 600px at 10% -10%,#1e1b4b 0,#0b1020 50%,#05070f 100%)}
 .glass{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);backdrop-filter:blur(8px)}
@@ -18,8 +18,8 @@
 .ans-meta{margin-top:1.25rem;padding-top:.75rem;border-top:1px solid rgba(255,255,255,.06);font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .ans-disc{margin-top:.35rem;font-size:11px;color:rgba(252,211,77,.55)}
 @keyframes pulse2{50%{opacity:.4}}.live{animation:pulse2 1s infinite}</style><script src="/static/links.js"></script>
-<link rel="stylesheet" href="/static/theme/precedent-theme.css?v=20261016-1">
-<link rel="icon" type="image/svg+xml" href="/static/theme/favicon.svg?v=20261016-1">
+<link rel="stylesheet" href="/static/theme/precedent-theme.css?v=ux1">
+<link rel="icon" type="image/svg+xml" href="/static/theme/favicon.svg?v=ux1">
 <!-- SEO -->
 <meta name="description" content="Precedent is a reliable pipeline for multi-agent AI: isolated, grounded, traced, coordinated and verified agents that write cited legal research memos.">
 <link rel="canonical" href="https://arize.design-bakery.com/">
@@ -64,16 +64,21 @@
  <div><h1 class="text-3xl font-bold tracking-tight"><span class="text-indigo-400">⚖ Precedent</span> <span class="text-slate-400 font-light">a reliable pipeline for multi-agent AI</span></h1>
  <p class="text-slate-400 text-sm mt-1">Isolated, grounded, traced, coordinated and verified agents · first use case: verified research memos for legal professionals</p></div>
  <div id="badges" class="flex gap-3 text-base font-bold"></div></header>
-<div class="glass rounded-2xl p-4 flex gap-3 mb-6">
- <input id="q" class="flex-1 bg-transparent outline-none text-lg placeholder-slate-500" placeholder="Enter a research query (issue, jurisdiction)…" value="Automobile exception: probable cause standard in Colorado">
- <button id="go" class="bg-indigo-500 hover:bg-indigo-400 px-6 py-2 rounded-xl font-semibold">Ask</button></div>
+<div id="firststep" class="fs-cue glass rounded-2xl px-4 py-3 mb-3 text-sm" role="note" aria-label="How to start">
+ <div class="fs-row"><p class="fs-lead"><b class="text-indigo-300">Start here:</b> ask a legal question, or try an example.</p>
+ <button id="firststep-dismiss" type="button" class="fs-x" aria-label="Dismiss the getting-started tips" title="Dismiss tips">✕</button></div>
+ <ol id="steps" class="fs-steps"><li><span class="fs-n">1</span>Ask</li><li><span class="fs-n">2</span>Read the cited memo</li><li><span class="fs-n">3</span>Take the map tour</li></ol></div>
+<div id="askrow" class="glass rounded-2xl p-4 flex gap-3 mb-6">
+ <label for="q" class="sr-only">Legal research question</label>
+ <input id="q" class="flex-1 bg-transparent outline-none text-lg placeholder-slate-500" aria-label="Legal research question" placeholder="e.g. Automobile exception: probable cause standard in Colorado" value="">
+ <button id="go" class="bg-indigo-500 hover:bg-indigo-400 px-6 py-2 rounded-xl font-semibold" aria-label="Ask: run the research agents" title="Run the research agents on your question (Enter)">Ask</button></div>
 <div class="flex gap-2 mb-6 text-xs" id="examples"></div>
 <div class="glass rounded-2xl overflow-hidden relative mb-6" style="height:clamp(300px,42vh,420px)"><div id="docs3d" class="absolute inset-0"></div><div class="absolute bottom-2 left-3 text-[10px] uppercase tracking-widest text-slate-500">United States · Colorado courts &amp; statutes</div><div id="docnav" class="absolute bottom-2 right-3 flex gap-1"></div><a id="fullmap" href="/map" class="absolute top-3 right-4 z-20 text-xs bg-indigo-600/80 hover:bg-indigo-500 px-3 py-1 rounded-full">Open full map ↗</a></div>
 <div class="grid grid-cols-12 gap-6">
  <div class="col-span-8 space-y-6">
   <div class="glass rounded-2xl p-6 ans-card"><div class="ans-head flex items-center justify-between gap-3 mb-4"><h2 class="font-semibold text-slate-300">Answer</h2>
    <div class="flex gap-2 items-center ml-auto"><span id="sg" class="ans-chips"></span><label class="text-xs text-slate-400 flex items-center gap-1 mr-1"><input id="hf" type="checkbox" class="accent-indigo-500"> Hands-free</label><button id="play" data-abtn="play" data-label="Listen" data-tip="Listen to the memo" aria-label="Listen to the memo" class="abtn"></button></div></div>
-   <div id="answer" class="leading-relaxed text-slate-100 text-[15px] max-w-none">Ask a question to start the agent pipeline.</div>
+   <div id="answer" class="leading-relaxed text-slate-100 text-[15px] max-w-none"><div class="ans-empty"><p class="text-slate-300">Your cited memo will appear here.</p><p class="text-slate-500 text-sm">Type a question above and press <b class="text-indigo-300">Ask</b>, or pick one from <b class="text-slate-300">Examples</b>. Four agents plan, retrieve, write and verify; every claim links to its source.</p></div></div>
    <div id="meta" class="ans-meta"></div><div id="disc" class="ans-disc"></div></div>
 
   <div class="glass rounded-2xl p-6"><h2 class="font-semibold text-slate-300 mb-3">Retrieved authorities</h2><div id="cites" class="space-y-2"></div></div>
@@ -112,7 +117,7 @@ function feedDrain(){if(FEED.busy||!FEED.q.length)return;FEED.busy=true;const [e
  const hand=["release","handoff","done"].includes(e.kind)||(FEED.prevAgent&&FEED.prevAgent!==e.agent);FEED.prevAgent=e.agent;
  setTimeout(()=>{FEED.busy=false;feedDrain()},FEED.fast?120:(hand?1200:600+Math.random()*300));}
 let running=false,lastAskT=0,resultWaiters=[];
-async function ask(){const q=$("q").value.trim();if(!q||running||Date.now()-lastAskT<800)return null;window.__askT=performance.now();window.__ttft=0;if(window.Docs3D)Docs3D.holdVoice=true;window.AudioMgr&&AudioMgr.stopAll();lastAskT=Date.now();running=true;$("go").disabled=true;$("go").classList.add("opacity-50");
+async function ask(){let q=$("q").value.trim();if(!q){const m=($("q").placeholder||"").match(/^e\.g\.\s*(.+)$/);if(m){q=m[1];$("q").value=q}}if(!q||running||Date.now()-lastAskT<800)return null;window.__askT=performance.now();window.__ttft=0;if(window.Docs3D)Docs3D.holdVoice=true;window.AudioMgr&&AudioMgr.stopAll();lastAskT=Date.now();running=true;$("go").disabled=true;$("go").classList.add("opacity-50");
  $("answer").innerHTML='<span class="live text-slate-400">Agents working…</span>';$("events").innerHTML="";$("sg").innerHTML="";$("cites").innerHTML="";$("play").classList.add("hidden");seats({});window.Docs3D&&Docs3D.busy();
  const done=()=>{running=false;$("go").disabled=false;$("go").classList.remove("opacity-50")};
  const resp=await fetch("/api/ask",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(window.FOLLOW?FOLLOW.body(q):{question:q})});const j=await resp.json().catch(()=>({}));
@@ -129,7 +134,7 @@ function render(r){setTimeout(()=>window.FOLLOW&&FOLLOW.onResult(r),0);lastAnswe
  if(tts)$("play").classList.remove("hidden");
  if(window.Docs3D){Docs3D.holdVoice=false;if(Docs3D.voice&&!(window.AudioMgr&&AudioMgr.isMuted())){const go=()=>{if(!Docs3D.tour)return setTimeout(go,200);Docs3D.stopTour();const g=AudioMgr.gen||0;AudioMgr.say(shortLine(r.answer),$("play")).then(()=>{if((AudioMgr.gen||0)===g)Docs3D.tour(0)});};setTimeout(go,300);}}
  if(window.Docs3D)Docs3D.ctx={answer:r.answer||"",question:r.question||""};if(window.__early!==r.run_id){lastCites=r.citations;window.Docs3D&&Docs3D.show(r.citations,r.edges,r.documents||[]);}else{lastCites=Docs3D._c||r.citations;}
- $("docnav").innerHTML=r.citations.slice(0,12).map((c,i)=>`<button onclick="Docs3D.focus(${i});Docs3D.open&&Docs3D.open(lastCites[${i}])" class="w-5 h-5 rounded-full text-[10px] bg-indigo-500/30 hover:bg-indigo-500/70">${i+1}</button>`).join("");
+ $("docnav").innerHTML=r.citations.slice(0,12).map((c,i)=>`<button onclick="Docs3D.focus(${i});Docs3D.open&&Docs3D.open(lastCites[${i}])" aria-label="Open source ${i+1}: ${esc(c.title||"").replace(/"/g,"&quot;")}" title="${esc(c.title||"").replace(/"/g,"&quot;")}" class="docpin w-5 h-5 rounded-full text-[10px] bg-indigo-500/30 hover:bg-indigo-500/70">${i+1}</button>`).join("");
  if(tts&&$("hf").checked&&!(window.PrecedentVoice&&PrecedentVoice.state()!=="idle"))setTimeout(()=>speak(),400);
  $("cites").innerHTML=r.citations.map((c,i)=>`<div class="glass rounded-xl p-3 flex justify-between gap-4"><div><span class="text-indigo-300 font-bold">${c.ref}</span> ${c.url?`<button type="button" class="hover:underline text-left" onclick="Docs3D.focus(${i});Docs3D.open&&Docs3D.open(lastCites[${i}])">${esc(c.title)}</button>`:esc(c.title)}
   <div class="text-xs text-slate-500">${c.type} ${esc(c.court)} ${c.date} · path: ${c.path.map(esc).join(" → ")}</div>${c.passage?`<div class="text-xs text-slate-300 mt-1 border-l-2 border-indigo-500/50 pl-2 italic">${esc(window.cleanPassage?cleanPassage(c.passage):c.passage.slice(0,300))}</div>`:""}${window.caseLinks?window.caseLinks(c):""}</div><div class="text-right text-xs text-slate-400 whitespace-nowrap">cited by ${c.cited_by}<br>PR ${c.pagerank}</div></div>`).join("");
@@ -175,5 +180,5 @@ $("tasks").innerHTML=Object.entries(d.tasks).map(([k,t])=>`<div class="flex just
 board();setInterval(board,5000);
 
 window.PRECEDENT={ask:async t=>{$("q").value=t;return await ask()},speak};
-</script><script src="/static/vendor/d3-array.min.js"></script><script src="/static/vendor/d3-geo.min.js"></script><script type="module" src="/static/map3d.js?v=mt1"></script><script src="/static/voice.js?v=mt1"></script><script src="/static/followup.js"></script><script>FOLLOW.init({input:()=>document.getElementById("q"),threadHost:()=>document.getElementById("q").parentElement,chipsHost:()=>document.getElementById("q").parentElement,newHost:()=>document.getElementById("go"),submit:()=>document.getElementById("go").click(),placeholder:"Enter a research query (issue, jurisdiction)…",onReset:()=>{lastAnswer="";["answer","cites"].forEach(i=>{const e=document.getElementById(i);if(e)e.innerHTML=""});}});</script><script src="/static/declutter.js"></script><script src="/static/partners.js"></script><script src="/static/navbar.js"></script><script>document.addEventListener("click",e=>{ const a=e.target.closest&&e.target.closest('a[href="/map"]'); if(!a) return; try{ window.AudioMgr&&AudioMgr.stopAll(); speechSynthesis&&speechSynthesis.cancel(); }catch(_){} const id=window.FOLLOW&&FOLLOW.prev; if(id) a.href="/map?run="+encodeURIComponent(id); },true);</script>
+</script><script src="/static/vendor/d3-array.min.js"></script><script src="/static/vendor/d3-geo.min.js"></script><script type="module" src="/static/map3d.js?v=ux1"></script><script src="/static/voice.js?v=ux1"></script><script src="/static/followup.js"></script><script>FOLLOW.init({input:()=>document.getElementById("q"),threadHost:()=>document.getElementById("q").parentElement,chipsHost:()=>document.getElementById("q").parentElement,newHost:()=>document.getElementById("go"),submit:()=>document.getElementById("go").click(),placeholder:"e.g. Automobile exception: probable cause standard in Colorado",onReset:()=>{lastAnswer="";["answer","cites"].forEach(i=>{const e=document.getElementById(i);if(e)e.innerHTML=""});}});</script><script src="/static/declutter.js"></script><script src="/static/firstscreen.js?v=fs1"></script><script src="/static/partners.js"></script><script src="/static/navbar.js?v=ux1"></script><script>document.addEventListener("click",e=>{ const a=e.target.closest&&e.target.closest('a[href="/map"]'); if(!a) return; try{ window.AudioMgr&&AudioMgr.stopAll(); speechSynthesis&&speechSynthesis.cancel(); }catch(_){} const id=window.FOLLOW&&FOLLOW.prev; if(id) a.href="/map?run="+encodeURIComponent(id); },true);</script>
 </body></html>

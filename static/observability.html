@@ -94,4 +94,4 @@ function dx(){const ds=SNAP.dataset||{},xp=SNAP.experiment||{},D=$("dx");D.repla
 $("flt").onchange=()=>{page=0;render();};$("q").oninput=()=>{page=0;render();};$("prev").onclick=()=>{page--;render();};$("next").onclick=()=>{page++;render();};$("rf").onclick=load;$("sel").onchange=draw;
 load().then(dx).catch(e=>$("st").textContent="Load failed: "+e);setInterval(load,30000);
 </script>
-<script src="/static/navbar.js"></script></body></html>
+<script src="/static/navbar.js?v=ux1"></script></body></html>

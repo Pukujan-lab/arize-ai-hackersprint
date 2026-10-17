@@ -179,7 +179,7 @@ if(!webgl){
   if(window.AudioMgr&&AudioMgr.isMuted()) api.voice=false; const vbtn=mk("",()=>{ const on=!api.voice; if(window.AudioMgr) AudioMgr.setMuted(!on); else { try{curAudio&&curAudio.pause();}catch(e){} } api.voice=on; }); vbtn.dataset.abtn="mute"; document.addEventListener("precedent:mute",e=>{ api.voice=!e.detail; });
   const TOURH='<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg> Tour'; const tbtn=mk("",()=>{ touring?api.stopTour():api.tour(0); });
   mk("▶",()=>{ api.stopTour(); const O=api.order(); tpos=Math.min(O.length-1,tpos+1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
-  tbtn.innerHTML=TOURH; tbtn.setAttribute("aria-label","Play or pause the guided tour"); tbar.addEventListener("pointerdown",e=>e.stopPropagation()); host.parentElement.appendChild(tbar);
+  tbtn.innerHTML=TOURH; tbtn.setAttribute("aria-label","Play or pause the guided tour"); tbtn.title="Guided tour: walks through each cited source"; tbar.setAttribute("role","toolbar"); tbar.setAttribute("aria-label","Map tour controls"); tbar.classList.add("tourbar"); tbar.addEventListener("pointerdown",e=>e.stopPropagation()); host.parentElement.appendChild(tbar);
   let _pd=null; R.domElement.addEventListener("pointerdown",e=>{ _pd=[e.clientX,e.clientY]; },{passive:true}); addEventListener("pointerup",()=>{ _pd=null; });
   R.domElement.addEventListener("pointermove",e=>{ if(_pd&&e.buttons&&Math.hypot(e.clientX-_pd[0],e.clientY-_pd[1])>5){ _pd=null; if(touring) api.stopTour(); } },{passive:true});
   R.domElement.addEventListener("wheel",()=>{ if(touring) api.stopTour(); },{passive:true});

@@ -390,6 +390,7 @@
 
     // Fix navbar layout
     fixNavbarLayout();
+    if(!document.getElementById('responsive-css')){const l=document.createElement('link');l.id='responsive-css';l.rel='stylesheet';l.href='/static/responsive.css?v=ux1';document.head.appendChild(l);}
 
     // Add partner strip to nav
     addPartnerStrip();

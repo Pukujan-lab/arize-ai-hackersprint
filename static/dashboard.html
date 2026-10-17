@@ -77,4 +77,4 @@ async function load(){ const d=await (await fetch("/api/stack")).json(); const R
  document.getElementById("tabs").innerHTML=Object.keys(PARTNERS).map(k=>`<a href="#${k}">${PARTNERS[k].name}</a>`).join("");
  document.getElementById("upd").textContent="Updated "+new Date().toLocaleTimeString(); }
 flow(); load(); setInterval(load,15000);
-</script><script src="/static/partners.js"></script><script src="/static/navbar.js"></script></body></html>
+</script><script src="/static/partners.js"></script><script src="/static/navbar.js?v=ux1"></script></body></html>
