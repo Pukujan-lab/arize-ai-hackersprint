@@ -6,6 +6,19 @@ APP=${APP_DIR:-$HOME/precedent}; LABEL=com.precedent.app; PUBLIC=${PUBLIC_URL:-h
 cd "$APP" || exit 1
 ts=$(date +%Y%m%d%H%M%S)
 dirty=$(git status --porcelain --untracked-files=no -- . ':(exclude).coord' ':(exclude)uvicorn.log')
+# Changes already merged upstream (working file == origin/main) are safe to reset over.
+git fetch --quiet origin main || exit 1
+if [ -n "$dirty" ]; then
+  unmerged=""
+  for f in $(git diff --name-only HEAD -- . ':(exclude).coord' ':(exclude)uvicorn.log'); do
+    if [ -e "$f" ]; then [ "$(git hash-object "$f")" = "$(git rev-parse -q --verify "origin/main:$f" 2>/dev/null)" ] || unmerged="$unmerged $f"
+    else git cat-file -e "origin/main:$f" 2>/dev/null && unmerged="$unmerged $f"; fi
+  done
+  [ -z "$unmerged" ] && { echo "local changes are all merged in origin/main; continuing"; dirty=""; } || echo "unmerged local changes:$unmerged"
+fi
+if [ -n "$dirty" ] && [ "${CONFIRM_RESET_OVER_LOCAL:-false}" = true ]; then
+  git diff > "$HOME/precedent-uncommitted-$ts.patch"; echo "::warning::resetting over local changes on operator confirmation (saved ~/precedent-uncommitted-$ts.patch)"; dirty=""
+fi
 if [ -n "$dirty" ]; then
   git diff > "/tmp/precedent-uncommitted.$$"
   last=$(ls -t "$HOME"/precedent-uncommitted-*.patch 2>/dev/null | head -1)
