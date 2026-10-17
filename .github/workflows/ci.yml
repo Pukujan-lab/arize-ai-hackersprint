@@ -22,9 +22,9 @@ jobs:
       ACS_HOTLOAD: "0"
       PYTHONDONTWRITEBYTECODE: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check out the pinned writing helper (CGM 0.5.12, see docs/continuity/cgm-pin.md)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Pukujan/content-generation-modules
           ref: 6831f91e165b62d719c05eb492f7375fa932b560
@@ -78,7 +78,7 @@ jobs:
           show-openssf-scorecard: true
           warn-on-openssf-scorecard-level: 3
       - name: Check out the pinned OIO (see docs/continuity/oio-pin.md)
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           repository: Pukujan/observational-issue-ops
           ref: e5e5fb1250aa8d154e9a83554638aec4cc8b2c8a
