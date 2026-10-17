@@ -159,13 +159,13 @@ if(!webgl){
       const cat=p.userData.G.cat, far=cat==="federal", d=far?2.6:(cat==="county"?0.75:1.0); lookT.copy(p.position); camT.set(p.position.x,p.position.y-d*0.25,d); if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ cam.position.copy(camT); look.copy(lookT); } },
     order(){ const hp=c=>holding(c,(api.ctx||{}).question)?0:1; return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0,hp(c)]).filter(x=>x[1]>0&&(x[2]===0||citedBy(cites[x[0]]))).sort((a,b)=>a[2]-b[2]||a[1]-b[1]).map(x=>x[0]); },
     jump(k){ const O=api.order(); const n=O.indexOf(k); if(n<0){ api.focus(k); return; } api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; api.tour(n); },
-    tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; tbtn.innerHTML=(window.ICON?ICON("pause",16):"")+" Pause";
+    tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; const tg=api._tg=(api._tg||0)+1; if(!start) api._ttsDown=false; tbtn.innerHTML=(window.ICON?ICON("pause",16):"")+" Pause";
       if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.innerHTML=TOURH; return; }
-      const step=n=>{ if(!touring) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.innerHTML=TOURH; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,a?600:Math.max(2600,ms+1200)); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
+      const step=n=>{ if(!touring||tg!==api._tg) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.innerHTML=TOURH; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,a?600:Math.max(2600,ms+1200)); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
     replay(){ if(cur>=0) typeOut(cur); },
     jumpRef(n){ const k=cites.findIndex(c=>parseInt(String(c.ref||"").replace(/\D/g,""))===+n); if(k>=0) api.jump(k); },
     summaryStop(t){ clearInterval(trT); if(sync) sync.dead=true; cur=-1; api.fit(); label.innerHTML='<b class="text-indigo-300">Summary</b> Colorado overview'; tr.classList.remove("hidden"); const esc=x=>x.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;"); let n=0; const L=String(t||""); trT=setInterval(()=>{ n+=2; tr.innerHTML='<b style="color:#a5b4fc">Summary</b> '+esc(L.slice(0,n))+(n<L.length?"<span class='animate-pulse'>▍</span>":""); if(n>=L.length) clearInterval(trT); },30); },
-    stopTour(){ touring=false; clearTimeout(tour); try{curAudio&&curAudio.pause();}catch(e){} tbtn.innerHTML=TOURH; },
+    stopTour(){ touring=false; clearTimeout(tour); try{curAudio&&curAudio.pause();}catch(e){} if(sync&&!sync.a) sync.dead=true; try{ window.AudioMgr&&AudioMgr.loadCancel&&AudioMgr.loadCancel(); }catch(e){} tbtn.innerHTML=TOURH; },
     fit(){ const fed=pins.some(p=>p.userData.G.cat==="federal"); if(fed){ camT.copy(homeCam); lookT.copy(homeLook); } else coView(); },
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
   R.domElement.addEventListener("click",ev=>{ const r=R.domElement.getBoundingClientRect(); mouse.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
@@ -233,24 +233,29 @@ if(!webgl){
         rel=t; } }
     return {sum, rel}; }
   api.explainText=k=>{ const {sum,rel}=explain(k); return sum+(rel?" "+rel:""); }
-  let curAudio=null; api.voice=(()=>{ try{ return localStorage.getItem("mapVoice")==="1"; }catch(e){ return false; } })();
+  let curAudio=null; api.voice=!(window.AudioMgr&&AudioMgr.isMuted());   /* sound on by default; manual mute lives in AudioMgr */
   let sync=null; // {a:Audio, starts:[...]} for the stop currently speaking
-  function sayTTS(text){ if(!api.voice||api.holdVoice||(window.AudioMgr&&AudioMgr.isMuted())) return null;
+  function sayTTS(text){ const M=window.AudioMgr; if(!api.voice||api.holdVoice||api._ttsDown||(M&&(M.isMuted()||Date.now()-(M.failedAt||0)<60000))) return null;   /* after a failure the rest of this tour is caption-only */
     const S={a:null,starts:[],dead:false}; sync=S;
-    S.done=fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.ok&&r.status!==204?r.json():null).then(j=>{ if(!j||!j.audio_b64||S.dead||api.holdVoice||(window.AudioMgr&&AudioMgr.saying)) return;
+    S.done=fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.ok&&r.status!==204?r.json():null).then(j=>{ if(S.dead||api.holdVoice||(window.AudioMgr&&AudioMgr.saying)) return false; if(!j||!j.audio_b64){ S.fail=true; return false; }
       try{curAudio&&curAudio.pause();}catch(e){}
       const bin=atob(j.audio_b64), u8=new Uint8Array(bin.length); for(let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
       curAudio=new Audio(URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"}))); S.a=curAudio; S.starts=j.starts||[];
-      return new Promise(res=>{ curAudio.onended=res; curAudio.onerror=res; curAudio.play().catch(res); }); }).catch(()=>{}).finally(()=>{ S.ended=true; });
+      const a=curAudio; a.addEventListener("playing",()=>{ S.ok=true; },{once:true});
+      return new Promise(res=>{ a.onended=()=>res(true); a.onerror=()=>{ if(!S.ok) S.fail=true; res(!!S.ok); }; a.play().then(()=>{ S.ok=true; },()=>res(!!S.ok)); }); }).catch(()=>{ S.fail=true; return false; }).finally(()=>{ S.ended=true; });
     return S; }
   function typeOut(k){ clearInterval(trT); cancelAnimationFrame(api._raf||0); if(sync) sync.dead=true; const {sum,rel}=explain(k); const full=`<button title="Replay this stop" aria-label="Replay this stop" onclick="Docs3D.replay()" style="float:right;margin-left:8px;color:#a5b4fc"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button><b style="color:#a5b4fc">${(cites[k]||{}).ref||""}</b> `; const txt=sum+(rel?"\n"+rel:"");
     tr.classList.remove("hidden"); const esc=t=>t.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;");
     const paint=n=>{ tr.innerHTML=full+esc(txt.slice(0,n)).replace("\n","<br><span style='color:#6ee7b7'>")+(n<txt.length?"<span class='animate-pulse'>▍</span>":""); };
+    try{ window.AudioMgr&&AudioMgr.loadCancel&&AudioMgr.loadCancel(true); }catch(e){}   /* tour advanced: clear a stale 'loading' (keep a fresh 'unavailable' notice) */
     const S=sayTTS(txt.replace("\n"," "));
     if(!S){ api._audio=null; let n=0; trT=setInterval(()=>{ n+=1; paint(n); if(n>=txt.length) clearInterval(trT); },30); return txt.length*30; }
-    api._audio=S.done; api._sync=S; let last=-1;
-    const tick=()=>{ if(S.dead) return; let n=0; const a=S.a;
-      if(S.ended) n=txt.length;
+    // no audio (failed, timed out, autoplay blocked): type the caption out instead so the tour keeps advancing
+    S.fallback=()=>new Promise(res=>{ S.fb=true; if(S.fail) api._ttsDown=true; cancelAnimationFrame(api._raf||0); clearInterval(trT); let n=0;
+      trT=setInterval(()=>{ if(S.dead) return clearInterval(trT); n+=1; paint(n); if(n>=txt.length) clearInterval(trT); },30); setTimeout(res,txt.length*30+1200); });
+    S.done=S.done.then(ok=>ok||S.dead?0:S.fallback()); api._audio=S.done; api._sync=S; let last=-1;
+    const tick=()=>{ if(S.dead||S.fb) return; let n=0; const a=S.a;
+      if(S.ended){ if(!S.ok) return; n=txt.length; }
       else if(a&&a.duration){ const t=a.currentTime; if(S.starts.length){ while(n<S.starts.length&&S.starts[n]<=t) n++; if(n>=S.starts.length&&a.ended) n=txt.length; } else n=Math.round(t/a.duration*txt.length); }
       if(n!==last){ paint(n); last=n; } if(n<txt.length) api._raf=requestAnimationFrame(tick); };
     tick(); return 0; }
