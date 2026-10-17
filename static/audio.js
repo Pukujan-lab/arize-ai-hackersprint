@@ -41,7 +41,9 @@ HTMLMediaElement.prototype.play=function(){
   /* never two at once, and never cut: wait in line until the current clip ENDS (only stopAll interrupts) */
   loadDone(); const ep=epoch; return new Promise((res,rej)=>{ queue.push({a,ep,res,rej}); pump(); }); };
 function start(a){ return play.call(a).then(v=>{ started(a); return v; },e=>{ if(e&&e.name==="NotAllowedError"&&!(window.AudioMgr&&AudioMgr.unlocked)){ cur=0; clearTimeout(tmr); show("gesture"); } else if(cur) loadFail(cur); setTimeout(pump,0); throw e; }); }
-function busyEl(o){ return !o.__unlock&&!o.paused&&!o.ended&&!(o.duration&&o.currentTime>=o.duration-0.05); }
+function busyEl(o){ if(o.__unlock||o.paused||o.ended) return false;
+  if(o.duration&&o.currentTime>=o.duration-0.05){ o.__endAt=o.__endAt||Date.now(); return Date.now()-o.__endAt<1500; }   /* wait for 'ended'; only a stuck clip is skipped */
+  return true; }
 function busy(except){ return [...all].some(o=>o!==except&&busyEl(o)) || ("speechSynthesis" in window && speechSynthesis.speaking) || !!speechWait; }
 let epoch=0, speechWait=null; const queue=[];
 function pump(){ while(queue.length&&queue[0].ep!==epoch){ const it=queue.shift(); try{ it.a.dispatchEvent(new Event("ended")); }catch(e){} it.res(); }   /* stale clip from an earlier run: never plays */

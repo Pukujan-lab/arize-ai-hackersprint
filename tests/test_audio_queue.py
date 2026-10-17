@@ -99,5 +99,5 @@ def test_live_full_flow_nothing_cut(browser):
     # never two clips at once: each clip's playing comes after the previous clip's ended
     starts = [e for e in log if e[1] == "playing"]; ends = {e[0]: e[4] for e in log if e[1] == "ended"}
     for prev, nxt in zip(starts, starts[1:]):
-        if prev[0] in ends: assert ends[prev[0]] <= nxt[4] + 300, (prev, nxt)   # next starts once the previous reached its end (ended event may lag ~200ms)
+        if prev[0] in ends: assert ends[prev[0]] <= nxt[4] + 50, (prev, nxt)   # next starts only after the previous ended
     assert errs == []
