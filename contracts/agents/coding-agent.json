@@ -4,6 +4,13 @@
   "kind": "coding",
   "purpose": "Any coding agent working in this repo: claims a task, changes code on a branch, opens a PR that CI gates and auto-merges.",
   "implemented_in": "AGENTS.md",
+  "read_first": [
+    "docs/FRONTEND_INVENTORY.md",
+    "contracts/openapi.json",
+    "contracts/agents/",
+    "docs/UX_GUIDELINES.md",
+    "AGENTS.md"
+  ],
   "seat": null,
   "handoff_to": null,
   "input_schema": {

@@ -105,6 +105,13 @@
       "items": {
         "type": "string"
       }
+    },
+    "read_first": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Files an agent reads before its first edit"
     }
   }
 }

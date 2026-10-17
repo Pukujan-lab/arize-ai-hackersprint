@@ -4,6 +4,7 @@ Most of these files were written during the HackSprint NYC build on 2026-10-16, 
 
 Current:
 
+- `FRONTEND_INVENTORY.md`: every page, control, owning file and API route in `static/`, plus known clutter. Start here for frontend work.
 - `continuity/cgm-pin.md`: which writing-helper commit this repo pins, what `.content-system/` holds, and how CI checks it.
 - `continuity/oio-pin.md`: which OIO commit this repo pins, the installer layout under `.oio/`, and how CI checks it.
 - `voice-and-data-model.md`: the TTS provider chain and queue, the local-then-Octo answer, retrieval and clip caches, and how the Octo tables are versioned and migrated.

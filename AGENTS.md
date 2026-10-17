@@ -2,6 +2,15 @@
 
 This file tells a coding agent where things go in Precedent and how a change gets from a branch to the live site. Read it before your first edit. The layout is also recorded in `repo.manifest.json`, which CI checks, so if this file and the manifest ever disagree, the manifest wins and this file needs a fix.
 
+## Read first
+
+Before any change, read these. Frontend work starts from the inventory, not from screenshots.
+
+- `docs/FRONTEND_INVENTORY.md`: every page, button, link, drawer and the API route it calls. `static/map3d.js`, `static/map3d.co.js` and the vendored map data are KEEP AS IS.
+- `contracts/openapi.json`: the API routes and their shapes.
+- `contracts/agents/`: agent contracts (`coding-agent.json` is yours).
+- `docs/UX_GUIDELINES.md`: how the UI should look and read.
+
 ## Writing rule at boot
 
 Paste the block below into your system prompt when you start. It comes verbatim from the pinned writing helper (`.content-system/system-version.json` names the version and commit) and CI fails if it drifts. Do not edit the text between the markers by hand; change the pin and copy the new block instead.
