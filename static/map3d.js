@@ -161,11 +161,12 @@ if(!webgl){
     jump(k){ const O=api.order(); const n=O.indexOf(k); if(n<0){ api.focus(k); return; } api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; api.tour(n); },
     tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; const tg=api._tg=(api._tg||0)+1; if(!start) api._ttsDown=false; tbtn.innerHTML=(window.ICON?ICON("pause",16):"")+" Pause";
       if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.innerHTML=TOURH; return; }
-      const step=n=>{ if(!touring||tg!==api._tg) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.innerHTML=TOURH; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,a?600:Math.max(2600,ms+1200)); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
-    replay(){ if(cur>=0) typeOut(cur); },
+      const step=n=>{ if(!touring||tg!==api._tg) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.innerHTML=TOURH; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); api.prefetch(O[n+1]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,a?600:Math.max(2600,ms+1200)); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
+    replay(){ if(cur<0) return; api.stopTour(); typeOut(cur); },   /* deliberate: interrupts */
     jumpRef(n){ const k=cites.findIndex(c=>parseInt(String(c.ref||"").replace(/\D/g,""))===+n); if(k>=0) api.jump(k); },
     summaryStop(t){ clearInterval(trT); if(sync) sync.dead=true; cur=-1; api.fit(); label.innerHTML='<b class="text-indigo-300">Summary</b> Colorado overview'; tr.classList.remove("hidden"); const esc=x=>x.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;"); let n=0; const L=String(t||""); trT=setInterval(()=>{ n+=2; tr.innerHTML='<b style="color:#a5b4fc">Summary</b> '+esc(L.slice(0,n))+(n<L.length?"<span class='animate-pulse'>▍</span>":""); if(n>=L.length) clearInterval(trT); },30); },
-    stopTour(){ touring=false; clearTimeout(tour); try{curAudio&&curAudio.pause();}catch(e){} if(sync&&!sync.a) sync.dead=true; try{ window.AudioMgr&&AudioMgr.loadCancel&&AudioMgr.loadCancel(); }catch(e){} tbtn.innerHTML=TOURH; },
+    stopTour(soft){ touring=false; clearTimeout(tour); if(!soft){ try{curAudio&&curAudio.pause();}catch(e){} if(sync&&!sync.a) sync.dead=true; api._pfc=null; try{ window.AudioMgr&&AudioMgr.loadCancel&&AudioMgr.loadCancel(); }catch(e){} }   /* soft = stop advancing, let the current line finish */
+    tbtn.innerHTML=TOURH; },
     fit(){ const fed=pins.some(p=>p.userData.G.cat==="federal"); if(fed){ camT.copy(homeCam); lookT.copy(homeLook); } else coView(); },
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
   R.domElement.addEventListener("click",ev=>{ const r=R.domElement.getBoundingClientRect(); mouse.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
@@ -246,16 +247,27 @@ if(!webgl){
   function speakBrowser(text,S){ if(!("speechSynthesis" in window)||(window.AudioMgr&&AudioMgr.isMuted())){ S.fail=true; return false; }
     try{ window.AudioMgr&&AudioMgr.loadCancel&&AudioMgr.loadCancel(); }catch(e){}
     return new Promise(res=>{ const u=new SpeechSynthesisUtterance(text); S.sp=0; u.onstart=()=>{ S.ok=true; }; u.onboundary=e=>{ S.sp=e.charIndex; }; u.onend=()=>res(true); u.onerror=()=>res(!!S.ok); speechSynthesis.speak(u); }); }
-  function sayTTS(text){ const M=window.AudioMgr; if(!api.voice||api.holdVoice||api._ttsDown||(M&&(M.isMuted()||Date.now()-(M.failedAt||0)<60000))) return null;   /* after a failure the rest of this tour is caption-only */
-    const S={a:null,starts:[],dead:false}; sync=S;
-    S.done=fetch("/api/tts_ts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.status===204?null:r.json().catch(()=>null)).then(j=>{ if(S.dead||api.holdVoice||(window.AudioMgr&&AudioMgr.saying)) return false;
+  const ttsOff=()=>{ const M=window.AudioMgr; return !api.voice||api._ttsDown||Date.now()<(api.holdUntil||0)||(M&&(M.isMuted()||Date.now()-(M.failedAt||0)<60000)); };   /* after a failure the rest of this tour is caption-only */
+  const ttsReq=(text,pre)=>fetch("/api/tts_ts",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},pre?{"X-Prefetch":"1"}:{}),body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.status===204?null:r.json().catch(()=>null));
+  // prefetch the NEXT stop's clip while this one plays: download only, never plays or stops anything
+  api.prefetch=k=>{ const M=window.AudioMgr; if(k===undefined||!api.voice||api._ttsDown||(M&&(M.isMuted()||Date.now()-(M.failedAt||0)<60000))) return; const text=api.explainText(k).slice(0,400); if(api._pfc&&api._pfc.text===text) return;
+    const P={text,ep:window.AudioMgr&&AudioMgr.epoch,settled:false}; P.p=ttsReq(text,true).catch(()=>null).then(j=>{ P.settled=true; return j; }); api._pfc=P; };
+  function sayTTS(text){ if(ttsOff()||api.holdVoice) return null;
+    const M=window.AudioMgr, ep=M&&M.epoch, S={a:null,starts:[],dead:false}; sync=S; text=text.slice(0,400);
+    const pf=api._pfc&&api._pfc.text===text&&api._pfc.ep===ep?api._pfc:null; api._pfc=null; let t=null, req;
+    if(pf&&pf.settled) req=pf.p;
+    else if(pf){ t=M&&M.loadStart?M.loadStart():null; req=Promise.race([pf.p,new Promise(r=>setTimeout(()=>r(null),8000))]); }   /* still downloading: same indicator + 8s rule */
+    else req=ttsReq(text);
+    S.done=req.then(j=>{ if(S.dead||api.holdVoice||(M&&(M.saying||M.epoch!==ep))) return false;   /* stale (stopped / new run): never plays */
       if(j&&!j.audio_b64&&j.fallback==="browser") return speakBrowser(text,S);   /* server voices all failed (429): browser voice, not silence */
-      if(!j||!j.audio_b64){ S.fail=true; return false; }
-      try{curAudio&&curAudio.pause();}catch(e){}
+      if(!j||!j.audio_b64){ S.fail=true; if(t!=null) M.loadFail(t); return false; }
       const bin=atob(j.audio_b64), u8=new Uint8Array(bin.length); for(let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
       curAudio=new Audio(URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"}))); S.a=curAudio; S.starts=j.starts||[];
-      const a=curAudio; a.addEventListener("playing",()=>{ S.ok=true; },{once:true});
-      return new Promise(res=>{ a.onended=()=>res(true); a.onerror=()=>{ if(!S.ok) S.fail=true; res(!!S.ok); }; a.play().then(()=>{ S.ok=true; },()=>res(!!S.ok)); }); }).catch(()=>{ S.fail=true; return false; }).finally(()=>{ S.ended=true; });
+      const a=curAudio;
+      // the step advances on 'ended'; safety timer from the clip's duration so a lost 'ended' can't stall the tour
+      return new Promise(res=>{ let sf=null; const arm=()=>{ clearTimeout(sf); if(a.duration&&isFinite(a.duration)) sf=setTimeout(()=>res(true),(a.duration-a.currentTime)*1000+2500); };
+        a.addEventListener("playing",()=>{ S.ok=true; arm(); }); a.onended=()=>{ clearTimeout(sf); res(true); }; a.onerror=()=>{ clearTimeout(sf); if(!S.ok) S.fail=true; res(!!S.ok); };
+        a.play().then(()=>{ S.ok=true; },()=>{ clearTimeout(sf); res(!!S.ok); }); }); }).catch(()=>{ S.fail=true; return false; }).finally(()=>{ S.ended=true; });
     return S; }
   function typeOut(k){ clearInterval(trT); cancelAnimationFrame(api._raf||0); if(sync) sync.dead=true; const {sum,rel}=explain(k); const full=`<button title="Replay this stop" aria-label="Replay this stop" onclick="Docs3D.replay()" style="float:right;margin-left:8px;color:#a5b4fc"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button><b style="color:#a5b4fc">${(cites[k]||{}).ref||""}</b> `; const txt=sum+(rel?"\n"+rel:"");
     tr.classList.remove("hidden"); const esc=t=>t.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;");
