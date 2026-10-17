@@ -3,7 +3,7 @@ import os, time, uuid, threading, pathlib, httpx
 from fastapi import FastAPI, Depends
 from fastapi.responses import HTMLResponse, Response, JSONResponse
 import contracts
-import agents, tracing, acs_board, limits, ttschain
+import agents, tracing, acs_board, limits, ttschain, octocache
 from coord import Run, CLAIM
 
 ROOT = pathlib.Path(__file__).parent
@@ -193,7 +193,7 @@ def tour_steps(run_id: str):
     return ttschain.tour(run_id)
 
 
-threading.Thread(target=ttschain.octo_check, daemon=True).start()  # startup: Octo schema_version must match the repo
+threading.Thread(target=octocache.octo_check, daemon=True).start()  # startup: Octo schema_version must match the repo
 
 
 def _run_and_log(question, rid, prev=None):

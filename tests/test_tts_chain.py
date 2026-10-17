@@ -171,3 +171,11 @@ def test_health_lists_chain(env, monkeypatch):
     monkeypatch.setenv("TTS_DISABLE_FISH", "1")
     h = env.get("/api/health").json()
     assert h["tts"] == ["kokoro", "browser"] and h["kokoro"] is False and h["fish"] is False
+
+
+def test_fish_timeout_default_is_5s(env, monkeypatch):
+    """Browser gives up at 8s (static/audio.js AUDIO_TIMEOUT_MS): Fish must time out early enough for Kokoro to answer."""
+    monkeypatch.delenv("FISH_TIMEOUT_S", raising=False)
+    calls = route(monkeypatch, httpx.ReadTimeout("slow"), Resp(200, KOKORO_MP3, {"X-Audio-Duration": "1.0"}))
+    env.post("/api/tts_ts", json={"text": text()})
+    assert calls[0][1]["timeout"] == 5.0

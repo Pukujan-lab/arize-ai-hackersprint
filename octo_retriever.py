@@ -1,8 +1,10 @@
 """Octo passage retriever (primary). Live: Octo workspace SQL full-text search (Postgres tsvector, ts_rank) over
 legal_graph.chunk (804,646 passages). Fallback: local SQLite FTS5 snapshot of Octo passages exported via a relay
-(the sandbox network cannot reach octodb.design-bakery.com). Responses cached on disk by query hash."""
+(the sandbox network cannot reach octodb.design-bakery.com). Responses cached by query hash: local cache/octo/<key>.json first, shared Octo `retrieval` table second (synced back)."""
 
 import os, json, re, time, hashlib, sqlite3, pathlib, urllib.request
+import octocache
+from schema.store import loads
 
 ROOT = pathlib.Path(__file__).parent
 CACHE = ROOT / "cache" / "octo"
@@ -79,15 +81,43 @@ def _snapshot(question):
     ]
 
 
+def _cache_get(h):
+    f = CACHE / f"{h}.json"
+    if f.exists():
+        try:
+            d = json.loads(f.read_text())
+        except Exception:
+            d = {}
+        if d.get("passages"):
+            octocache.link("retrieval", h, True)
+            return d
+    for r in octocache.query("SELECT source, passages FROM retrieval WHERE key = $1", [h]):
+        ps = loads(r.get("passages")) or []
+        if ps:
+            d = {"passages": ps, "source": r["source"]}
+            f.write_text(json.dumps(d))  # sync back to the local layer
+            octocache.link("retrieval", h, True)
+            return d
+    return None
+
+
+def _cache_put(h, question, source, passages):
+    (CACHE / f"{h}.json").write_text(json.dumps({"passages": passages, "source": source}))
+    octocache.write(
+        "INSERT INTO retrieval(key, query, source, passages, n, run_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (key) DO NOTHING",
+        [h, question[:500], source, json.dumps(passages), len(passages), octocache.RUN.get() or None, octocache.now()],
+    )
+    octocache.link("retrieval", h, False)
+
+
 def search(question, k=12):
     """Returns (passages, source). Source: 'octo-live' | 'octo-snapshot' | None."""
     h = hashlib.sha256(question.strip().lower().encode()).hexdigest()[:24]
-    f = CACHE / f"{h}.json"
     import stats
 
     stats.bump("octo_searches")
-    if f.exists():
-        d = json.loads(f.read_text())
+    d = _cache_get(h)
+    if d:
         stats.bump("octo_cache_hits")
         stats.put("octo_last_source", d["source"] + " (cached)")
         return d["passages"][:k], d["source"] + " (cached)"
@@ -99,7 +129,7 @@ def search(question, k=12):
                 if p["work_id"] not in seen:
                     seen.add(p["work_id"])
                     uniq.append(p)
-            f.write_text(json.dumps({"passages": uniq, "source": name}))
+            _cache_put(h, question, name, uniq)
             stats.bump("octo_live" if name == "octo-live" else "octo_snapshot")
             stats.put("octo_last_source", name)
             return uniq[:k], name

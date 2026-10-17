@@ -6,7 +6,7 @@ bump SCHEMA_VERSION, add migrations/NNNN_name.sql, run `python -m schema.lock`. 
 
 import hashlib, json, pathlib
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 # field -> (type, required). Types: str, int, num, list. Lists are stored as JSON text so the SQL stays portable.
 MODELS = {
@@ -46,6 +46,42 @@ MODELS = {
             "node_ids": ("list", False),
             "coords": ("list", False),  # map pin key(s) and [lat, lon]
             "phase": ("str", False),  # fast | batch (generation order)
+            "created_at": ("str", True),
+        },
+    },
+    "llm_answer": {
+        "table": "llm_answer",
+        "key": ["key"],
+        "fields": {
+            "key": ("str", True),  # sha256(system\nprompt\nmax_tokens), same as the local cache/<key>.json
+            "text": ("str", True),
+            "provider": ("str", True),  # e.g. inferhub/cb/deepseek-v4.1-flash; template/empty answers are never stored
+            "max_tokens": ("int", False),
+            "run_id": ("str", False),  # run that first produced it (all users: run_cache_link)
+            "created_at": ("str", True),
+        },
+    },
+    "retrieval": {
+        "table": "retrieval",
+        "key": ["key"],
+        "fields": {
+            "key": ("str", True),  # sha256(lower(strip(question)))[:24], same as cache/octo/<key>.json
+            "query": ("str", False),
+            "source": ("str", True),  # octo-live | octo-snapshot
+            "passages": ("list", True),
+            "n": ("int", False),
+            "run_id": ("str", False),
+            "created_at": ("str", True),
+        },
+    },
+    "run_cache_link": {
+        "table": "run_cache_link",
+        "key": ["run_id", "kind", "key"],
+        "fields": {
+            "run_id": ("str", True),
+            "kind": ("str", True),  # answer | retrieval
+            "key": ("str", True),
+            "hit": ("int", True),  # 1 = served from cache, 0 = computed by this run
             "created_at": ("str", True),
         },
     },

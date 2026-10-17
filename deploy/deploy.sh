@@ -44,7 +44,7 @@ switch() {
   .venv/bin/pip install -q -r requirements.txt || return 1
   # Data model: apply pending migrations/ to the Octo workspace (schema_version must match schema/SCHEMA_VERSION).
   # Non-fatal: if Octo is unreachable the app runs on its local TTS cache and /api/health shows data_schema.ok=false.
-  ( set -a; . "$HOME/.hack_env" 2>/dev/null; set +a; .venv/bin/python -m schema.migrate --apply ) || echo "::warning::schema migrate did not complete (app falls back to local TTS cache)"
+  ( set -a; . "$HOME/.hack_env" 2>/dev/null; set +a; .venv/bin/python -m schema.migrate --apply && .venv/bin/python -m schema.backfill ) || echo "::warning::schema migrate did not complete (app falls back to local TTS cache)"
   launchctl kickstart -k "gui/$(id -u)/$LABEL"
 }
 switch "$NEW"; if health; then echo "deployed $NEW"; exit 0; fi

@@ -1,6 +1,8 @@
-"""LLM helper: InferHub DeepSeek -> Anthropic haiku -> deterministic template. Disk cache by prompt hash."""
+"""LLM helper: InferHub DeepSeek -> Anthropic haiku -> deterministic template.
+Cache by prompt hash: local cache/<key>.json first, shared Octo llm_answer table second (synced back); template/empty never cached."""
 
 import os, json, hashlib, pathlib, httpx, logging
+import octocache
 
 log = logging.getLogger("llm")
 CACHE = pathlib.Path(__file__).parent / "cache"
@@ -93,13 +95,54 @@ def _err(name, e):
     LAST_ERR[name] = f"{type(e).__name__}{' ' + str(code) if code else ''}"  # no message text: never leak keys/urls
 
 
+def cache_key(system, prompt, max_tokens):
+    return hashlib.sha256(f"{system}\n{prompt}\n{max_tokens}".encode()).hexdigest()
+
+
+def stale(d):
+    """Answers that must never be served from cache: empty, template, reasoning-only, or pre-PR #5 ('inferhub/deepseek' label)."""
+    t = (d.get("text") or "").strip()
+    p = d.get("provider") or ""
+    return not t or p.startswith("template") or p == "inferhub/deepseek" or (t.startswith("<think>") and "</think>" not in t)
+
+
+def _cache_get(h):
+    f = CACHE / f"{h}.json"
+    if f.exists():
+        try:
+            d = json.loads(f.read_text())
+        except Exception:
+            d = {}
+        if d and not stale(d):
+            octocache.link("answer", h, True)
+            return d
+    for r in octocache.query("SELECT text, provider FROM llm_answer WHERE key = $1", [h]):
+        if not stale(r):
+            d = {"text": r["text"], "provider": r["provider"]}
+            f.write_text(json.dumps(d))  # sync back to the local layer
+            octocache.link("answer", h, True)
+            return d
+    return None
+
+
+def _cache_put(h, text, provider, max_tokens):
+    d = {"text": text, "provider": provider}
+    if stale(d):
+        return
+    (CACHE / f"{h}.json").write_text(json.dumps(d))
+    octocache.write(
+        "INSERT INTO llm_answer(key, text, provider, max_tokens, run_id, created_at) VALUES ($1, $2, $3, $4, $5, $6) ON CONFLICT (key) DO NOTHING",
+        [h, text, provider, max_tokens, octocache.RUN.get() or None, octocache.now()],
+    )
+    octocache.link("answer", h, False)
+
+
 def complete(system, prompt, max_tokens=500, fallback=None):
     """Returns (text, provider). LLM_MODE=fake skips network entirely."""
     max_tokens = min(max_tokens, 600)
-    h = hashlib.sha256(f"{system}\n{prompt}\n{max_tokens}".encode()).hexdigest()
-    f = CACHE / f"{h}.json"
-    if f.exists():
-        d = json.loads(f.read_text())
+    h = cache_key(system, prompt, max_tokens)
+    d = _cache_get(h)
+    if d:
         return d["text"], d["provider"] + " (cached)"
     capped = False
     if os.environ.get("LLM_MODE") != "fake":
@@ -109,7 +152,7 @@ def complete(system, prompt, max_tokens=500, fallback=None):
                 if t:
                     if name.startswith("inferhub"):
                         name = "inferhub/" + LAST_MODEL.get("inferhub", INFERHUB_MODEL)
-                    f.write_text(json.dumps({"text": t, "provider": name}))
+                    _cache_put(h, t, name, max_tokens)
                     return t, name
             except CapReached:
                 capped = True
@@ -157,10 +200,9 @@ def _anthropic_stream(system, prompt, mt, on_delta):
 def complete_stream(system, prompt, max_tokens=400, fallback=None, on_delta=None):
     """Like complete() but streams Anthropic tokens to on_delta(text_so_far). Cache hits return instantly."""
     max_tokens = min(max_tokens, 600)
-    h = hashlib.sha256(f"{system}\n{prompt}\n{max_tokens}".encode()).hexdigest()
-    f = CACHE / f"{h}.json"
-    if f.exists():
-        d = json.loads(f.read_text())
+    h = cache_key(system, prompt, max_tokens)
+    d = _cache_get(h)
+    if d:
         on_delta and on_delta(d["text"])
         return d["text"], d["provider"] + " (cached)"
     capped = False
@@ -168,7 +210,7 @@ def complete_stream(system, prompt, max_tokens=400, fallback=None, on_delta=None
         try:
             t = _anthropic_stream(system, prompt, max_tokens, on_delta)
             if t:
-                f.write_text(json.dumps({"text": t, "provider": "anthropic/claude-haiku-4-5"}))
+                _cache_put(h, t, "anthropic/claude-haiku-4-5", max_tokens)
                 return t, "anthropic/claude-haiku-4-5 (streamed)"
         except CapReached:
             capped = True

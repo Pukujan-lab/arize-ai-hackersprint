@@ -129,17 +129,17 @@ def test_clip_key_is_sha256_text_voice_provider():
 
 def test_octo_shared_layer(env, monkeypatch, tmp_path):
     """Clip made by one box lands in Octo; a box with an empty local cache serves it from Octo with zero provider calls."""
-    import ttschain
+    import octocache
     from schema.store import SqliteStore
     from schema import migrate
 
     octo = SqliteStore(":memory:")
     migrate.apply(octo)  # stands in for the Octo Postgres workspace
-    monkeypatch.setattr(ttschain, "octo_store", lambda: octo)
+    monkeypatch.setattr(octocache, "octo_store", lambda: octo)
     calls = counting_fish(monkeypatch)
     t = "Shared line " + uuid.uuid4().hex
     assert env.post("/api/tts_ts", json={"text": t}).json()["provider"] == "fish"
-    ttschain.flush_octo()
+    octocache.flush()
     assert octo.query("SELECT count(*) AS n FROM tts_clip")[0]["n"] == 1
     monkeypatch.setenv("TTS_CACHE_DIR", str(tmp_path / "fresh_box"))  # new box, cold local cache
     calls.clear()
@@ -149,7 +149,7 @@ def test_octo_shared_layer(env, monkeypatch, tmp_path):
 
 
 def test_octo_down_still_works(env, monkeypatch):
-    import ttschain
+    import octocache
 
     class Down:
         def query(self, *a, **k):
@@ -157,6 +157,6 @@ def test_octo_down_still_works(env, monkeypatch):
 
         execute = query
 
-    monkeypatch.setattr(ttschain, "octo_store", lambda: Down())
+    monkeypatch.setattr(octocache, "octo_store", lambda: Down())
     counting_fish(monkeypatch)
     assert env.post("/api/tts_ts", json={"text": "Octo down " + uuid.uuid4().hex}).status_code == 200

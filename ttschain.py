@@ -8,10 +8,10 @@ Cache: every request checks the cache first, so each line hits a paid API at mos
        L1 = local SQLite index + .mp3 files in TTS_CACHE_DIR (default .tts_cache/); L2 = the shared Octo workspace
        (managed Postgres, schema/ + migrations/). Clip key = sha256(provider|voice|text)."""
 
-import base64, datetime, hashlib, heapq, itertools, os, pathlib, queue, threading, time
-import httpx, limits
-from schema import SCHEMA_VERSION, validate
-from schema.store import OctoStore, SqliteStore, dumps, loads
+import base64, datetime, hashlib, heapq, itertools, os, pathlib, threading, time
+import httpx, limits, octocache
+from schema import validate
+from schema.store import SqliteStore, dumps, loads
 
 ROOT = pathlib.Path(__file__).parent
 FISH_URL = "https://api.fish.audio/v1/tts"
@@ -121,7 +121,7 @@ def _fish(text):
     try:
         r = httpx.post(
             FISH_URL,
-            timeout=_f("FISH_TIMEOUT_S", 8),
+            timeout=_f("FISH_TIMEOUT_S", 5),  # browser gives up at 8s; leave Kokoro room to answer
             headers={"Authorization": "Bearer " + os.environ["FISH_API_KEY"], "Content-Type": "application/json", "model": "s2.1-pro-free"},
             json={"text": text, "reference_id": os.environ.get("FISH_VOICE_ID") or "", "format": "mp3"},
         )
@@ -200,66 +200,20 @@ def local():
         return _locals[p]
 
 
-_octo = {"ok": None, "t": 0.0, "down_until": 0.0, "status": None, "store": None}
-
-
-def octo_check():
-    """Startup/periodic check that Octo's schema_version matches the repo. Pending migrations are applied by deploy."""
-    from schema import migrate
-
-    s = OctoStore.from_env()
-    if not s:
-        _octo.update(ok=False, t=time.time(), status={"repo": SCHEMA_VERSION, "store": None, "ok": False, "reason": "no OCTO_API_KEY"})
-        return _octo["status"]
-    try:
-        st = migrate.status(s)
-    except Exception as e:
-        st = {"repo": SCHEMA_VERSION, "store": None, "ok": False, "reason": type(e).__name__}
-        _octo["down_until"] = time.time() + 60
-    _octo.update(ok=st["ok"], t=time.time(), status=st, store=s)
-    return st
-
-
 def octo_store():
-    """Shared L2, or None when unconfigured, unreachable, or its schema version doesn't match this code."""
-    if not os.environ.get("OCTO_API_KEY") or _off("TTS_OCTO_DISABLE") or time.time() < _octo["down_until"]:
-        return None
-    if _octo["ok"] is None or time.time() - _octo["t"] > 300:
-        octo_check()
-    return _octo["store"] if _octo["ok"] else None
+    return octocache.octo_store()
 
 
 def _octo_down():
-    _octo["down_until"] = time.time() + 60
-
-
-_oq: queue.Queue = queue.Queue()
-_ow = {"t": None}
-
-
-def _octo_writer():
-    while True:
-        store, sql, params = _oq.get()
-        try:
-            store.execute(sql, params)
-        except Exception:
-            _octo_down()
-        finally:
-            _oq.task_done()
+    octocache.down()
 
 
 def _octo_write(sql, params):
-    s = octo_store()
-    if not s:
-        return
-    if not _ow["t"]:
-        _ow["t"] = threading.Thread(target=_octo_writer, daemon=True)
-        _ow["t"].start()
-    _oq.put((s, sql, params))
+    octocache.write(sql, params)
 
 
 def flush_octo():
-    _oq.join()
+    octocache.flush()
 
 
 CLIP_COLS = ["key", "text_sha", "provider", "voice", "text", "chars", "starts", "duration_s", "bytes", "audio_b64", "created_at"]
@@ -517,11 +471,11 @@ def tour(run_id):
 
 
 def health():
-    st = _octo["status"] or {"repo": SCHEMA_VERSION, "store": None, "ok": False}
+    st = octocache.status()
     return {
         "tts": chain(),
         "fish": fish_on(),
         "kokoro": kokoro_on() and kokoro_up(),
-        "tts_cache": {"local": True, "octo": bool(_octo["ok"]) and time.time() >= _octo["down_until"]},
+        "tts_cache": {"local": True, "octo": octocache.up()},
         "data_schema": st,
     }

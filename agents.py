@@ -311,7 +311,16 @@ def _graph_unavailable(run, question, session, prev, t0, err):
 
 
 def run_pipeline(question, run_id=None, prev=None):
-    run = Run(run_id or time.strftime("%H%M%S-") + uuid.uuid4().hex[:6])
+    """Runs the pipeline with the run id in context so cache rows (answers, retrievals) are linked to this run in Octo."""
+    import octocache
+
+    rid = run_id or time.strftime("%H%M%S-") + uuid.uuid4().hex[:6]
+    with octocache.run_context(rid):
+        return _run_pipeline(question, rid, prev)
+
+
+def _run_pipeline(question, run_id, prev=None):
+    run = Run(run_id)
     t0 = time.time()
     run.claim("planner", "orchestrator")
     run.event("planner", "plan", "plan: retrieve -> answer -> safeguard", question=question)
