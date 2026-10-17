@@ -29,7 +29,7 @@ jobs:
           repository: Pukujan/content-generation-modules
           ref: 6831f91e165b62d719c05eb492f7375fa932b560
           path: .cgm
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
           cache: pip
