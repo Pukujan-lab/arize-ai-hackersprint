@@ -71,7 +71,7 @@ jobs:
         run: python tools/dep_policy.py maturity --base "origin/${{ github.base_ref }}"
       - name: Dependency review with OpenSSF Scorecard (runs once the repo's dependency graph is on and vars.DEPENDENCY_REVIEW is 'on')
         if: github.event_name == 'pull_request' && vars.DEPENDENCY_REVIEW == 'on'
-        uses: actions/dependency-review-action@v4
+        uses: actions/dependency-review-action@v5
         with:
           fail-on-severity: moderate
           allow-licenses: MIT, BSD-2-Clause, BSD-3-Clause, Apache-2.0, ISC, PSF-2.0, Python-2.0, MPL-2.0, Unlicense, 0BSD, Zlib, CC0-1.0
