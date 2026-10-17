@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+python-multipart
+requests
+httpx
+networkx
+arize-otel
+openinference-instrumentation

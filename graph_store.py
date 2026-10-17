@@ -1,6 +1,6 @@
 """SurrealDB-backed legal graph (NetworkX fallback). PageRank precomputed once and cached."""
-import json, hashlib, re, math, pathlib, pickle, httpx, collections
-D = pathlib.Path("/home/daytona/hack/legal-graphrag-starter/data")
+import os, json, hashlib, re, math, pathlib, pickle, httpx, collections
+D = pathlib.Path(os.environ.get("GRAPH_DATA_DIR") or (pathlib.Path(__file__).resolve().parent / "data"))
 CACHE = pathlib.Path(__file__).parent / "cache" / "graph_meta.pkl"
 STOP = set("a an the of to in on for and or is are was be by with what when how does do can under law legal court colorado who which my i if it that this from as at".split())
 def key(s): return "n" + hashlib.md5(s.encode()).hexdigest()[:16]
