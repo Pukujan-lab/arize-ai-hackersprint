@@ -281,3 +281,5 @@ def runs_list(request: Request, n: int = 15):
     return out
 @app.get("/guide", response_class=HTMLResponse)
 def guide_page(): return (ROOT / "static" / "guide.html").read_text()
+
+import seo; seo.install(app)
