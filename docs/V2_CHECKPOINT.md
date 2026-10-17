@@ -1,24 +1,28 @@
-# Precedent v2 frontend checkpoint (2026-10-17, 3:05 PM EDT)
+# Precedent v2 frontend checkpoint (2026-10-17, 3:06 PM EDT)
 
 Resume point for any agent. Read AGENTS.md, contracts/openapi.json and docs/FRONTEND_INVENTORY.md (being added) first.
 
 ## Decision so far
-- Rebuild only the frontend as v2 (target: arize-v2.design-bakery.com). Backend, API contracts, Octo, voice chain unchanged. Not yet approved to start building.
+- APPROVED DIRECTION (Alex, 3:06 PM EDT): the minimal layout is "a lot cleaner" and "a good approach" but needs more refinement before building. Next step: refine mockups against the real inventory and the real 3D render, then write the v2 build spec for ABA.
+- Rebuild only the frontend as v2 (target: arize-v2.design-bakery.com). Backend, API contracts, Octo, voice chain unchanged.
 - KEEP AS IS: static/map3d.js, static/map3d.co.js, static/vendor county/state data, three.module, d3, topojson. The 3D county map, its exploration and the guided tour are the product moat.
 - The problem is everything around the map: too many things visible at once.
 
 ## Layout rules
+- Visible by default: answer, map, chat input. Nothing else.
 - Chat input sticky at the BOTTOM; answer above; map in the center of the page.
-- Minimal visible UI: answer, map, input. Everything else behind small buttons, dropdowns, drawers or bottom sheets (sources, follow-ups, legend, tour controls, run info).
+- Everything else behind small buttons, dropdowns, drawers or bottom sheets (sources, follow-ups, legend, tour controls, run info).
 - Map controls never overlap the map or step dots; legend behind a toggle; one popover at a time.
 - Desktop favored: "Split" = map left, right column with answer, collapsed Sources and Follow-up dropdowns, input at bottom.
 - Phone favored: answer, square map, pills Sources / Tour / Follow-ups opening bottom sheets, input at bottom.
 - One collapsible sidebar (links only), no top navbar. Run history on /runs.
 - Tour autoplays after the memo, starts at stop 1, visible pause/stop. Voice: Fish, then Kokoro, then browser.
 - No overflow or overlap at 390, 768, 1024, 1440.
+- Rejected: mockups that crowd the map with legends, cards and control rows; generic redesigns that ignore the existing map.
 
 ## Hard rules for builders
 - Frontend changes via ABA only. Plain HTML/JS, no React/TS/shadcn, no new deps or CDNs.
+- Reuse existing buttons and navigation from docs/FRONTEND_INVENTORY.md; don't invent new ones without reason.
 - Tests first (Playwright at 4 widths). One issue per feature, PR says Closes #N, auto-merge, deploy, verify live.
 - No secrets in issues, commits or docs.
 
