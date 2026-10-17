@@ -1,6 +1,6 @@
 """Citation cards never show 'unknown' or a bare title with a dead 'Full opinion' link (#61). A graph-linked
 authority with no type and no passage gets a readable type label and its jurisdiction, and no 'Full opinion' link;
-a normal case keeps its link. Checked on every citation card on / (answer cards and sidebar Sources)."""
+a normal case keeps its link. Checked on every citation card on /v1, the old home page (answer cards and sidebar Sources)."""
 
 import pytest
 from ui_server import DESKTOP, app_server, needs_chromium
@@ -78,7 +78,7 @@ def test_fallback_label_and_no_dead_link(base):
         b = p.chromium.launch()
         page = b.new_page(viewport={"width": DESKTOP, "height": 900})
         _stub(page)
-        page.goto(base + "/", wait_until="load")
+        page.goto(base + "/v1", wait_until="load")
         page.wait_for_timeout(800)
         page.fill("#q", RESULT["question"])
         page.click("#go")

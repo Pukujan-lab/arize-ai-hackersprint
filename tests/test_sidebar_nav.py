@@ -1,4 +1,4 @@
-"""One collapsible sidebar holds navigation on every page (#50). The top bar keeps only the logo, the ask box with
+"""One collapsible sidebar holds navigation on every page except the v2 root (#50, #92). The top bar keeps only the logo, the ask box with
 Ask and the sidebar toggle. The sidebar is a closed drawer on phones, remembers its state on desktop, marks the
 current page, closes on Esc, and holds navigation links only."""
 
@@ -16,6 +16,10 @@ from ui_server import (
 
 sync_api = pytest.importorskip("playwright.sync_api")
 pytestmark = needs_chromium
+
+# Since #92 the root "/" is the v2 page, which has an icon rail instead of the collapsible sidebar
+# (covered by tests/test_v2_home.py). The sidebar tests cover every other page in PAGES.
+PAGES = [p for p in PAGES if p != "/"]
 
 
 @pytest.fixture(scope="module")
