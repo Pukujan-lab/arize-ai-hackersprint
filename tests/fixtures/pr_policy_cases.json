@@ -4,88 +4,368 @@
     {
       "name": "docs only",
       "expect": "pass",
-      "pr": {"body": "Fix a typo in the guide.", "labels": [], "files": [{"path": "docs/PLAN.md", "status": "modified", "additions": 400}], "linked_issues": []}
+      "pr": {
+        "body": "Fix a typo in the guide.",
+        "labels": [],
+        "files": [
+          {
+            "path": "docs/PLAN.md",
+            "status": "modified",
+            "additions": 400
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "tests and CI only",
       "expect": "pass",
-      "pr": {"body": "More tests.", "labels": [], "files": [{"path": "tests/test_new.py", "status": "added", "additions": 300}, {"path": ".github/workflows/ci.yml", "status": "modified", "additions": 20}], "linked_issues": []}
+      "pr": {
+        "body": "More tests.",
+        "labels": [],
+        "files": [
+          {
+            "path": "tests/test_new.py",
+            "status": "added",
+            "additions": 300
+          },
+          {
+            "path": ".github/workflows/ci.yml",
+            "status": "modified",
+            "additions": 20
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "frontend only (ABA)",
       "expect": "pass",
-      "pr": {"body": "Built by ABA.", "labels": [], "files": [{"path": "static/map.js", "status": "modified", "additions": 600}], "linked_issues": []}
+      "pr": {
+        "body": "Built by ABA.",
+        "labels": [],
+        "files": [
+          {
+            "path": "static/map.js",
+            "status": "modified",
+            "additions": 600
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "small edit under app/",
       "expect": "pass",
-      "pr": {"body": "Tidy the retriever.", "labels": [], "files": [{"path": "app/octo_retriever.py", "status": "modified", "additions": 40}], "linked_issues": []}
+      "pr": {
+        "body": "Tidy the retriever.",
+        "labels": [],
+        "files": [
+          {
+            "path": "app/octo_retriever.py",
+            "status": "modified",
+            "additions": 40
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "tests under app/ do not count",
       "expect": "pass",
-      "pr": {"body": "x", "labels": [], "files": [{"path": "app/tests/test_x.py", "status": "added", "additions": 500}], "linked_issues": []}
+      "pr": {
+        "body": "x",
+        "labels": [],
+        "files": [
+          {
+            "path": "app/tests/test_x.py",
+            "status": "added",
+            "additions": 500
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "new module, no OSS section",
       "expect": "fail",
-      "pr": {"body": "Adds a cache.", "labels": [], "files": [{"path": "app/new_cache.py", "status": "added", "additions": 60}], "linked_issues": []}
+      "pr": {
+        "body": "Adds a cache.",
+        "labels": [],
+        "files": [
+          {
+            "path": "app/new_cache.py",
+            "status": "added",
+            "additions": 60
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "new module, template left as is",
       "expect": "fail",
-      "pr": {"body": "## OSS considered\n\nIf this PR adds a new custom module, name the open-source packages or existing tools you looked at and why none of them fit. Write \"no new module\" otherwise. See \"Reuse before you write\" in AGENTS.md.\n", "labels": [], "files": [{"path": "app/new_cache.py", "status": "added", "additions": 60}], "linked_issues": []}
+      "pr": {
+        "body": "## OSS considered\n\nIf this PR adds a new custom module, name the open-source packages or existing tools you looked at and why none of them fit. Write \"no new module\" otherwise. See \"Reuse before you write\" in AGENTS.md.\n",
+        "labels": [],
+        "files": [
+          {
+            "path": "app/new_cache.py",
+            "status": "added",
+            "additions": 60
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "new module, says no new module",
       "expect": "fail",
-      "pr": {"body": "## OSS considered\n\nNo new module.\n", "labels": [], "files": [{"path": "acs/new_tool.py", "status": "added", "additions": 30}], "linked_issues": []}
+      "pr": {
+        "body": "## OSS considered\n\nNo new module.\n",
+        "labels": [],
+        "files": [
+          {
+            "path": "acs/new_tool.py",
+            "status": "added",
+            "additions": 30
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "new module, vague OSS line without a project",
       "expect": "fail",
-      "pr": {"body": "OSS considered: looked around, nothing fit because it is special.", "labels": [], "files": [{"path": "app/new_cache.py", "status": "added", "additions": 60}], "linked_issues": []}
+      "pr": {
+        "body": "OSS considered: looked around, nothing fit because it is special.",
+        "labels": [],
+        "files": [
+          {
+            "path": "app/new_cache.py",
+            "status": "added",
+            "additions": 60
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "new module, OSS named with a reason",
       "expect": "pass",
-      "pr": {"body": "## OSS considered\n\n- `diskcache`: does not reach Octo, and the cache has to sync to the shared Postgres.\n\n## Tests\n", "labels": [], "files": [{"path": "app/new_cache.py", "status": "added", "additions": 60}], "linked_issues": []}
+      "pr": {
+        "body": "## OSS considered\n\n- `diskcache`: does not reach Octo, and the cache has to sync to the shared Postgres.\n\n## Tests\n",
+        "labels": [],
+        "files": [
+          {
+            "path": "app/new_cache.py",
+            "status": "added",
+            "additions": 60
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "new module, inline OSS line with a repo",
       "expect": "pass",
-      "pr": {"body": "OSS considered: grantjenks/python-diskcache lacks a Postgres backend, so it cannot sync to Octo.", "labels": [], "files": [{"path": "tools/new_script.py", "status": "added", "additions": 20}], "linked_issues": []}
+      "pr": {
+        "body": "OSS considered: grantjenks/python-diskcache lacks a Postgres backend, so it cannot sync to Octo.",
+        "labels": [],
+        "files": [
+          {
+            "path": "tools/new_script.py",
+            "status": "added",
+            "additions": 20
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "big change, no OSS section",
       "expect": "fail",
-      "pr": {"body": "Rewrite the agents.", "labels": [], "files": [{"path": "app/agents.py", "status": "modified", "additions": 120}, {"path": "app/llm.py", "status": "modified", "additions": 60}], "linked_issues": []}
+      "pr": {
+        "body": "Rewrite the agents.",
+        "labels": [],
+        "files": [
+          {
+            "path": "app/agents.py",
+            "status": "modified",
+            "additions": 120
+          },
+          {
+            "path": "app/llm.py",
+            "status": "modified",
+            "additions": 60
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "bugfix label and a confirmed linked issue",
       "expect": "pass",
-      "pr": {"body": "Closes #64", "labels": ["bugfix"], "files": [{"path": "app/agents.py", "status": "modified", "additions": 200}], "linked_issues": [{"number": 64, "labels": ["evidence:confirmed"], "body": ""}]}
+      "pr": {
+        "body": "Closes #64",
+        "labels": [
+          "bugfix"
+        ],
+        "files": [
+          {
+            "path": "app/agents.py",
+            "status": "modified",
+            "additions": 200
+          }
+        ],
+        "linked_issues": [
+          {
+            "number": 64,
+            "labels": [
+              "evidence:confirmed"
+            ],
+            "body": ""
+          }
+        ]
+      }
     },
     {
       "name": "bugfix marker and an issue body that says confirmed",
       "expect": "pass",
-      "pr": {"body": "Bugfix: the tour skipped stop 1.\n\nCloses #64", "labels": [], "files": [{"path": "app/fix_tour.py", "status": "added", "additions": 30}], "linked_issues": [{"number": 64, "labels": [], "body": "### Evidence Confidence\n\nconfirmed\n"}]}
+      "pr": {
+        "body": "Bugfix: the tour skipped stop 1.\n\nCloses #64",
+        "labels": [],
+        "files": [
+          {
+            "path": "app/fix_tour.py",
+            "status": "added",
+            "additions": 30
+          }
+        ],
+        "linked_issues": [
+          {
+            "number": 64,
+            "labels": [],
+            "body": "### Evidence Confidence\n\nconfirmed\n"
+          }
+        ]
+      }
     },
     {
       "name": "bugfix label without a linked issue",
       "expect": "fail",
-      "pr": {"body": "quick fix", "labels": ["bugfix"], "files": [{"path": "app/agents.py", "status": "modified", "additions": 200}], "linked_issues": []}
+      "pr": {
+        "body": "quick fix",
+        "labels": [
+          "bugfix"
+        ],
+        "files": [
+          {
+            "path": "app/agents.py",
+            "status": "modified",
+            "additions": 200
+          }
+        ],
+        "linked_issues": []
+      }
     },
     {
       "name": "bugfix label, linked issue not confirmed",
       "expect": "fail",
-      "pr": {"body": "Closes #62", "labels": ["bugfix"], "files": [{"path": "app/agents.py", "status": "modified", "additions": 200}], "linked_issues": [{"number": 62, "labels": ["evidence:supported"], "body": "### Evidence Confidence\n\nsupported\n"}]}
+      "pr": {
+        "body": "Closes #62",
+        "labels": [
+          "bugfix"
+        ],
+        "files": [
+          {
+            "path": "app/agents.py",
+            "status": "modified",
+            "additions": 200
+          }
+        ],
+        "linked_issues": [
+          {
+            "number": 62,
+            "labels": [
+              "evidence:supported"
+            ],
+            "body": "### Evidence Confidence\n\nsupported\n"
+          }
+        ]
+      }
     },
     {
       "name": "raw HTTP to a provider with an SDK is flagged but does not fail",
       "expect": "pass",
       "warnings": 1,
-      "pr": {"body": "Tweak.", "labels": [], "files": [{"path": "app/llm.py", "status": "modified", "additions": 3, "patch": "@@ -1,2 +1,3 @@\n+r = httpx.post(\"https://api.anthropic.com/v1/messages\", json=body)\n context\n-old\n"}], "linked_issues": []}
+      "pr": {
+        "body": "Tweak.",
+        "labels": [],
+        "files": [
+          {
+            "path": "app/llm.py",
+            "status": "modified",
+            "additions": 3,
+            "patch": "@@ -1,2 +1,3 @@\n+r = httpx.post(\"https://api.anthropic.com/v1/messages\", json=body)\n context\n-old\n"
+          }
+        ],
+        "linked_issues": []
+      }
+    },
+    {
+      "name": "provider URL in a test fixture is not flagged",
+      "expect": "pass",
+      "warnings": 0,
+      "pr": {
+        "body": "x",
+        "labels": [],
+        "files": [
+          {
+            "path": "tests/fixtures/cases.json",
+            "status": "modified",
+            "additions": 1,
+            "patch": "@@ -1 +1,2 @@\n+r = httpx.post(\"https://api.anthropic.com/v1/messages\", json=body)\n"
+          }
+        ],
+        "linked_issues": []
+      }
+    },
+    {
+      "name": "provider URL in a top-level test file is not flagged",
+      "expect": "pass",
+      "warnings": 0,
+      "pr": {
+        "body": "x",
+        "labels": [],
+        "files": [
+          {
+            "path": "tests/test_llm.py",
+            "status": "modified",
+            "additions": 1,
+            "patch": "@@ -1 +1,2 @@\n+r = httpx.post(\"https://api.anthropic.com/v1/messages\", json=body)\n"
+          }
+        ],
+        "linked_issues": []
+      }
+    },
+    {
+      "name": "provider URL in docs is not flagged",
+      "expect": "pass",
+      "warnings": 0,
+      "pr": {
+        "body": "x",
+        "labels": [],
+        "files": [
+          {
+            "path": "docs/PLAN.md",
+            "status": "modified",
+            "additions": 1,
+            "patch": "@@ -1 +1,2 @@\n+r = httpx.post(\"https://api.anthropic.com/v1/messages\", json=body)\n"
+          }
+        ],
+        "linked_issues": []
+      }
     }
   ]
 }

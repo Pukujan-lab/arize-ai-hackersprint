@@ -40,7 +40,7 @@ CONFIRMED = re.compile(r"###\s*Evidence Confidence\s*\n+\s*confirmed\b", re.I)
 
 def _is_test(path: str) -> bool:
     name = path.rsplit("/", 1)[-1]
-    return "/tests/" in path or name.startswith("test_") or name.endswith("_test.py") or name == "conftest.py"
+    return path.startswith("tests/") or "/tests/" in path or name.startswith("test_") or name.endswith("_test.py") or name == "conftest.py"
 
 
 def scope(files: list[dict]) -> dict:
@@ -81,7 +81,7 @@ def bugfix_ok(pr: dict) -> tuple[bool, str]:
 def sdk_warnings(files: list[dict]) -> list[str]:
     out = []
     for f in files:
-        if _is_test(f["path"]):
+        if _is_test(f["path"]) or not f["path"].endswith(SOURCE_EXT):
             continue
         for line in (f.get("patch") or "").splitlines():
             if not line.startswith("+") or line.startswith("+++") or not RAW_HTTP.search(line):

@@ -51,3 +51,15 @@ def test_lock_pins_every_direct_dependency():
     for line in lock.splitlines():
         if line and not line.startswith((" ", "#")):
             assert "==" in line, line
+
+
+def test_pins_for_a_named_python():
+    assert dep_policy.pins(FX["lock"], dep_policy.python_env("3.9")) == {"fastapi": "0.128.8", "httpx": "0.28.1", "numpy": "2.0.2"}
+    assert dep_policy.pins(FX["lock"], dep_policy.python_env("3.11")) == {"fastapi": "0.143.3", "httpx": "0.28.1", "numpy": "2.4.6"}
+
+
+def test_pins_cli_takes_python(capsys):
+    assert dep_policy.main(["pins", "--python", "3.9"]) == 0
+    out = capsys.readouterr().out
+    lock = dep_policy.pins((ROOT / "requirements.txt").read_text(), dep_policy.python_env("3.9"))
+    assert out.split() == [f"{n}=={v}" for n, v in sorted(lock.items())]

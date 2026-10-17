@@ -1,6 +1,7 @@
 """Dependency gate glue for AGENTS.md "Dependencies and SDKs". The tools do the work; this file only wires them up.
 
   python tools/dep_policy.py pins > /tmp/pins.txt        # lock pins for this Python, for `pip-audit -r`
+  python tools/dep_policy.py pins --python 3.9            # pins for another Python (the Pro runs 3.9)
   python tools/dep_policy.py licenses                     # pip-licenses output checked against the allowlist
   python tools/dep_policy.py maturity --base origin/main  # new direct deps need a PyPI release in the last 12 months
 
@@ -49,6 +50,12 @@ def pins(lock_text: str, env: dict | None = None) -> dict:
         if spec.startswith("==") and (r.marker is None or r.marker.evaluate(e)):
             out[canonicalize_name(r.name)] = spec[2:]
     return out
+
+
+def python_env(version: str) -> dict:
+    """Marker values for another Python, e.g. "3.9" or "3.9.6"."""
+    parts = version.split(".")
+    return {"python_version": ".".join(parts[:2]), "python_full_version": ".".join((parts + ["0"])[:3])}
 
 
 def direct(text: str) -> set:
@@ -109,8 +116,9 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     ap.add_argument("cmd", choices=["pins", "licenses", "maturity"])
     ap.add_argument("--base", default="origin/main")
+    ap.add_argument("--python", help="evaluate lock markers for this Python version instead of the running one (pins only)")
     a = ap.parse_args(argv)
-    lock = pins((ROOT / "requirements.txt").read_text())
+    lock = pins((ROOT / "requirements.txt").read_text(), python_env(a.python) if a.python else None)
     if a.cmd == "pins":
         print("\n".join(f"{n}=={v}" for n, v in sorted(lock.items())))
         return 0

@@ -65,7 +65,11 @@ jobs:
             echo "::warning::pip-audit found known vulnerabilities in existing pins; a Dependabot PR or a lock refresh should fix them"
           fi
           # The Pro's Python 3.9 pins, reported only: newer fixes need Python 3.10+ (see #20).
-          pip-audit -r requirements.txt --no-deps --disable-pip --progress-spinner off >/tmp/audit-all.txt 2>&1 || echo "::warning::pip-audit reports known vulnerabilities in the Python 3.9 pins the Pro runs (see #20): $(grep -cE '^[a-z0-9-]+ +[0-9]' /tmp/audit-all.txt) findings"
+          python tools/dep_policy.py pins --python 3.9 > /tmp/pins-py39.txt
+          if ! pip-audit -r /tmp/pins-py39.txt --no-deps --disable-pip --progress-spinner off >/tmp/audit-py39.txt 2>&1; then
+            cat /tmp/audit-py39.txt
+            echo "::warning::pip-audit found $(grep -cE '^[A-Za-z0-9_.-]+ +[0-9][^ ]* +[A-Z]+-' /tmp/audit-py39.txt) known vulnerabilities in the Python 3.9 pins the Pro runs ($(awk '/^[A-Za-z0-9_.-]+ +[0-9][^ ]* +[A-Z]+-/{print $1"=="$2}' /tmp/audit-py39.txt | sort -u | paste -sd ' ' -)); the fixes need Python 3.10+, see #20"
+          fi
       - name: New dependencies are maintained (PyPI release in the last 12 months)
         if: github.event_name == 'pull_request'
         run: python tools/dep_policy.py maturity --base "origin/${{ github.base_ref }}"
