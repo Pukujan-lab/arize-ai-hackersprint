@@ -26,18 +26,17 @@
 @media (max-width:1023px){
   .abtn,[data-tourctl],#sumplay{min-width:44px!important;height:44px!important;min-height:44px}
   #fullmap{min-height:44px;display:inline-flex!important;align-items:center}
-  #go,#exBtn,#q{min-height:44px}
-  html #sideToggle{width:44px!important;height:44px!important;min-width:44px!important}
-  nav a[href]{min-height:44px;min-width:44px;display:inline-flex!important;align-items:center;justify-content:center}
-  nav a.nav-link{padding:0 6px!important}
+  #go,#q{min-height:44px}
+  #sidebar-toggle{width:44px;min-width:44px;height:44px}
+  #sidebar a[href],#topbar a[href]{min-height:44px}
   input,select{min-height:44px}
   button{min-height:44px}
   .fs-x{width:44px;height:44px}
   .docpin{width:44px!important;height:44px!important;font-size:13px!important}
   #vorb-label{display:none}
   /* floating mic: smaller, tucked into the corner, with room reserved below the content */
-  #vorb{width:56px!important;height:56px!important;right:12px!important;bottom:28px!important}
-  #vorb canvas{width:56px;height:56px}
+  #vorb:not(.in-form){width:56px!important;height:56px!important;right:12px!important;bottom:28px!important}
+  #vorb:not(.in-form) canvas{width:56px;height:56px}
   #vstate{right:12px!important;width:56px!important;bottom:6px!important;font-size:8px!important}
   #vcap{right:12px!important;left:12px;bottom:96px!important;max-width:none!important}
   body{padding-bottom:96px}
@@ -46,12 +45,10 @@
 /* ---- Phones ---- */
 @media (max-width:760px){
   html,body{max-width:100%}
-  nav, nav .max-w-7xl, .nav{flex-wrap:wrap!important;height:auto!important;row-gap:0!important;column-gap:10px!important}
-  nav .max-w-7xl{padding:4px 12px!important}
   .max-w-7xl{padding-left:14px!important;padding-right:14px!important}
   h1{overflow-wrap:anywhere}
   header h1{font-size:1.6rem!important;line-height:1.2}
-  #askrow{flex-wrap:wrap!important;padding:12px!important}
+  #askrow{padding:12px!important}
   #askrow #q{flex:1 1 100%!important;min-width:0;width:100%;font-size:16px}
   #askrow #go{flex:1 1 auto}
   #askrow > *:not(#q):not(label){flex:1 1 auto}
@@ -71,15 +68,11 @@
 }
 /* Tablet: map page search form drops to its own row; guide partner rows wrap */
 @media (max-width:1023px){
-  nav:has(form#f){flex-wrap:wrap!important;row-gap:0!important}
-  nav form#f{flex:1 1 100%!important;width:100%!important;margin:0 0 8px!important;min-width:0}
-  nav form#f input{min-width:0}
   .p{flex-wrap:wrap}
   a.btn{min-height:44px;display:inline-flex!important;align-items:center}
 }
 @media (max-width:760px){ .p>span:first-child{width:auto!important;flex:1 1 100%!important} }
 /* Map page at small-desktop widths: the search form needs the room the partner logos took */
-@media (max-width:1279px){ nav:has(form#f) #partner-strip{display:none!important} }
 /* Links inside running text stay inline; standalone links get a comfortable tap area */
 @media (max-width:1023px){
   a.inline-block,a.block{min-height:44px;display:inline-flex!important;align-items:center}
@@ -88,5 +81,5 @@
 @media (pointer:coarse){
   .abtn,[data-tourctl],#sumplay,button,input,select,a.btn{min-height:44px}
   .abtn,[data-tourctl]{min-width:44px!important;height:44px!important}
-  nav a[href]{min-height:44px;display:inline-flex!important;align-items:center}
+  #side-links a,.fuc{min-height:44px;display:inline-flex!important;align-items:center}
 }
