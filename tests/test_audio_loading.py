@@ -11,6 +11,11 @@ ARGS = ["--autoplay-policy=no-user-gesture-required", "--no-sandbox", "--use-gl=
 LOADING, FAIL = "Audio loading…", "Audio unavailable — continuing"
 
 
+def _get(url):  # Cloudflare 403s the default Python-urllib user agent
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (precedent-tests)"})
+    return urllib.request.urlopen(req).read().decode()
+
+
 def src(name):
     return (STATIC / name).read_text()
 
@@ -229,11 +234,11 @@ def test_first_interaction_unlocks_audio(browser):
 # ---------- live site ----------
 @pytest.mark.skipif(not LIVE, reason="set LIVE_BASE to check the deployed site")
 def test_live_serves_new_js():
-    html = urllib.request.urlopen(LIVE + "/map").read().decode()
+    html = _get(LIVE + "/map")
     for name in ("audio.js", "map3d.js"):
         m = re.search(r'/static/%s\?v=\w+' % re.escape(name), html)
         assert m, name
-        js = urllib.request.urlopen(LIVE + m.group(0)).read().decode()
+        js = _get(LIVE + m.group(0))
         assert (LOADING in js) if name == "audio.js" else ("S.fallback" in js)
 
 
