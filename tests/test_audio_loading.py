@@ -7,7 +7,15 @@ import base64, io, os, re, struct, wave, pathlib, pytest, urllib.request
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 STATIC = ROOT / "static"
 LIVE = os.environ.get("LIVE_BASE", "").rstrip("/")
-ARGS = ["--autoplay-policy=no-user-gesture-required", "--no-sandbox", "--use-gl=swiftshader", "--enable-unsafe-swiftshader"]
+# --disable-audio-output: without it, headless Chromium on a Mac with no usable audio sink starts a clip and then
+# freezes its clock (currentTime stuck at 0.064 s), so a clip never ends; with it the clock runs and "ended" fires.
+ARGS = [
+    "--autoplay-policy=no-user-gesture-required",
+    "--no-sandbox",
+    "--use-gl=swiftshader",
+    "--enable-unsafe-swiftshader",
+    "--disable-audio-output",
+]
 LOADING, FAIL = "Audio loading…", "Audio unavailable — continuing"
 
 
