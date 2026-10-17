@@ -29,7 +29,6 @@ svg{max-width:100%}
 }
 @media (max-width:1279px){
  .nav{flex-wrap:wrap;height:auto;min-height:56px;padding:8px 32px;row-gap:2px}
- #partner-strip{display:none!important}
  .tabs a{min-height:44px;display:inline-flex;align-items:center}
 }
 @media (max-width:760px){
@@ -54,10 +53,11 @@ svg{max-width:100%}
 <meta name="twitter:title" content="Precedent · Partner dashboards for a multi-agent legal AI pipeline">
 <meta name="twitter:description" content="Live partner dashboards for Precedent: Arize traces, Anthropic models, ElevenLabs voice and SurrealDB graph powering verified legal research memos.">
 <meta name="twitter:image" content="https://arize.design-bakery.com/og.png">
+<link rel="stylesheet" href="/static/layout.css?v=sb4">
+<link rel="stylesheet" href="/static/responsive.css?v=sb4">
 </head><body>
-<nav class="nav"><b>⚖ Precedent</b><a href="/">Demo</a><a href="/map">Map</a><a href="/dashboard" class="on">Dashboards</a><a href="/slides">Slides</a><a href="/guide">Guide</a><span class="s" style="margin-left:auto" id="upd"></span></nav>
 <div class="wrap">
- <div class="up">Partner dashboards · live from this sandbox</div>
+ <div class="up">Partner dashboards · live from this sandbox · <span class="s" id="upd"></span></div>
  <h1 style="margin-top:8px">How Precedent runs on its partners</h1>
  <div class="card" style="margin-top:28px;padding:28px 32px"><div class="up" style="margin-bottom:16px">Dataflow · one research query</div><div id="flow"></div></div>
  <div class="tabs" id="tabs"></div>
@@ -109,4 +109,4 @@ async function load(){ let d; try{ const res=await fetch("/api/stack"), txt=awai
  document.getElementById("upd").textContent="Updated "+new Date().toLocaleTimeString(); }
 const tick=()=>load().catch(()=>{ noStack(); });
 flow(); drawTabs(); tick(); setInterval(tick,15000);
-</script><script src="/static/partners.js"></script><script src="/static/navbar.js?v=ux2"></script></body></html>
+</script><script src="/static/partners.js"></script><script src="/static/navbar.js?v=sb4"></script></body></html>

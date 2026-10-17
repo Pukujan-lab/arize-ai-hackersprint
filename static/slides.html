@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Precedent · A reliable pipeline for multi-agent AI (slides)</title>
 <script src="/static/vendor/tailwind.js"></script>
 <style>
@@ -110,17 +111,11 @@ html,body{height:100%;margin:0}
 <meta name="twitter:title" content="Precedent · A reliable pipeline for multi-agent AI (slides)">
 <meta name="twitter:description" content="The Precedent deck: how isolated, grounded, traced and verified agents deliver legal research memos law firms and in-house legal teams can trust.">
 <meta name="twitter:image" content="https://arize.design-bakery.com/og.png">
+<link rel="stylesheet" href="/static/layout.css?v=sb4">
+<link rel="stylesheet" href="/static/responsive.css?v=sb4">
 </head>
 <body class="overflow-hidden">
 
-<nav class="fixed top-0 inset-x-0 z-40 backdrop-blur" style="background: rgba(10, 14, 20, 0.8); border-bottom: 1px solid rgba(58, 124, 165, 0.2);">
-  <div class="max-w-7xl mx-auto px-6 h-12 flex items-center gap-6 text-sm">
-    <span class="font-bold" style="color: var(--primary);">⚖ Precedent</span>
-    <a href="/" style="color: var(--muted);" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">Demo</a>
-    <a href="/map" style="color: var(--muted);" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">Map</a>
-    <a href="/guide" style="color: var(--muted);" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--muted)'">Guide</a>
-  </div>
-</nav>
 
 <main id="deck">
 
@@ -434,8 +429,8 @@ addEventListener('keydown', (e) => {
 // Click navigation (left/right side of screen)
 addEventListener('click', (e) => {
   // Don't navigate if clicking on links or buttons
-  if (e.target.closest('a, button, nav')) return;
-  
+  if (e.target.closest('a, button, nav, input, #topbar, #site-footer, #sidebar-backdrop')) return;
+
   const clickX = e.clientX;
   const screenWidth = window.innerWidth;
   
@@ -448,10 +443,10 @@ addEventListener('click', (e) => {
 
 // Initialize
 goToSlide(0);
-function fitDeck(){const d=document.getElementById('deck');const top=48,pad=8;const W=innerWidth-2*pad,H=innerHeight-top-2*pad;const k=Math.min(W/1920,H/1080);d.style.transform=`translate(${(innerWidth-1920*k)/2}px,${top+pad+(H-1080*k)/2}px) scale(${k})`;}
+function fitDeck(){const d=document.getElementById('deck');const cs=getComputedStyle(document.documentElement);const top=parseFloat(cs.getPropertyValue('--topbar-h'))||56;const side=(document.documentElement.classList.contains('side-docked')&&document.documentElement.classList.contains('side-shown'))?(parseFloat(cs.getPropertyValue('--side-w'))||0):0;const pad=8;const W=Math.max(160,innerWidth-side-2*pad),H=Math.max(120,innerHeight-top-2*pad);const k=Math.min(W/1920,H/1080);d.style.transform=`translate(${side+(innerWidth-side-1920*k)/2}px,${top+pad+(H-1080*k)/2}px) scale(${k})`;}
 addEventListener('resize',fitDeck);fitDeck();
 
 </script>
 
-<script src="/static/partners.js"></script><script src="/static/navbar.js?v=ux2"></script></body>
+<script src="/static/partners.js"></script><script src="/static/navbar.js?v=sb4"></script></body>
 </html>
