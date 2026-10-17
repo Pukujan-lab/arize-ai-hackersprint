@@ -165,7 +165,7 @@ if(!webgl){
     replay(){ if(cur<0) return; api.stopTour(); typeOut(cur); },   /* deliberate: interrupts */
     jumpRef(n){ const k=cites.findIndex(c=>parseInt(String(c.ref||"").replace(/\D/g,""))===+n); if(k>=0) api.jump(k); },
     summaryStop(t){ clearInterval(trT); if(sync) sync.dead=true; cur=-1; api.fit(); label.innerHTML='<b class="text-indigo-300">Summary</b> Colorado overview'; tr.classList.remove("hidden"); const esc=x=>x.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;"); let n=0; const L=String(t||""); trT=setInterval(()=>{ n+=2; tr.innerHTML='<b style="color:#a5b4fc">Summary</b> '+esc(L.slice(0,n))+(n<L.length?"<span class='animate-pulse'>▍</span>":""); if(n>=L.length) clearInterval(trT); },30); },
-    stopTour(soft){ touring=false; clearTimeout(tour); if(!soft){ try{curAudio&&curAudio.pause();}catch(e){} if(sync&&!sync.a) sync.dead=true; api._pf=null; try{ window.AudioMgr&&AudioMgr.loadCancel&&AudioMgr.loadCancel(); }catch(e){} }   /* soft = stop advancing, let the current line finish */
+    stopTour(soft){ touring=false; clearTimeout(tour); if(!soft){ try{curAudio&&curAudio.pause();}catch(e){} if(sync&&!sync.a) sync.dead=true; api._pfc=null; try{ window.AudioMgr&&AudioMgr.loadCancel&&AudioMgr.loadCancel(); }catch(e){} }   /* soft = stop advancing, let the current line finish */
     tbtn.innerHTML=TOURH; },
     fit(){ const fed=pins.some(p=>p.userData.G.cat==="federal"); if(fed){ camT.copy(homeCam); lookT.copy(homeLook); } else coView(); },
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
@@ -234,20 +234,32 @@ if(!webgl){
         rel=t; } }
     return {sum, rel}; }
   api.explainText=k=>{ const {sum,rel}=explain(k); return sum+(rel?" "+rel:""); }
+  /* Queue every tour clip server-side (summary + stops; first 2 fast, rest batched) so each is ready when the previous ends.
+     Same text the tour speaks, so each line is generated once; the response (also GET /api/tour/<run>) links clip -> cites / map pin. */
+  api.prefetchTour=(runId,summary)=>{ try{ if(window.AudioMgr&&AudioMgr.isMuted()) return null; const steps=[];
+    if(summary) steps.push({step_index:0,text:String(summary).slice(0,400),cite_ids:[],refs:[],node_ids:["summary"]});
+    api.order().forEach(k=>{ const c=cites[k]||{}, L=c._loc||{}, ll=Array.isArray(L.ll)?L.ll.slice(0,2).filter(x=>typeof x==="number"):[];
+      steps.push({step_index:steps.length,text:api.explainText(k).slice(0,400),cite_ids:[String(c.id||c.ref||k)],refs:c.ref?[String(c.ref)]:[],node_ids:L.key?[L.key]:[],coords:ll}); });
+    const sig=(runId||"")+"|"+steps.map(s=>s.text).join("|"); if(!steps.length||api._pf===sig) return null; api._pf=sig;
+    return fetch("/api/tour/prefetch",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({run_id:runId||"",steps})}).then(r=>r.ok?r.json():null).then(j=>{ api.tourMeta=j; return j; }).catch(()=>null); }catch(e){ return null; } };
   let curAudio=null; api.voice=!(window.AudioMgr&&AudioMgr.isMuted());   /* sound on by default; manual mute lives in AudioMgr */
   let sync=null; // {a:Audio, starts:[...]} for the stop currently speaking
+  function speakBrowser(text,S){ if(!("speechSynthesis" in window)||(window.AudioMgr&&AudioMgr.isMuted())){ S.fail=true; return false; }
+    try{ window.AudioMgr&&AudioMgr.loadCancel&&AudioMgr.loadCancel(); }catch(e){}
+    return new Promise(res=>{ const u=new SpeechSynthesisUtterance(text); S.sp=0; u.onstart=()=>{ S.ok=true; }; u.onboundary=e=>{ S.sp=e.charIndex; }; u.onend=()=>res(true); u.onerror=()=>res(!!S.ok); speechSynthesis.speak(u); }); }
   const ttsOff=()=>{ const M=window.AudioMgr; return !api.voice||api._ttsDown||Date.now()<(api.holdUntil||0)||(M&&(M.isMuted()||Date.now()-(M.failedAt||0)<60000)); };   /* after a failure the rest of this tour is caption-only */
-  const ttsReq=(text,pre)=>fetch("/api/tts_ts",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},pre?{"X-Prefetch":"1"}:{}),body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.ok&&r.status!==204?r.json():null);
+  const ttsReq=(text,pre)=>fetch("/api/tts_ts",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},pre?{"X-Prefetch":"1"}:{}),body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.status===204?null:r.json().catch(()=>null));
   // prefetch the NEXT stop's clip while this one plays: download only, never plays or stops anything
-  api.prefetch=k=>{ const M=window.AudioMgr; if(k===undefined||!api.voice||api._ttsDown||(M&&(M.isMuted()||Date.now()-(M.failedAt||0)<60000))) return; const text=api.explainText(k).slice(0,400); if(api._pf&&api._pf.text===text) return;
-    const P={text,ep:window.AudioMgr&&AudioMgr.epoch,settled:false}; P.p=ttsReq(text,true).catch(()=>null).then(j=>{ P.settled=true; return j; }); api._pf=P; };
+  api.prefetch=k=>{ const M=window.AudioMgr; if(k===undefined||!api.voice||api._ttsDown||(M&&(M.isMuted()||Date.now()-(M.failedAt||0)<60000))) return; const text=api.explainText(k).slice(0,400); if(api._pfc&&api._pfc.text===text) return;
+    const P={text,ep:window.AudioMgr&&AudioMgr.epoch,settled:false}; P.p=ttsReq(text,true).catch(()=>null).then(j=>{ P.settled=true; return j; }); api._pfc=P; };
   function sayTTS(text){ if(ttsOff()||api.holdVoice) return null;
     const M=window.AudioMgr, ep=M&&M.epoch, S={a:null,starts:[],dead:false}; sync=S; text=text.slice(0,400);
-    const pf=api._pf&&api._pf.text===text&&api._pf.ep===ep?api._pf:null; api._pf=null; let t=null, req;
+    const pf=api._pfc&&api._pfc.text===text&&api._pfc.ep===ep?api._pfc:null; api._pfc=null; let t=null, req;
     if(pf&&pf.settled) req=pf.p;
     else if(pf){ t=M&&M.loadStart?M.loadStart():null; req=Promise.race([pf.p,new Promise(r=>setTimeout(()=>r(null),8000))]); }   /* still downloading: same indicator + 8s rule */
     else req=ttsReq(text);
     S.done=req.then(j=>{ if(S.dead||api.holdVoice||(M&&(M.saying||M.epoch!==ep))) return false;   /* stale (stopped / new run): never plays */
+      if(j&&!j.audio_b64&&j.fallback==="browser") return speakBrowser(text,S);   /* server voices all failed (429): browser voice, not silence */
       if(!j||!j.audio_b64){ S.fail=true; if(t!=null) M.loadFail(t); return false; }
       const bin=atob(j.audio_b64), u8=new Uint8Array(bin.length); for(let k=0;k<bin.length;k++) u8[k]=bin.charCodeAt(k);
       curAudio=new Audio(URL.createObjectURL(new Blob([u8],{type:"audio/mpeg"}))); S.a=curAudio; S.starts=j.starts||[];
@@ -270,6 +282,7 @@ if(!webgl){
     const tick=()=>{ if(S.dead||S.fb) return; let n=0; const a=S.a;
       if(S.ended){ if(!S.ok) return; n=txt.length; }
       else if(a&&a.duration){ const t=a.currentTime; if(S.starts.length){ while(n<S.starts.length&&S.starts[n]<=t) n++; if(n>=S.starts.length&&a.ended) n=txt.length; } else n=Math.round(t/a.duration*txt.length); }
+      else if(S.sp!=null) n=Math.max(last,S.sp);
       if(n!==last){ paint(n); last=n; } if(n<txt.length) api._raf=requestAnimationFrame(tick); };
     tick(); return 0; }
   coView(); cam.position.copy(camT); look.copy(lookT); cam.lookAt(look);

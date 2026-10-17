@@ -5,6 +5,15 @@ on:
     types: [completed]
     branches: [main]
   workflow_dispatch:
+    inputs:
+      confirm_reset_over_local:
+        description: "Local changes on the Pro are verified merged (e.g. reformatted upstream): save a patch and reset anyway"
+        type: boolean
+        default: false
+      force:
+        description: "Redeploy even if already at origin/main"
+        type: boolean
+        default: false
   # Squash merges done by auto-merge (GITHUB_TOKEN) do not fire push/workflow_run events,
   # so also poll: deploy.sh is a no-op when ~/precedent is already at origin/main.
   schedule:
@@ -22,4 +31,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Deploy to ~/precedent (health-checked, rolls back on failure)
+        env:
+          CONFIRM_RESET_OVER_LOCAL: ${{ inputs.confirm_reset_over_local || false }}
+          FORCE_DEPLOY: ${{ inputs.force && '1' || '0' }}
         run: bash deploy/deploy.sh
