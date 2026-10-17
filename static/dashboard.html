@@ -7,16 +7,36 @@ a{color:inherit;text-decoration:none}
 .nav{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:28px;height:56px;padding:0 40px;border-bottom:1px solid #1f1f22;background:rgba(10,10,11,.85);backdrop-filter:blur(10px)}
 .nav b{font-size:15px}.nav a{color:#8f8f95;font-size:13px}.nav a.on,.nav a:hover{color:#fff}
 .wrap{max-width:1440px;margin:0 auto;padding:40px}
-.grid{display:grid;grid-template-columns:repeat(12,1fr);gap:24px}
-.card{background:#111113;border:1px solid #1f1f22;border-radius:16px;padding:32px}
+.grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:24px}
+.card{background:#111113;border:1px solid #1f1f22;border-radius:16px;padding:32px;min-width:0}
 .s{font-size:13px;color:#8f8f95}.up{text-transform:uppercase;letter-spacing:.08em;font-size:13px;color:#6b6b72}
 h1{font-size:44px;font-weight:700;letter-spacing:-.03em;margin:0}
 .num{font-size:44px;font-weight:700;letter-spacing:-.03em;line-height:1.1;font-variant-numeric:tabular-nums}
-.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:28px 0 20px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:16px;margin:28px 0 20px}
 .btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 16px;border-radius:999px;border:1px solid #2a2a2e;font-size:13px;color:#ededed}
 .btn:hover{border-color:#555}
 .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:28px 0}.tabs a{font-size:13px;color:#8f8f95;padding:6px 12px;border-radius:999px;border:1px solid #1f1f22}.tabs a:hover{color:#fff;border-color:#3a3a3e}
 .pill{display:inline-block;font-size:13px;padding:2px 10px;border-radius:999px;background:#18181b;color:#8f8f95}
+svg{max-width:100%}
+.wrap,.card,.card *{min-width:0;overflow-wrap:anywhere}
+@media (max-width:1023px){
+ .kpis{grid-template-columns:repeat(auto-fit,minmax(92px,1fr));gap:12px}
+ .num{font-size:30px}
+ .card>div:first-child>span{font-size:26px!important}
+ .card{padding:20px}
+ .card [style*="width:130px"],.card [style*="width:60px"]{width:auto!important;flex:0 1 auto!important}
+ .card [style*="width:130px"]{flex:1 1 auto;margin-right:8px}
+}
+@media (max-width:1279px){
+ .nav{flex-wrap:wrap;height:auto;min-height:56px;padding:8px 32px;row-gap:2px}
+ #partner-strip{display:none!important}
+ .tabs a{min-height:44px;display:inline-flex;align-items:center}
+}
+@media (max-width:760px){
+ .nav{padding:8px 16px;column-gap:14px}
+ #cards>section{grid-column:1/-1!important}
+ .kpis{gap:12px}
+}
 </style><!-- SEO -->
 <meta name="description" content="Live partner dashboards for Precedent: Arize traces, Anthropic models, ElevenLabs voice and SurrealDB graph powering verified legal research memos.">
 <link rel="canonical" href="https://arize.design-bakery.com/dashboard">
@@ -45,13 +65,16 @@ h1{font-size:44px;font-weight:700;letter-spacing:-.03em;margin:0}
 </div>
 <script>
 const fmt=n=>n==null?"–":typeof n==="number"?(n>=1e5?(n/1000).toFixed(0)+"k":n.toLocaleString()):n;
+const esc=t=>String(t==null?"":t).replace(/[<&]/g,m=>m==="<"?"&lt;":"&amp;");
+const escDeep=o=>{ if(o&&typeof o==="object"){ for(const k in o){ const v=o[k]; if(typeof v==="string") o[k]=esc(v); else if(v&&typeof v==="object") escDeep(v); } } return o; };
+const unit=(v,s)=>v==null||v===""||typeof v==="number"&&!isFinite(v)?null:v+s;
 function spark(vals,color,w=360,h=56){ if(!vals.length) return ""; const mx=Math.max(...vals,1), st=w/Math.max(1,vals.length-1);
  const pts=vals.map((v,i)=>`${(i*st).toFixed(1)},${(h-4-(v/mx)*(h-8)).toFixed(1)}`).join(" ");
  return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="${h}" preserveAspectRatio="none"><polyline points="0,${h} ${pts} ${w},${h}" fill="${color}" fill-opacity=".08" stroke="none"/><polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2" stroke-linejoin="round"/></svg>`; }
-function bars(items,color){ return items.map(([l,v,cap])=>`<div style="display:flex;align-items:center;gap:12px;margin-top:8px"><span class="s" style="width:130px">${l}</span><div style="flex:1;height:8px;border-radius:4px;background:#1c1c1f"><div style="width:${Math.min(100,cap?v/cap*100:0)}%;min-width:2px;height:100%;border-radius:4px;background:${color}"></div></div><span class="s" style="width:60px;text-align:right">${v}/${cap}</span></div>`).join(""); }
+function bars(items,color){ return items.map(([l,v,cap])=>`<div style="display:flex;align-items:center;gap:12px;margin-top:8px"><span class="s" style="width:130px">${l}</span><div style="flex:1;height:8px;border-radius:4px;background:#1c1c1f"><div style="width:${v==null||!cap?0:Math.min(100,v/cap*100)}%;min-width:2px;height:100%;border-radius:4px;background:${color}"></div></div><span class="s" style="width:60px;text-align:right">${fmt(v)}/${cap}</span></div>`).join(""); }
 function card(k,kpis,chart,label,span=6){ const p=PARTNERS[k];
  return `<section id="${k}" class="card" style="grid-column:span ${span};border-top:2px solid ${p.color}">
- <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">${partnerMark(k,40)}<a class="btn" href="${p.url}" target="_blank" rel="noopener">${p.open} ↗</a></div>
+ <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;min-width:0">${partnerMark(k,40)}<a class="btn" href="${p.url}" target="_blank" rel="noopener">${p.open} ↗</a></div>
  <div class="s" style="margin-top:12px;font-size:15px;color:#a1a1aa">${p.powers}</div>
  <div class="kpis">${kpis.map(([v,l])=>`<div><div class="num">${fmt(v)}</div><div class="s">${l}</div></div>`).join("")}</div>
  <div class="up" style="margin-bottom:8px">${label}</div>${chart}</section>`; }
@@ -63,18 +86,27 @@ function flow(){ const N=[["Query","#ededed"],["Octo","#f59e0b"],["SurrealDB","#
  s+=`<defs><marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 8 4 0 8z" fill="#3f3f46"/></marker></defs>`;
  s+=`<text x="30" y="128" fill="#38bdf8" font-size="13" font-weight="600">ACS · seats, handoffs, audit record per run</text><text x="${w-30}" y="128" fill="#a78bfa" font-size="13" font-weight="600" text-anchor="end">Arize · OpenTelemetry span per agent</text></svg>`;
  document.getElementById("flow").innerHTML=s; }
-async function load(){ const d=await (await fetch("/api/stack")).json(); const R=(d.runs||[]).slice().reverse(), L=d.limits||{}, C=L.caps||{};
+function drawTabs(){ document.getElementById("tabs").innerHTML=Object.keys(PARTNERS).map(k=>`<a href="#${k}">${PARTNERS[k].name}</a>`).join(""); }
+function noStack(){ const c=document.getElementById("cards"); if(c) c.innerHTML='<section class="card" style="grid-column:span 12"><div class="up">Live numbers</div><div class="s" style="margin-top:8px">The live numbers did not load. This page checks again every 15 seconds.</div></section>'; }
+async function load(){ let d; try{ const res=await fetch("/api/stack"), txt=await res.text(); d=res.ok?JSON.parse(txt):null; }catch(e){ d=null; }
+ if(!d||typeof d!=="object"){ noStack(); return; }
+ escDeep(d);
+ ["daytona","surrealdb","arize","elevenlabs","model","octo","acs"].forEach(k=>{ if(!d[k]||typeof d[k]!=="object") d[k]={}; });
+ if(!d.model.real_calls||typeof d.model.real_calls!=="object") d.model.real_calls={};
+ if(!d.arize.status) d.arize.status="No trace status yet";
+ const DAY=d.daytona, SD=d.surrealdb, lastMs=SD.last_ms==null?null:Math.round(SD.last_ms);
+ const R=(d.runs||[]).slice().reverse(), L=d.limits||{}, C=L.caps||{};
  const el=R.map(r=>r.elapsed_s||0), pass=R.filter(r=>r.pass).length;
  const cards=[
-  card("daytona",[[d.daytona.cpus,"vCPUs"],[d.daytona.ram_gb+" GB","RAM"],[d.daytona.uptime_h+" h","sandbox uptime"]],spark(el,PARTNERS.daytona.color),"Pipeline latency · last "+R.length+" runs (s)"),
-  card("surrealdb",[[d.surrealdb.nodes,"authorities"],[d.surrealdb.edges,"citation edges"],[d.surrealdb.avg_ms+" ms","avg graph query"]],bars([["queries",d.surrealdb.queries,Math.max(d.surrealdb.queries,1)],["last query ms",Math.round(d.surrealdb.last_ms),250]],PARTNERS.surrealdb.color),"Graph activity since restart"),
+  card("daytona",[[DAY.cpus,"vCPUs"],[unit(DAY.ram_gb," GB"),"RAM"],[unit(DAY.uptime_h," h"),"host uptime"]],spark(el,PARTNERS.daytona.color),"Pipeline latency · last "+R.length+" runs (s)"),
+  card("surrealdb",[[SD.nodes,"authorities"],[SD.edges,"citation edges"],[unit(SD.avg_ms," ms"),"avg graph query"]],bars([["queries",SD.queries||0,Math.max(SD.queries||0,1)],["last query ms",lastMs,250]],PARTNERS.surrealdb.color),"Graph activity since restart"),
   card("arize",[[4,"span kinds: chain, retriever, LLM, guardrail"],[d.arize.connected?"Live":"Pending","status"],[2,"span evals (citation_guard, groundedness)"]],`<div class="s">${d.arize.status}. Project <b>precedent-legal-graphrag</b>: planner → retriever → answer → safeguard.</div><div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:14px"><a class="btn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjo1MjM0Mjo2cVRj/spaces/U3BhY2U6NTY4Nzk6MHhDRQ==/home">Home ↗</a><a class="btn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjo1MjM0Mjo2cVRj/spaces/U3BhY2U6NTY4Nzk6MHhDRQ==/evaluators">Evaluators ↗</a><a class="btn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjo1MjM0Mjo2cVRj/spaces/U3BhY2U6NTY4Nzk6MHhDRQ==/datasets">Datasets ↗</a><a class="btn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjo1MjM0Mjo2cVRj/spaces/U3BhY2U6NTY4Nzk6MHhDRQ==/experiments">Experiments ↗</a><a class="btn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjo1MjM0Mjo2cVRj/spaces/U3BhY2U6NTY4Nzk6MHhDRQ==/monitors">Monitors ↗</a><a class="btn" target="_blank" rel="noopener" href="https://app.arize.com/organizations/QWNjb3VudE9yZ2FuaXphdGlvbjo1MjM0Mjo2cVRj/spaces/U3BhY2U6NTY4Nzk6MHhDRQ==/dashboards">Dashboards ↗</a><a class="btn" target="_blank" rel="noopener" href="https://app.arize.com/account/billing">Usage ↗</a></div>`,"Tracing"),
   card("elevenlabs",[[d.elevenlabs.tts_calls,"TTS calls"],[d.elevenlabs.cached_files,"cached clips"],[d.stt_calls||0,"STT calls"]],bars([["TTS / hour",(C.elevenlabs_tts||{}).used_last_hour||0,(C.elevenlabs_tts||{}).cap_per_hour||30],["STT / hour",(C.elevenlabs_stt||{}).used_last_hour||0,(C.elevenlabs_stt||{}).cap_per_hour||20]],PARTNERS.elevenlabs.color),"Usage vs hourly cap"),
   card("anthropic",[[d.model.real_calls.anthropic,"Haiku calls"],[d.model.cached_answers,"cached answers"],[d.model.runs,"total runs"]],bars([["Haiku / hour",(C.anthropic||{}).used_last_hour||0,(C.anthropic||{}).cap_per_hour||40]],PARTNERS.anthropic.color),"Cost control"),
   card("octo",[["804k","opinion passages"],["45k","cases in snapshot"],[d.octo.searches,"searches"]],`<div class="s">Source: ${d.octo.last_source||"–"}</div>`,"Retrieval"),
   card("acs",[[d.acs.issue_logs,"audit records"],[d.acs.events,"events"],[pass+"/"+R.length,"safeguard pass"]],spark(R.map(r=>r.pass?1:0.15),PARTNERS.acs.color),"Safeguard outcome · recent runs",12)];
  document.getElementById("cards").innerHTML=cards.join("");
- document.getElementById("tabs").innerHTML=Object.keys(PARTNERS).map(k=>`<a href="#${k}">${PARTNERS[k].name}</a>`).join("");
  document.getElementById("upd").textContent="Updated "+new Date().toLocaleTimeString(); }
-flow(); load(); setInterval(load,15000);
+const tick=()=>load().catch(()=>{ noStack(); });
+flow(); drawTabs(); tick(); setInterval(tick,15000);
 </script><script src="/static/partners.js"></script><script src="/static/navbar.js?v=ux1"></script></body></html>
