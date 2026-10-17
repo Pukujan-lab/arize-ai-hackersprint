@@ -53,8 +53,8 @@ svg{max-width:100%}
 <meta name="twitter:title" content="Precedent · Partner dashboards for a multi-agent legal AI pipeline">
 <meta name="twitter:description" content="Live partner dashboards for Precedent: Arize traces, Anthropic models, ElevenLabs voice and SurrealDB graph powering verified legal research memos.">
 <meta name="twitter:image" content="https://arize.design-bakery.com/og.png">
-<link rel="stylesheet" href="/static/layout.css?v=side2">
-<link rel="stylesheet" href="/static/responsive.css?v=side2">
+<link rel="stylesheet" href="/static/layout.css?v=sb3">
+<link rel="stylesheet" href="/static/responsive.css?v=sb3">
 </head><body>
 <div class="wrap">
  <div class="up">Partner dashboards · live from this sandbox · <span class="s" id="upd"></span></div>
@@ -109,4 +109,4 @@ async function load(){ let d; try{ const res=await fetch("/api/stack"), txt=awai
  document.getElementById("upd").textContent="Updated "+new Date().toLocaleTimeString(); }
 const tick=()=>load().catch(()=>{ noStack(); });
 flow(); drawTabs(); tick(); setInterval(tick,15000);
-</script><script src="/static/partners.js"></script><script src="/static/navbar.js?v=side2"></script></body></html>
+</script><script src="/static/partners.js"></script><script src="/static/navbar.js?v=sb3"></script></body></html>

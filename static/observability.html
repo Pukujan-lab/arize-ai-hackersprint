@@ -48,8 +48,8 @@ dl.info{display:grid;grid-template-columns:max-content 1fr;gap:4px 16px;font-siz
 <meta name="twitter:title" content="Precedent · Observability for multi-agent runs with Arize">
 <meta name="twitter:description" content="See every Precedent run traced end to end with Arize: planner, retriever, writer and safeguard agents, latency, claims and verification results.">
 <meta name="twitter:image" content="https://arize.design-bakery.com/og.png">
-<link rel="stylesheet" href="/static/layout.css?v=side2">
-<link rel="stylesheet" href="/static/responsive.css?v=side2">
+<link rel="stylesheet" href="/static/layout.css?v=sb3">
+<link rel="stylesheet" href="/static/responsive.css?v=sb3">
 </head><body>
 <div class="wrap">
 <div class="up">Every question asked here · <span id="st">Loading…</span></div>
@@ -406,4 +406,4 @@ let rt=null; window.addEventListener("resize",()=>{ clearTimeout(rt); rt=setTime
 load().catch(e=>{ $("st").textContent="Could not read the run data: "+(e&&e.message?e.message:e); });
 setInterval(()=>{ load().catch(()=>{}); },30000);
 </script>
-<script src="/static/navbar.js?v=side2"></script></body></html>
+<script src="/static/navbar.js?v=sb3"></script></body></html>

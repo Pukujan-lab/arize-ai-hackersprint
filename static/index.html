@@ -19,8 +19,8 @@
 .ans-disc{margin-top:.35rem;font-size:11px;color:rgba(252,211,77,.55)}
 @keyframes pulse2{50%{opacity:.4}}.live{animation:pulse2 1s infinite}</style><script src="/static/links.js?v=cf2"></script>
 <link rel="stylesheet" href="/static/theme/precedent-theme.css?v=ux1">
-<link rel="stylesheet" href="/static/layout.css?v=side2">
-<link rel="stylesheet" href="/static/responsive.css?v=side2">
+<link rel="stylesheet" href="/static/layout.css?v=sb3">
+<link rel="stylesheet" href="/static/responsive.css?v=sb3">
 <link rel="icon" type="image/svg+xml" href="/static/theme/favicon.svg?v=ux1">
 <!-- SEO -->
 <meta name="description" content="Precedent is a reliable pipeline for multi-agent AI: isolated, grounded, traced, coordinated and verified agents that write cited legal research memos.">
@@ -75,6 +75,7 @@
  <input id="q" class="flex-1 bg-transparent outline-none text-lg placeholder-slate-500" aria-label="Legal research question" placeholder="e.g. Automobile exception: probable cause standard in Colorado" value="">
  <button id="go" type="button" class="bg-indigo-500 hover:bg-indigo-400 px-6 py-2 rounded-xl font-semibold" aria-label="Ask: run the research agents" title="Run the research agents on your question (Enter)">Ask</button></form></div>
 <p id="askhint" class="hidden -mt-4 mb-4 px-2 text-sm text-amber-300" role="status">Type a research question first, or pick one from Examples.</p>
+<div class="flex flex-wrap gap-2 mb-6 text-xs" id="examples"></div>
 <div class="glass rounded-2xl overflow-hidden relative mb-6" style="height:clamp(300px,42vh,420px)"><div id="docs3d" class="absolute inset-0"></div><div class="absolute bottom-2 left-3 text-[10px] uppercase tracking-widest text-slate-500">United States · Colorado courts &amp; statutes</div><div id="docnav" class="absolute bottom-2 right-3 flex gap-1"></div><a id="fullmap" href="/map" class="absolute top-3 right-4 z-20 text-xs bg-indigo-600/80 hover:bg-indigo-500 px-3 py-1 rounded-full">Open full map ↗</a></div>
 <div class="grid grid-cols-12 gap-6">
  <div class="col-span-8 space-y-6">
@@ -100,6 +101,8 @@ const C={planner:"text-sky-300",retriever:"text-indigo-300",answer:"text-fuchsia
 const $=id=>document.getElementById(id);let lastAnswer="",tts=false;
 function seats(state){$("seats").innerHTML=SEATS.map(([k,i,n])=>`<div class="seat glass rounded-xl p-3 border ${state[k]||''}"><div class="text-2xl">${i}</div><div class="font-semibold text-sm">${n}</div><div class="text-[10px] text-slate-400">${state[k]==='on'?'<span class=live>● working</span>':state[k]==='done'?'✓ handed off':'idle'}</div></div>`).join("")}
 seats({});
+// Example chips live next to the ask box: one click fills the question and runs it.
+["Automobile exception: probable cause standard in Colorado","Landlord liability for security deposit withholding under C.R.S. 38-12-103","Suppression of evidence from warrantless vehicle search","Water rights priority: senior appropriator call doctrine"].forEach(e=>{const b=document.createElement("button");b.type="button";b.className="glass px-3 py-1 rounded-full hover:bg-white/10";b.textContent=e;b.onclick=()=>{$("q").value=e;ask()};$("examples").appendChild(b)});
 fetch("/api/health").then(r=>r.json()).then(h=>{tts=h.elevenlabs||Array.isArray(h.tts);const b=(t,on)=>`<span class="px-2 py-1 rounded-full ${on?'bg-emerald-500/20 text-emerald-300':'bg-slate-700/50 text-slate-500'}">${t}</span>`;
 $("badges").innerHTML=b("Daytona",!!h.sandbox)+b("SurrealDB",h.backend=="surrealdb")+b("Arize",h.arize)+b("ElevenLabs",h.elevenlabs)});
 function esc(s){return (s||"").replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))}
@@ -183,5 +186,5 @@ $("tasks").innerHTML=Object.entries(d.tasks).map(([k,t])=>`<div class="flex just
 board();setInterval(board,5000);
 
 window.PRECEDENT={ask:async t=>{$("q").value=t;return await ask()},speak};
-</script><script src="/static/vendor/d3-array.min.js"></script><script src="/static/vendor/d3-geo.min.js"></script><script type="module" src="/static/map3d.js?v=ts2"></script><script src="/static/voice.js?v=ts2"></script><script src="/static/followup.js"></script><script>FOLLOW.init({input:()=>document.getElementById("q"),threadHost:()=>document.getElementById("askrow"),chipsHost:()=>document.getElementById("askrow"),newHost:()=>document.getElementById("go"),submit:()=>document.getElementById("go").click(),placeholder:"e.g. Automobile exception: probable cause standard in Colorado",onReset:()=>{lastAnswer="";["answer","cites"].forEach(i=>{const e=document.getElementById(i);if(e)e.innerHTML=""});}});</script><script src="/static/declutter.js"></script><script src="/static/firstscreen.js?v=fs1"></script><script src="/static/partners.js"></script><script src="/static/navbar.js?v=side2"></script><script>document.addEventListener("click",e=>{ const a=e.target.closest&&e.target.closest('a[href="/map"]'); if(!a) return; try{ window.AudioMgr&&AudioMgr.stopAll(); speechSynthesis&&speechSynthesis.cancel(); }catch(_){} const id=window.FOLLOW&&FOLLOW.prev; if(id) a.href="/map?run="+encodeURIComponent(id); },true);</script>
+</script><script src="/static/vendor/d3-array.min.js"></script><script src="/static/vendor/d3-geo.min.js"></script><script type="module" src="/static/map3d.js?v=ts2"></script><script src="/static/voice.js?v=ts2"></script><script src="/static/followup.js"></script><script>FOLLOW.init({input:()=>document.getElementById("q"),threadHost:()=>document.getElementById("askrow"),chipsHost:()=>document.getElementById("askrow"),newHost:()=>document.getElementById("go"),submit:()=>document.getElementById("go").click(),placeholder:"e.g. Automobile exception: probable cause standard in Colorado",onReset:()=>{lastAnswer="";["answer","cites"].forEach(i=>{const e=document.getElementById(i);if(e)e.innerHTML=""});}});</script><script src="/static/declutter.js?v=sb3"></script><script src="/static/firstscreen.js?v=fs1"></script><script src="/static/partners.js"></script><script src="/static/navbar.js?v=sb3"></script><script>document.addEventListener("click",e=>{ const a=e.target.closest&&e.target.closest('a[href="/map"]'); if(!a) return; try{ window.AudioMgr&&AudioMgr.stopAll(); speechSynthesis&&speechSynthesis.cancel(); }catch(_){} const id=window.FOLLOW&&FOLLOW.prev; if(id) a.href="/map?run="+encodeURIComponent(id); },true);</script>
 </body></html>

@@ -1,6 +1,7 @@
 /* layout.css — the one shared shell on every page (issue #50): top bar, sidebar, backdrop and footer.
    navbar.js builds the elements; this file styles them. Page-level rules stay in responsive.css,
-   design tokens in theme/precedent-theme.css. Selectors are id-scoped so they beat utility classes. */
+   design tokens in theme/precedent-theme.css. Selectors are id-scoped so they beat utility classes.
+   The sidebar holds navigation links only — every panel a page shows stays in the page. */
 
 :root {
   --side-w: clamp(240px, 25vw, 320px);
@@ -177,7 +178,7 @@
   min-width: 0;
 }
 
-/* ---- Sidebar: navigation, Examples, then the page's own panels ---- */
+/* ---- Sidebar: navigation links, and nothing else ---- */
 #sidebar {
   position: fixed;
   top: 0;
@@ -188,10 +189,6 @@
   width: var(--side-w);
   padding: 10px 10px 26px;
   display: block;
-  flex-wrap: nowrap;
-  height: auto;
-  row-gap: 0;
-  column-gap: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
   color: var(--sh-ink);
@@ -219,6 +216,9 @@ html:not(.side-docked) #sidebar {
 html.side-shown:not(.side-docked) body {
   overflow: hidden;
 }
+#sidebar a {
+  text-decoration: none;
+}
 .side-head {
   display: flex;
   align-items: center;
@@ -233,7 +233,7 @@ html.side-shown:not(.side-docked) body {
   text-transform: uppercase;
   color: #64748b;
 }
-#side-close {
+#sidebar-close {
   display: none;
   align-items: center;
   justify-content: center;
@@ -247,11 +247,11 @@ html.side-shown:not(.side-docked) body {
   border-radius: 10px;
   cursor: pointer;
 }
-html:not(.side-docked) #side-close {
+html:not(.side-docked) #sidebar-close {
   display: inline-flex;
 }
-#side-close:hover,
-#side-close:focus-visible {
+#sidebar-close:hover,
+#sidebar-close:focus-visible {
   color: #fff;
   background: rgba(148, 163, 184, 0.12);
 }
@@ -259,7 +259,7 @@ html:not(.side-docked) #side-close {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin: 0 0 4px;
+  margin: 0;
   padding: 0;
 }
 #side-links a {
@@ -270,7 +270,6 @@ html:not(.side-docked) #side-close {
   font-size: 15px;
   font-weight: 600;
   color: var(--sh-mut);
-  text-decoration: none;
   border-radius: 10px;
   transition: background 0.15s, color 0.15s;
 }
@@ -283,99 +282,6 @@ html:not(.side-docked) #side-close {
   color: #fff;
   background: rgba(99, 102, 241, 0.2);
   box-shadow: inset 2px 0 0 var(--sh-acc);
-}
-.side-sec {
-  margin: 10px 0 0;
-  border-top: 1px solid var(--sh-line);
-  min-width: 0;
-}
-.side-sec > summary {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 44px;
-  padding: 10px 12px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #a5b4fc;
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-.side-sec > summary::-webkit-details-marker {
-  display: none;
-}
-.side-sec > summary:hover {
-  color: #c7d2fe;
-}
-.side-sec > summary .chev {
-  margin-left: auto;
-  flex: none;
-  transition: transform 0.2s;
-}
-.side-sec[open] > summary .chev {
-  transform: rotate(180deg);
-}
-.side-body {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 0 10px 12px;
-  min-width: 0;
-}
-.ex-item {
-  display: block;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 10px 12px;
-  font: inherit;
-  font-size: 14px;
-  line-height: 1.35;
-  text-align: left;
-  overflow-wrap: anywhere;
-  color: #cbd5e1;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 10px;
-  cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, color 0.15s;
-}
-.ex-item:hover,
-.ex-item:focus-visible {
-  color: #fff;
-  background: rgba(99, 102, 241, 0.16);
-  border-color: rgba(129, 140, 248, 0.45);
-}
-#sidebar-panels {
-  display: block;
-  min-width: 0;
-}
-#sidebar-panels > * {
-  min-width: 0;
-  max-width: 100%;
-}
-#sidebar #sumbox {
-  margin: 0;
-  max-width: 100%;
-}
-#sidebar select {
-  box-sizing: border-box;
-  width: 100%;
-  min-height: 44px;
-  max-width: 100%;
-}
-#sidebar #side {
-  max-height: none;
-  overflow: visible;
-  padding: 0;
-}
-#sidebar a {
-  text-decoration: none;
-}
-#sidebar .run-history-list a {
-  min-height: 48px;
 }
 
 /* ---- Drawer backdrop (phones and tablets) ---- */
@@ -441,6 +347,13 @@ html.side-shown:not(.side-docked) #sidebar-backdrop {
 #partner-strip a:focus-visible {
   background: rgba(148, 163, 184, 0.1);
 }
+/* Below desktop width the logo strip hides (responsive.css), and its lonely "Built with" label goes with it.
+   Pages that name their partners in the text — the demo page line under the panels — still do. */
+@media (max-width: 1279px) {
+  #site-footer {
+    display: none;
+  }
+}
 @media (max-width: 760px) {
   #site-footer {
     margin-top: 20px;
@@ -472,22 +385,4 @@ html.side-shown:not(.side-docked) #sidebar-backdrop {
 }
 body.mic-in-form #vstate {
   display: none;
-}
-/* Follow-up chips and the thread summary land in the sidebar next to the panels. */
-#sidebar #fuChips,
-#sidebar #fuThread {
-  box-sizing: border-box;
-  max-width: 100%;
-  min-width: 0;
-  margin: 0 10px;
-  overflow-wrap: anywhere;
-}
-#sidebar #fuThread {
-  margin-top: 10px;
-  border-top: 1px solid var(--sh-line);
-}
-/* Map panels: the answer summary and the per-place list read as sidebar sections, not cards. */
-#sidebar #sumbox {
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.03);
 }

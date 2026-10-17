@@ -1,7 +1,8 @@
 // navbar.js — the one shared shell for every page (issue #50).
-// Builds <header id="topbar"> (logo, sidebar toggle, ask box), <nav id="sidebar"> (page links, Examples, then the
-// page's own panels), the drawer backdrop and the "Built with" footer. Style lives in /static/layout.css.
+// Builds <header id="topbar"> (logo, sidebar toggle, ask box), <nav id="sidebar"> (navigation links only),
+// the drawer backdrop and the "Built with" footer. Style lives in /static/layout.css.
 // Navigation used to be a row of links in each page's <nav>; those old navs are removed here.
+// Everything else a page shows — activity, sources, run pickers — stays in the page itself.
 (function () {
   'use strict';
 
@@ -9,20 +10,14 @@
   const PARTNER_ORDER = ['daytona', 'surrealdb', 'octo', 'arize', 'elevenlabs', 'anthropic'];
   const LOGO_DIMS = { daytona: 80, surrealdb: 18, arize: 66, elevenlabs: 18, anthropic: 18 };
 
-  const EXAMPLE_QUESTIONS = [
-    'Automobile exception: probable cause standard in Colorado',
-    'Landlord liability for security deposit withholding under C.R.S. 38-12-103',
-    'Suppression of evidence from warrantless vehicle search',
-    'Water rights priority: senior appropriator call doctrine',
-  ];
-
   const ROUTES = [
     ['/', 'Home'],
     ['/map', 'Map'],
-    ['/dashboard', 'Dashboards'],
-    ['/slides', 'Slides'],
-    ['/guide', 'Guide'],
+    ['/runs', 'Run history'],
+    ['/dashboard', 'Dashboard'],
     ['/observability', 'Observability'],
+    ['/guide', 'Guide'],
+    ['/slides', 'Slides'],
   ];
 
   const SIDE_KEY = 'precedent.sidebar';
@@ -180,13 +175,11 @@
     })();
   }
 
-  // ---------- sidebar ----------
+  // ---------- sidebar: navigation links only ----------
   function buildSidebar() {
     const here = pagePath();
-    // A page script may have left an older sidebar behind (cached declutter.js): keep its panels, drop its shell.
-    const stale = $('sidebar');
-    const staleKids = stale && !stale.querySelector('#side-links') ? [...stale.children] : [];
-    if (staleKids.length) stale.remove();
+    const stale = $('sidebar'); // a cached older shell: it holds nothing we need, the links are rebuilt here
+    if (stale) stale.remove();
 
     const side = document.createElement('nav');
     side.id = 'sidebar';
@@ -198,7 +191,7 @@
     kicker.className = 'side-kicker';
     kicker.textContent = 'Menu';
     const close = document.createElement('button');
-    close.id = 'side-close';
+    close.id = 'sidebar-close';
     close.type = 'button';
     close.setAttribute('aria-label', 'Close menu');
     close.textContent = '✕';
@@ -215,57 +208,13 @@
       links.appendChild(a);
     });
 
-    const ex = document.createElement('details');
-    ex.className = 'side-sec';
-    ex.id = 'sidebar-examples';
-    ex.open = true;
-    const sum = document.createElement('summary');
-    sum.innerHTML = '<span>Examples</span><svg class="chev" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>';
-    const body = document.createElement('div');
-    body.className = 'side-body';
-    EXAMPLE_QUESTIONS.forEach((question) => {
-      const b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'ex-item';
-      b.textContent = question;
-      b.onclick = () => useExample(question);
-      body.appendChild(b);
-    });
-    ex.append(sum, body);
-
-    const panels = document.createElement('div');
-    panels.id = 'sidebar-panels';
-
-    side.append(head, links, ex, panels);
+    side.append(head, links);
     document.body.appendChild(side);
-    staleKids.forEach((k) => panels.appendChild(k));
 
     const back = document.createElement('div');
     back.id = 'sidebar-backdrop';
     back.onclick = closeDrawer;
     document.body.appendChild(back);
-  }
-
-  // An example fills the demo ask box; anywhere else it asks on the demo page.
-  function useExample(question) {
-    if (pagePath() === '/') {
-      const input = $('q');
-      if (input) {
-        input.value = question;
-        input.focus();
-      }
-      return;
-    }
-    location.href = '/?q=' + encodeURIComponent(question);
-  }
-
-  // Panels a page declares with <div id="page-panels" hidden> become sections below the navigation.
-  function movePagePanels() {
-    const host = $('sidebar-panels');
-    const declared = $('page-panels');
-    if (!host || !declared) return;
-    while (declared.firstElementChild) host.appendChild(declared.firstElementChild);
-    declared.remove();
   }
 
   // ---------- footer ----------
@@ -278,6 +227,8 @@
     label.textContent = 'Built with';
     const strip = document.createElement('div');
     strip.id = 'partner-strip';
+    strip.style.cssText =
+      'display:flex;align-items:center;gap:12px;margin-left:auto;flex:0 1 auto;min-width:0;max-width:100%;overflow:hidden;flex-wrap:nowrap;';
     foot.append(label, strip);
     document.body.appendChild(foot);
 
@@ -361,6 +312,26 @@
     document.head.appendChild(l);
   }
 
+  // ========== Shell polish (#72) =========
+  // Main added this when navigation still lived in a per-page <nav>. That <nav> is gone, so the same outcome is
+  // retargeted at the shared shell: a firm bar edge, a divider after the brand, steady gaps, and the partner logo
+  // strip never squeezing the page below desktop width (it shrinks and clips, then hides).
+  function fixNavbarLayout() {
+    if (document.getElementById('navbar-layout-fixes')) return;
+    const style = document.createElement('style');
+    style.id = 'navbar-layout-fixes';
+    style.textContent = `
+      #topbar{gap:14px}
+      #tb-brand{padding-right:14px;border-right:1px solid rgba(148,163,184,.2);white-space:nowrap}
+      #topbar > *:last-child{margin-left:auto}
+      #partner-strip{flex:0 1 auto;min-width:0;max-width:100%;flex-wrap:nowrap;overflow:hidden}
+      #partner-strip > *{flex:0 1 auto;min-width:0}
+      @media (max-width:1279px){#partner-strip{display:none!important}#tb-brand{white-space:nowrap!important}}
+      @media (max-width:900px){#topbar{gap:14px}#tb-brand{padding-right:14px}}
+    `;
+    document.head.appendChild(style);
+  }
+
   // A question handed over by another page's ask box.
   function askFromUrl() {
     if (pagePath() !== '/') return;
@@ -393,12 +364,12 @@
     buildTopbar();
     const form = placeAskForm();
     buildSidebar();
-    movePagePanels();
     buildFooter();
     dropOldNavs();
     setFavicon();
-    ensureCss('/static/layout.css?v=side2');
-    ensureCss('/static/responsive.css?v=side2');
+    ensureCss('/static/layout.css?v=sb3');
+    ensureCss('/static/responsive.css?v=sb3');
+    fixNavbarLayout();
     window.addEventListener('resize', () => {
       const d = isDesk();
       if (d !== wasDesk) {

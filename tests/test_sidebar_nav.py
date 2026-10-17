@@ -1,6 +1,6 @@
 """One collapsible sidebar holds navigation on every page (#50). The top bar keeps only the logo, the ask box with
 Ask and the sidebar toggle. The sidebar is a closed drawer on phones, remembers its state on desktop, marks the
-current page, closes on Esc, and holds the Examples."""
+current page, closes on Esc, and holds navigation links only."""
 
 import pytest
 
@@ -90,13 +90,16 @@ def test_desktop_state_is_remembered(base, browser):
     ctx.close()
 
 
-def test_examples_live_in_the_sidebar(base, browser):
-    ctx, page = open_page(browser, base, "/", DESKTOP)
-    ex = page.locator("#sidebar #sidebar-examples")
-    assert ex.count() == 1
-    if ex.evaluate("e => e.tagName") == "DETAILS" and not ex.evaluate("e => e.open"):
-        ex.locator("summary").click()
-    page.locator("#sidebar-examples button, #sidebar-examples a").first.click()
-    page.wait_for_timeout(300)
-    assert page.input_value("#q").strip()
+@pytest.mark.parametrize("path", PAGES)
+def test_sidebar_holds_only_navigation(base, browser, path):
+    ctx, page = open_page(browser, base, path, DESKTOP)
+    bad = page.evaluate(
+        """() => { const s = document.querySelector('#sidebar'); if (!s) return ['no #sidebar'];
+        const out = [];
+        s.querySelectorAll('button, input, select, textarea, details, audio, video, iframe, #events, #cites, #hf, #sidebar-examples')
+          .forEach(e => { if (!e.closest('[data-sidebar-collapse]') && e.id !== 'sidebar-close') out.push(e.tagName + '#' + e.id); });
+        s.querySelectorAll('a').forEach(a => { const h = a.getAttribute('href') || ''; if (!h.startsWith('/')) out.push('a ' + h); });
+        return out; }"""
+    )
+    assert not bad, f"{path}: sidebar should hold navigation links only, found {bad[:6]}"
     ctx.close()
