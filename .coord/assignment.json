@@ -5,9 +5,9 @@
     "planner": {
       "role": "orchestrator",
       "status": "done",
-      "run_id": "170543-170972",
-      "claimed_at": "2026-10-16T17:05:43Z",
-      "released_at": "2026-10-16T17:05:43Z",
+      "run_id": "000710-eb710b",
+      "claimed_at": "2026-10-17T04:07:10Z",
+      "released_at": "2026-10-17T04:07:10Z",
       "handoff_to": "retriever",
       "summary": "dispatched retriever"
     },
@@ -39,5 +39,5 @@
       "summary": "PASS"
     }
   },
-  "updated_at": "2026-10-16T17:05:48Z"
+  "updated_at": "2026-10-17T04:07:10Z"
 }
