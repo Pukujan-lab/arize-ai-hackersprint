@@ -1,5 +1,7 @@
 # Precedent
 
+[![CI](https://github.com/Pukujan/arize-ai-hackersprint/actions/workflows/ci.yml/badge.svg)](https://github.com/Pukujan/arize-ai-hackersprint/actions/workflows/ci.yml)
+
 Precedent is a reliable pipeline for multi-agent AI. Several agents split up a job,
 each one claims its piece, and every answer is checked before it goes out.
 
