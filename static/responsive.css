@@ -66,10 +66,11 @@ nav .max-w-7xl{max-width:100%!important;min-width:0!important}
   /* guide, dashboard, observability */
   .wrap{padding:20px 14px!important}
   .card{padding:16px!important}
-  .step{grid-template-columns:44px 1fr!important;gap:12px!important;padding:16px!important}
+  .step{grid-template-columns:44px minmax(0,1fr) auto!important;gap:12px!important;padding:16px!important}
   .step .n{font-size:32px!important}
   .step .t{font-size:19px!important}
-  .step .tm{grid-column:2;justify-self:start;font-size:20px!important;min-width:0!important;padding:8px 14px!important}
+  /* the timer stays in its own right-hand column, so the three columns line up at every width */
+  .step .tm{grid-column:3;justify-self:end;font-size:20px!important;min-width:0!important;padding:8px 14px!important}
   .card input{min-width:0!important;flex:1 1 100%!important}
 }
 /* Tablet: map page search form drops to its own row; guide partner rows wrap */

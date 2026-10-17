@@ -367,8 +367,8 @@
     buildFooter();
     dropOldNavs();
     setFavicon();
-    ensureCss('/static/layout.css?v=sb3');
-    ensureCss('/static/responsive.css?v=sb3');
+    ensureCss('/static/layout.css?v=sb4');
+    ensureCss('/static/responsive.css?v=sb4');
     fixNavbarLayout();
     window.addEventListener('resize', () => {
       const d = isDesk();

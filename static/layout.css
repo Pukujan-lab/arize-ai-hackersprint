@@ -205,7 +205,11 @@ html.side-shown #sidebar {
   transform: none;
   visibility: visible;
 }
+/* The page beside the open sidebar gets exactly what is left of the viewport: the offset is padding *inside* a
+   border-box body, so nothing next to the panel can be as wide as the viewport plus the sidebar. */
 html.side-docked.side-shown body {
+  box-sizing: border-box;
+  width: 100%;
   padding-left: var(--side-w);
 }
 /* As a drawer the panel sits under the top bar, so its own header row stays readable. */
