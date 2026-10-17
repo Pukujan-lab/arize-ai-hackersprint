@@ -1,0 +1,132 @@
+# Frontend inventory
+
+What every page in `static/` shows, which file owns each control, and which API route it calls. Built from the code on `main` (October 2026), not from screenshots. API routes match `contracts/openapi.json`. `tests/test_frontend_inventory.py` fails if an HTML route in openapi.json has no section here, so add a section when you add a page.
+
+There is no `/runs` page. Run history is the `/api/runs` JSON route, shown inside `/`, `/map` and `/observability`.
+
+## KEEP AS IS
+
+The 3D county map and the guided tour are the product's moat. v2 rebuilds the UI around them and does not touch these files:
+
+- `static/map3d.js`: 3D US map (Albers USA, d3-geo), Colorado raised, one pin per cited document, arcs for graph links, guided tour. Calls `POST /api/tour/prefetch`, `POST /api/tts_ts`, and loads `/static/vendor/us_states_proj.json` and `/static/vendor/co_counties_proj.json`. Creates `#docpanel`, `#transcript`, tour controls (aria-label "Map tour controls", "Play or pause the guided tour", "Replay this stop").
+- `static/map3d.co.js`: Colorado-only county variant (county seats, pins, arcs).
+- `static/vendor/` county and state data (`co_counties_proj.json`, `us_states_proj.json`) and the d3 builds it needs (`d3-array.min.js`, `d3-geo.min.js`).
+
+Both map files mount into `#docs3d` and expose `window.Docs3D` (`focus`, `open`, `jumpRef`, `busy`, `show`, `pulse`, `idle`). Any new UI should drive the map through that object.
+
+## Shared across pages
+
+| Control | id / aria-label | Owner | API |
+|---|---|---|---|
+| Top nav: Demo, Map, Dashboards, Slides, Guide | plain `<a>` links in each page's `<nav>` | each HTML file | none |
+| Partner logo strip | `#partner-strip`, links aria-label "{partner} — open dashboard" | `navbar.js` + `partners.js` | none |
+| Examples dropdown (replaces `#examples` chips) | `#exBtn`, `#exMenu` | `navbar.js` | none (fills `#q`, triggers ask) |
+| Nav logo | `#nav-logo` | `navbar.js` | none |
+| Session id header on every `/api` call | `window.SESSION_ID` | `session.js` | all `/api/*` |
+| Mute/stop and audio status | `#audio-status`, `[data-abtn]` buttons | `audio.js` | `POST /api/tts_ts` |
+| Voice orb (tap to talk) | `#vorb` aria-label "Tap to talk", `#vcap`, `#vstate`, `#vwave` | `voice.js` | `POST /api/stt`, then ask |
+| Follow-up chips, thread, New question | `#fuChips`, `#fuThread`, `#fuNew` | `followup.js` | `POST /api/ask` |
+| Citation labels and research links | no controls of its own | `links.js` | none |
+
+## `/`
+
+Demo page. File: `static/index.html`. Scripts: session, audio, tailwind, vis-network, links, d3, map3d (module), voice, followup, declutter, firstscreen, partners, navbar.
+
+| Control | id / aria-label | Owner | API |
+|---|---|---|---|
+| Top nav links | `<nav>` | `index.html` | none |
+| Getting-started tips card | `#firststep` aria-label "How to start" | `index.html`, `firstscreen.js` | none |
+| Dismiss tips | `#firststep-dismiss` aria-label "Dismiss the getting-started tips" | `firstscreen.js` | none |
+| Question box | `#q`, `#askrow`, `#askhint` | `index.html` | none |
+| Ask | `#go` aria-label "Ask: run the research agents" | `index.html` | `POST /api/ask`, `GET /api/run/{rid}` |
+| Try an example | `#tryex` | `index.html` | `POST /api/ask` |
+| Example chips (hidden, replaced by dropdown) | `#examples` | `index.html` / `navbar.js` | none |
+| Voice label | `#vorb-label`, aria-label "Ask by voice: tap to talk" | `firstscreen.js` | none |
+| 3D map | `#docs3d` | `map3d.js` (KEEP) | see KEEP AS IS |
+| Open full map | `#fullmap` → `/map` | `index.html` | none |
+| Source number buttons | `#docnav` buttons, aria-label "Open source N: {title}" | `index.html` | none (`Docs3D.focus/open`) |
+| Memo + Listen | `#answer`, `#play` aria-label "Listen to the memo" | `index.html` | `POST /api/tts` |
+| Citations list | `#cites` (title buttons, external links) | `index.html` | none |
+| Agent stages, events, badges, graph | `#stages`, `#events`, `#badges`, `#net`, `#steps`, `#meta` | `index.html` | `GET /api/run/{rid}` |
+| Seats and tasks panels | `#seats`, `#tasks` | `index.html` | `GET /api/tasks`, `GET /api/health` |
+| Hands-free toggle | `#hf` | `index.html` | none |
+| "Built with" link | `<a href="/dashboard">` | `index.html` | none |
+| Sidebar drawer | `#sidebar`, `#sideToggle` "Toggle sidebar", `#sideClose` "Close menu", `#sideBack`, `#sideDot`, mobile "Menu" button | `declutter.js` | none |
+| Sidebar accordions: Live agent activity (open), Sources, Run history, Voice & hands-free, Partners & pipeline | built by `createAccordion()` | `declutter.js` | Run history: `GET /api/runs?n=60` |
+| Live line | `#liveline` | `declutter.js` | none |
+
+## `/map`
+
+Full map page. File: `static/map.html`. Scripts: session, audio, tailwind, links, d3, map3d (module), agentnodes, voice, followup, partners, navbar.
+
+| Control | id / aria-label | Owner | API |
+|---|---|---|---|
+| Top nav links | `<nav>` | `map.html` | none |
+| Ask form | `#f`, `#q`, Ask button | `map.html` | `POST /api/ask`, `GET /api/run/{rid}` |
+| View toggle: United States / Colorado counties | `button[data-v="us"]`, `button[data-v="co"]` | `map.html` | none |
+| 3D map | `#docs3d` | `map3d.js` (KEEP) | see KEEP AS IS |
+| Summary collapsible | `<details id="sumbox" open>`, `#sum` | `map.html` | none |
+| Play summary | `#sumplay` aria-label "Play summary" | `map.html` | `POST /api/tts_ts` |
+| Reference jumps `[n]` | inline buttons | `map.html` | none (`Docs3D.jumpRef`) |
+| Side panel | `<aside>`, `#side` | `map.html` | none |
+| Recent runs | `#runs` | `map.html` | `GET /api/runs` |
+| Featured run on first load | none | `map.html` | `/static/featured-run.json` |
+| Status | `#stat`, `#st2` | `map.html` | none |
+| Agent pipeline overlay | `#agentNodes`, `#anCached`, `#anMsg` | `agentnodes.js` | uses run events |
+
+## `/dashboard`
+
+Partner dashboards. File: `static/dashboard.html`. Scripts: vendor/logos, partners, navbar.
+
+| Control | id / aria-label | Owner | API |
+|---|---|---|---|
+| Top nav links | `<nav>` | `dashboard.html` | none |
+| Partner tabs | `#tabs` (`<a href="#{key}">`) | `dashboard.html` | none |
+| Partner cards with "Open ↗" links | `#cards`, `#{key}` | `dashboard.html` | none |
+| Arize deep links (Home, Evaluators, Datasets, Experiments, Monitors, Dashboards, Usage) | external `<a>` | `dashboard.html` | none |
+| Pipeline flow, updated time | `#flow`, `#upd`, `#a` | `dashboard.html` | `GET /api/stack` |
+
+## `/observability`
+
+Run observability. File: `static/observability.html`. Scripts: vendor/logos, partners, session, navbar.
+
+| Control | id / aria-label | Owner | API |
+|---|---|---|---|
+| Top nav links (only page with an Observability link) | `<nav>` | `observability.html` | none |
+| Refresh | `#rf` | `observability.html` | `GET /api/runs`, `GET /api/run/{rid}`, `GET /api/health` |
+| Filters: search, provider, range, run | `#q`, `#f-provider`, `#f-range`, `#f-run`, `#fcount` | `observability.html` | none |
+| Summary tiles | `#v-today`, `#v-pass`, `#v-time`, `#v-cache`, `#v-voice` (+ `s-*`) | `observability.html` | as Refresh |
+| Detail tabs/panels | `#t-*`/`#p-*`/`#n-*` for steps, time, cache, judge, provider; `#panel` | `observability.html` | as Refresh |
+| Pipeline steps collapsible | `<details id="pipeline-steps">`, `#step-rows` | `observability.html` | none |
+| Raw details collapsible | `<details id="raw-details">`, `#ev`, `#ev-note` | `observability.html` | none |
+| Waterfall | `#wf`, `#wf-hint`, `#wf-what` | `observability.html` | none |
+| Empty state with "demo page" link | `#obs-empty` → `/` | `observability.html` | none |
+| Snapshot fallback | `#snap`, `#src` | `observability.html` | `/static/data/observability.json` |
+
+## `/guide`
+
+Presenter guide. File: `static/guide.html`. Scripts: vendor/logos, partners, navbar.
+
+| Control | id / aria-label | Owner | API |
+|---|---|---|---|
+| Top nav links | `<nav>` | `guide.html` | none |
+| Steps and flow | `#steps`, `#flow` | `guide.html` | none |
+| Open demo ↗, Open slides ↗, Open dashboard ↗ | `a.btn` (new tab) | `guide.html` | none |
+
+## `/slides`
+
+Pitch deck. File: `static/slides.html` (`static/slides.marketing.html` is an older deck, not routed). Scripts: tailwind, partners, navbar.
+
+| Control | id / aria-label | Owner | API |
+|---|---|---|---|
+| Nav: Demo, Map, Guide (no Dashboards/Slides links) | `<a>` | `slides.html` | none |
+| Deck and page counter | `#deck`, `#pg` | `slides.html` | none |
+| Closing CTAs: Demo, Map, Guide; external site and GitHub links | `<a>` | `slides.html` | none |
+
+## Known clutter
+
+- Two navigations on `/`: the top `<nav>` links plus the `declutter.js` sidebar drawer (with its own toggle, close, back and mobile Menu buttons). `declutter.js` restructures the page at runtime by cloning panels (badges, stages, hands-free checkbox) instead of the HTML being laid out that way.
+- Three ways to run an example on `/`: the "Try an example" button (`#tryex`), the hidden `#examples` chips, and the `navbar.js` dropdown (`#exBtn`/`#exMenu`) that replaces them; the tips card also says "or try an example".
+- Getting-started cues stack up: the `#firststep` tips card, `firstscreen.js` numbered steps, the pulse on Ask, the `#vorb-label` mic label and `#askhint`.
+- Nav links differ by page: only `/observability` links to Observability, `/slides` drops Dashboards and Slides, and `slides.marketing.html` is an unrouted older deck with its own nav.
+- Duplicate surfaces: run history appears in the `/` sidebar, the `/map` `#runs` list and `/observability`; the map plus Listen/Play controls exist on both `/` (`#play`, TTS via `/api/tts`) and `/map` (`#sumplay`, via `/api/tts_ts`), and the voice orb is on both.
