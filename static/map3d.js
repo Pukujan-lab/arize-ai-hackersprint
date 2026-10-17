@@ -247,7 +247,7 @@ if(!webgl){
   function speakBrowser(text,S){ if(!("speechSynthesis" in window)||(window.AudioMgr&&AudioMgr.isMuted())){ S.fail=true; return false; }
     try{ window.AudioMgr&&AudioMgr.loadCancel&&AudioMgr.loadCancel(); }catch(e){}
     return new Promise(res=>{ const u=new SpeechSynthesisUtterance(text); S.sp=0; u.onstart=()=>{ S.ok=true; }; u.onboundary=e=>{ S.sp=e.charIndex; }; u.onend=()=>res(true); u.onerror=()=>res(!!S.ok); speechSynthesis.speak(u); }); }
-  const ttsOff=()=>{ const M=window.AudioMgr; return !api.voice||api._ttsDown||Date.now()<(api.holdUntil||0)||(M&&(M.isMuted()||Date.now()-(M.failedAt||0)<60000)); };   /* after a failure the rest of this tour is caption-only */
+  const ttsOff=()=>{ const M=window.AudioMgr; return !api.voice||api._ttsDown||api.awaitSummary||Date.now()<(api.holdUntil||0)||(M&&(M.isMuted()||Date.now()-(M.failedAt||0)<60000)); };   /* after a failure the rest of this tour is caption-only */
   const ttsReq=(text,pre)=>fetch("/api/tts_ts",{method:"POST",headers:Object.assign({"Content-Type":"application/json"},pre?{"X-Prefetch":"1"}:{}),body:JSON.stringify({text:text.slice(0,400)})}).then(r=>r.status===204?null:r.json().catch(()=>null));
   // prefetch the NEXT stop's clip while this one plays: download only, never plays or stops anything
   api.prefetch=k=>{ const M=window.AudioMgr; if(k===undefined||!api.voice||api._ttsDown||(M&&(M.isMuted()||Date.now()-(M.failedAt||0)<60000))) return; const text=api.explainText(k).slice(0,400); if(api._pfc&&api._pfc.text===text) return;
