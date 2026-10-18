@@ -146,6 +146,8 @@
     if (isMobile()) setPane("map");
   }
 
+  // A short strip stays a short strip: the passage is trimmed, and the strip itself scrolls if the
+  // text is still taller than its box, so it never reaches the tour stack parked below it.
   function passageOf(c) {
     var raw = String(c.passage || "");
     if (!raw) return "No passage stored for this source.";
@@ -153,7 +155,7 @@
     if (window.cleanPassage) {
       try { p = String(window.cleanPassage(raw, input ? input.value : "")) || raw; } catch (e) { p = raw; }
     }
-    return p.slice(0, 900);
+    return p.length > 360 ? p.slice(0, 360).replace(/\s\S*$/, "") + "…" : p;
   }
 
   if (pvRead) pvRead.addEventListener("click", function () {
@@ -193,9 +195,10 @@
     return arr[n - 1] || null;
   }
 
-  // On a phone a pin or county tap takes over the map's own source card and shows the strip instead.
+  // A pin or county tap means the reader wants to look at that source, so the slim strip answers it
+  // on phones and on desktop alike and the map's own big source card stays shut. The card is still
+  // reachable from the strip's Source button and from the Sources sheet.
   function onCiteTap(c) {
-    if (!isMobile()) return false;
     showPreview(c);
     return true;
   }
@@ -325,6 +328,7 @@
     setBusy(true);
     closeSheets();
     hidePreview();
+    showListenBar(false);        // no memo on screen yet, so nothing to listen to
     if (answerEl) answerEl.innerHTML = '<p class="v2-working">Agents working…</p>';
     if (mapReady()) { try { window.Docs3D.holdVoice = true; window.Docs3D.busy(); } catch (e) { /* no map */ } }
 
@@ -392,6 +396,7 @@
       answerEl.innerHTML = md(r.answer, byRef);
       answerEl.scrollTop = 0;
     }
+    showListenBar(!!(r && r.answer));   // the memo is on screen: the reader can hear it again
     renderSources(r);
     renderFollowups(r);
     fillRunInfo();
@@ -417,7 +422,16 @@
       D.show(r.citations || [], r.edges || [], r.documents || []);
       D.stopTour && D.stopTour();       // an older tour must not run under the new memo
     } catch (e) { return; }
+    speakThenTour(r, token);
+  }
+
+  // The shared starter: the stored summary is spoken first and the tour begins only when that clip
+  // is done. A fresh memo and the Listen button both come through here, so a replay follows
+  // exactly the same order as the first read. The question is never asked again.
+  function speakThenTour(r, token) {
+    var D = window.Docs3D;
     var M = window.AudioMgr;
+    if (!D) return;
     var line = (M && !M.isMuted() && D.voice !== false) ? shortLine(r.answer) : "";
     if (!line) { beginTour(token); return; }   // no voice: caption tour right away
     narrating = true;
@@ -434,6 +448,66 @@
     if (userReading) { try { D.holdVoice = false; D.stopTour && D.stopTour(); } catch (e) { /* no map */ } return; }
     try { D.holdVoice = false; D.tour(0); } catch (e) { /* map not ready */ }
   }
+
+  // ---------- Listen: hear the memo again the way it was read the first time ----------
+  // One control, on the answer (never in the tour bar). It reuses the starter above: the stored
+  // result's summary is spoken first, then the existing tour runs from stop 1. Nothing is re-asked.
+  var listenHead = document.querySelector(".v2-answer-head");
+  var listenBtn = $("listen-btn");
+  var listening = false, listenIdle = 0;
+
+  function setListen(on) {
+    listening = !!on;
+    listenIdle = 0;
+    if (!listenBtn) return;
+    listenBtn.textContent = listening ? "Stop" : "Listen";
+    listenBtn.setAttribute("aria-pressed", listening ? "true" : "false");
+  }
+
+  // The bar belongs to a memo: it shows once an answer is on screen and goes when a new question
+  // runs. Either way it starts out saying "Listen" — only a press of the button means "Stop".
+  function showListenBar(on) {
+    setListen(false);
+    if (listenHead) listenHead.hidden = !on;
+  }
+
+  // Is anything still being heard? A clip playing, the summary still queued, or the map's own play
+  // button reading "Pause". Cheap on purpose: it reads state the page already has, no new machinery.
+  function hearing() {
+    var M = window.AudioMgr;
+    try { if (M && (M.playing() || M.saying)) return true; } catch (e) { /* no audio manager */ }
+    if (narrating) return true;
+    var pb = document.querySelector('#tour-controls [data-tour="play"]');
+    return !!(pb && /Pause/.test(pb.textContent || ""));
+  }
+
+  // The walk ends by itself; a few beats of silence puts the button back to "Listen".
+  setInterval(function () {
+    if (!listening) return;
+    if (hearing()) { listenIdle = 0; return; }
+    listenIdle += 1;
+    if (listenIdle >= 12) setListen(false);            // 12 × 250 ms with nothing playing
+  }, 250);
+
+  showListenBar(false);
+
+  if (listenBtn) listenBtn.addEventListener("click", function () {
+    if (listening) {                                   // pressed again: stop the audio and the tour
+      setListen(false);
+      try { window.AudioMgr && AudioMgr.stopAll(); } catch (e) { /* no audio manager */ }
+      try { window.Docs3D && Docs3D.stopTour && Docs3D.stopTour(); } catch (e) { /* no map */ }
+      return;
+    }
+    var r = lastResult;
+    if (!r || !mapReady()) { showHint("Ask a legal question first."); return; }
+    var D = window.Docs3D;
+    userReading = false;                               // this press asks for the walk, it does not end it
+    var token = ++renderRun;                           // any older pending autoplay is now void
+    try { if (window.AudioMgr) AudioMgr.failedAt = 0; } catch (e) { /* an old failure must not mute this */ }
+    setListen(true);
+    try { D.ctx = { answer: r.answer || "", question: r.question || "" }; D.holdVoice = true; } catch (e) { return; }
+    speakThenTour(r, token);
+  });
 
   // ---------- sources ----------
   var citesEl = $("cites");
@@ -534,6 +608,7 @@
   // controls (Tour pill, prev / next, pins) are untouched and still start a stop.
   function stopTourForPreview() {
     userReading = true;                 // the pending autoplay (if any) must not start behind the strip
+    setListen(false);                   // the walk is over, so the Listen button says Listen again
     var D = window.Docs3D;
     if (D) { try { D.stopTour && D.stopTour(); } catch (e) { /* no map */ } }
     var tr = document.getElementById("transcript");

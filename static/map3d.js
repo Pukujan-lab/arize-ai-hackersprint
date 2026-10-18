@@ -238,9 +238,10 @@ if(!webgl){
     return best; }
   function citedBy(c){ const E=api._e||[]; const nm=String(c.title||"").split(/\s+v\.?\s+/).map(x=>x.trim()).find(x=>x.length>3&&!/^(People|State|United States)$/.test(x))||"";
     const src=E.filter(e=>e.dst===c.id).map(e=>cites.find(x=>x.id===e.src)).filter(x=>x&&x!==c);
-    for(const s of src){ const hit=nm&&sentences(s.passage).find(x=>x.includes(nm)&&x.length<=320); const who=(s.ref?s.ref+" ":"")+(s.title||"another source");
+    /* the title only, never the [n] badge: a stop is spoken, and "[two]" is read out as noise */
+    for(const s of src){ const hit=nm&&sentences(s.passage).find(x=>x.includes(nm)&&x.length<=320); const who=(s.title||"another source");
       if(hit) return `Cited by ${who} in this answer's sources: “${hit}”`; }
-    if(src.length){ const s=src[0]; return `Cited by ${(s.ref?s.ref+" ":"")+(s.title||"another source")} in this answer's sources.`; }
+    if(src.length){ const s=src[0]; return `Cited by ${s.title||"another source"} in this answer's sources.`; }
     return ""; }
   function explain(k){ const c=cites[k]||{}, ctx=api.ctx||{}, ref=c.ref||""; const yr=(String(c.date||"").match(/\d{4}/)||[""])[0];
     const where=[c.court, c._loc&&c._loc.cat==="county"?c._loc.label.split("→")[0].trim():""].filter(Boolean).join(", ");
