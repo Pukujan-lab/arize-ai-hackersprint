@@ -177,13 +177,13 @@ if(!webgl){
     tbtn.innerHTML=TOURH; },
     fit(){ const fed=pins.some(p=>p.userData.G.cat==="federal"); if(fed){ camT.copy(homeCam); lookT.copy(homeLook); } else coView(); },
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
-  /* Optional page hook. A page may set window.Docs3D.onCiteTap = fn; then a pin or county TAP calls
-     fn(cite, index) instead of jump+openDoc. With no hook the old behaviour is unchanged. A drag on the
-     map is never a tap, so the hook only fires on a click that stayed put. */
+  /* Optional page hook. A page may set window.Docs3D.onCiteTap = fn(cite, index); when fn returns true the
+     page has taken over the pin / county TAP (a slim preview strip, say). Returning anything else — or no
+     hook at all — keeps the old behaviour: jump to the stop and open the source card. A drag is never a tap. */
   let _tp=null, _tapMoved=false;
   R.domElement.addEventListener("pointerdown",e=>{ _tp=[e.clientX,e.clientY]; _tapMoved=false; },{passive:true});
   R.domElement.addEventListener("pointermove",e=>{ if(_tp&&e.buttons&&Math.hypot(e.clientX-_tp[0],e.clientY-_tp[1])>6) _tapMoved=true; },{passive:true});
-  function citeTap(k){ if(typeof api.onCiteTap!=="function") return false; if(_tapMoved) return true; api.onCiteTap(cites[k],k); return true; }
+  function citeTap(k){ if(typeof api.onCiteTap!=="function") return false; if(_tapMoved) return true; return api.onCiteTap(cites[k],k)===true; }
   R.domElement.addEventListener("click",ev=>{ const r=R.domElement.getBoundingClientRect(); mouse.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
     ray.setFromCamera(mouse,cam); ray.params.Line.threshold=0.01; const hit=ray.intersectObjects(pins.flatMap(p=>[p.userData.head,p.children[0]]),false)[0];
     R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined&&!citeTap(k)){ api.jump(k); openDoc(cites[k]); } } });

@@ -258,10 +258,21 @@ html[data-theme="light"] .v2-i-sun{display:block}
   .v2-head{gap:6px}
   .v2-ghost{margin-left:6px}
   .v2-pane-tabs{display:flex}
-  /* both panes share the single pane row; the unselected one is removed entirely */
+  /* One pane at a time: both share the single pane row and the unselected one is hidden.
+     It is hidden with visibility, not display, so the map keeps its box (the page measures it) and
+     the tour bar stays reachable while the memo is up. The canvas itself stays out of sight,
+     because the memo panel is a translucent glass and would let the map show through. */
   .v2-answer,.v2-mapcol{grid-area:pane}
   .v2-main[data-mobile-pane="answer"] .v2-mapcol,
-  .v2-main[data-mobile-pane="map"] .v2-answer{display:none}
+  .v2-main[data-mobile-pane="map"] .v2-answer{visibility:hidden}
+  .v2-main[data-mobile-pane="answer"] .v2-answer{position:relative;z-index:5}
+  .v2-main[data-mobile-pane="answer"] #docs3d{visibility:visible}
+  .v2-main[data-mobile-pane="answer"] #docs3d>*{visibility:hidden}
+  /* the tour controls float over the bottom of the memo on phones */
+  .v2-main[data-mobile-pane="answer"] #tour-controls{
+    visibility:visible;left:8px;right:8px;bottom:6px;justify-content:center;gap:6px;
+    padding:6px;border-radius:14px;background:rgba(11,16,32,.78);backdrop-filter:blur(8px);
+  }
   .v2-pill{min-height:44px}
   /* panels open from the top of the same pane area instead of sliding up from the bottom */
   .v2-sheet{

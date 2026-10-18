@@ -131,7 +131,7 @@ Pitch deck. File: `static/slides.html` (`static/slides.marketing.html` is an old
 
 Alias of `/`: `GET /v2` serves the same `static/v2.html` as the root. Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, audio, map3d (module), v2. No top `<nav>`; one icon rail on the left holds the logo link, the page links and the theme toggle.
 
-Visible on first load: the memo (`#answer`), the existing 3D map (`#docs3d`) and the composer at the bottom. Everything else sits in collapsed bottom sheets.
+Visible on first load: the memo (`#answer`), the existing 3D map (`#docs3d`) and the composer at the bottom. Everything else sits in collapsed bottom sheets. Below 900px only ONE of the memo and the map is shown at a time, full height, with Answer/Map buttons in the head.
 
 | Control | id / aria-label | Owner | API |
 |---|---|---|---|
@@ -140,6 +140,8 @@ Visible on first load: the memo (`#answer`), the existing 3D map (`#docs3d`) and
 | Question box and Ask | `#q`, `#go` aria-label "Ask: run the research agents" | `v2.html`, `v2.js` | `POST /api/ask`, `GET /api/run/{rid}` |
 | Empty-ask hint | `#v2-hint` | `v2.js` | none |
 | Memo | `#answer` | `v2.js` | `GET /api/run/{rid}` |
+| Answer / Map buttons (under 900px only, `display:none` at wider screens) | `.v2-pane-tabs`, `[data-pane]` | `v2.js` (`data-mobile-pane` on `.v2-main`) | none |
+| Slim source strip at the top of the map: case, court, year, then Read / Source | `#pin-preview`, `[data-preview-read]`, `[data-preview-source]` | `v2.js` | none (`Docs3D.onCiteTap`, memo `[data-ref]`) |
 | Source link in the memo (one glyph, no number: ↗ opens the source, › jumps to it on the map; aria-label names the title) | `a.v2-ref`, `button.v2-ref` | `v2.js` | none (`Docs3D.jumpRef`) |
 | 3D map | `#docs3d` | `map3d.js` (KEEP) | see KEEP AS IS |
 | Sources pill and sheet | `#sources-btn` → `#sources-panel` (collapsed by default), `#cites` | `v2.js` | none (`Docs3D.jump` / `open`) |
@@ -154,7 +156,8 @@ Behaviour notes:
 - The memo renders first; then the map shows the citations with the voice held, the summary line is spoken (`AudioMgr.say(shortLine(answer))`) and only when that clip ends does the tour autoplay from stop 1 (`Docs3D.tour(0)`) — never tour-voice-first. With no `AudioMgr`, or when it is muted, the tour starts straight away as a caption tour. Pause and stop are the map's own tour controls; prev/next and pin or memo links skip to that stop and start it at once, and that stop holds long enough to read the line before the walk carries on.
 - v2 loads `audio.js` (`window.AudioMgr`) for the summary narration; it does not load `followup.js`, it renders follow-ups itself and styles the map's tour buttons in `v2.css`.
 - Dark is the default theme (`data-theme="dark"` on `<html>`, set in the markup and re-applied from localStorage before the stylesheet paints). Light mode sets `data-theme="light"`.
-- At 390/768 the layout stacks (head, answer, map, pills and composer); at 1024/1440 it splits (map left, answer column right).
+- At 1024/1440 the layout splits (map left, answer column right, both full height). Under 900px it is single pane: head above, then ONE pane (memo or map) at full height, then pills and composer below. The Answer / Map buttons swap panes and so does a left/right swipe, but only in the bottom third of the pane — the top two thirds stay with the map drag. The unselected pane is hidden (kept laid out so the canvas keeps its box and the tour bar stays reachable over the memo). Sheets open from the top of the same pane area (`top:60px`), not as bottom sheets.
+- Tapping a pin, a county or a `›` link in the memo opens `#pin-preview`: one slim strip docked at the top of the map with the case name, court and year, plus Read (expands the strip downward with the passage, in place) and Source (opens the Sources sheet on that card). A click on the map outside the strip closes it, as does Escape. The strip never carries a `[n]` badge.
 - The rail links only route to pages that exist: `/`, `/map`, `/observability`, `/guide`, `/slides`. There is no Runs link, because `/runs` has no HTML route yet (issue #53 open, live `/runs` is 404, only `/api/runs` JSON) — `/observability` loads `/api/runs` and is the closest working target.
 
 ## Known clutter
