@@ -78,7 +78,7 @@ Direct dependencies go in `requirements.in`. `requirements.txt` is the lock: run
 - pip-audit finds no known vulnerability in the pins CI installs (it fails only when the PR changes the requirements; otherwise it warns), and
 - every new direct dependency has a PyPI release in the last 12 months.
 
-Dependabot (`.github/dependabot.yml`) opens weekly update PRs for pip and GitHub Actions, and they go through the same gates.
+Dependabot (`.github/dependabot.yml`) opens weekly update PRs for GitHub Actions, and they go through the same gates. It does not open pip version updates: Dependabot cannot reproduce a uv universal lock with `python_full_version` branches, so its PRs pin the newest release for every Python and fail to install. Bump Python dependencies by editing `requirements.in` and rerunning the `uv pip compile` command at the top of `requirements.txt`; pip security updates still come through Dependabot.
 
 ## What never goes in git
 
