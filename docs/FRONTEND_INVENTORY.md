@@ -2,7 +2,7 @@
 
 What every page in `static/` shows, which file owns each control, and which API route it calls. Built from the code on `main` (October 2026), not from screenshots. API routes match `contracts/openapi.json`. `tests/test_frontend_inventory.py` fails if an HTML route in openapi.json has no section here, so add a section when you add a page.
 
-There is no `/runs` page. Run history is the `/api/runs` JSON route, shown inside `/v1`, `/map` and `/observability`.
+There is no `/runs` page. Run history is the `/api/runs` JSON route, listed inside `/v1` and `/observability`; `/map` opens one saved run by id (`?run=`) instead of listing them.
 
 ## KEEP AS IS
 
@@ -64,22 +64,14 @@ Old demo page, kept as the fallback. File: `static/index.html`. Scripts: session
 
 ## `/map`
 
-Full map page. File: `static/map.html`. Scripts: session, audio, tailwind, links, d3, map3d (module), agentnodes, voice, followup, partners, navbar.
+The v2 experience opened on the map pane. File: `static/v2.html` — the same file as `/` and `/v2`. `server.py`'s `map_page()` rewrites it before serving: `data-mobile-pane="answer"` becomes `"map"`, the `<title>` and the description are swapped for this route's own copy, `rel="canonical"` and `og:url` become `/map`, and `aria-current="page"` moves off the Demo rail link onto the Map rail link. `v2.js` still sets the tab title from `data-app-title`, so the browser tab reads "Precedent v2 · Ask, read the memo, tour the map".
 
 | Control | id / aria-label | Owner | API |
 |---|---|---|---|
-| Top nav links | `<nav>` | `map.html` | none |
-| Ask form | `#f`, `#q`, Ask button | `map.html` | `POST /api/ask`, `GET /api/run/{rid}` |
-| View toggle: United States / Colorado counties | `button[data-v="us"]`, `button[data-v="co"]` | `map.html` | none |
-| 3D map | `#docs3d` | `map3d.js` (KEEP) | see KEEP AS IS |
-| Summary collapsible | `<details id="sumbox" open>`, `#sum` | `map.html` | none |
-| Play summary | `#sumplay` aria-label "Play summary" | `map.html` | `POST /api/tts_ts` |
-| Reference jumps `[n]` | inline buttons | `map.html` | none (`Docs3D.jumpRef`) |
-| Side panel | `<aside>`, `#side` | `map.html` | none |
-| Recent runs | `#runs` | `map.html` | `GET /api/runs` |
-| Featured run on first load | none | `map.html` | `/static/featured-run.json` |
-| Status | `#stat`, `#st2` | `map.html` | none |
-| Agent pipeline overlay | `#agentNodes`, `#anCached`, `#anMsg` | `agentnodes.js` | uses run events |
+| Every control on the page | see the `/v2` table below: icon rail, memo `#answer`, live map `#docs3d`, `#pin-preview` strip, Answer / Map pane tabs, pills, composer `#q` | `v2.html`, `v2.js` | see `/v2` |
+| Open one saved run | `?run=<id>` on the URL | `v2.js` (`openRun`) | `GET /api/run/{rid}` |
+
+The retired shell `static/map.html` is still on disk but served by no route. `map3d.js` and the vendored map data still power the map on `/`, `/v2` and `/map`.
 
 ## `/dashboard`
 
@@ -132,7 +124,7 @@ Pitch deck. File: `static/slides.html` (`static/slides.marketing.html` is an old
 
 ## `/v2`
 
-Alias of `/`: `GET /v2` serves the same `static/v2.html` as the root. Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, audio, map3d (module), v2. No top `<nav>` and no `navbar.js`: one icon rail on the left holds the logo link, the page links and the theme toggle, and it is the page's only navigation.
+Alias of `/`: `GET /v2` serves the same `static/v2.html` as the root, and `GET /map` serves it too, opened on the map pane. Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, audio, map3d (module), v2. No top `<nav>` and no `navbar.js`: one icon rail on the left holds the logo link, the page links and the theme toggle, and it is the page's only navigation.
 
 Visible on first load: the memo (`#answer`), the existing 3D map (`#docs3d`) and the composer at the bottom. Everything else sits in collapsed bottom sheets. Once a memo is on screen, a Listen button (`#listen-btn`) appears above it. Below 900px only ONE of the memo and the map is shown at a time, full height, with Answer/Map buttons in the head.
 
@@ -171,4 +163,4 @@ Behaviour notes:
 - Three ways to run an example on `/v1`: the "Try an example" button (`#tryex`), the hidden `#examples` chips, and the `navbar.js` dropdown (`#exBtn`/`#exMenu`) that replaces them; the tips card also says "or try an example".
 - Getting-started cues stack up: the `#firststep` tips card, `firstscreen.js` numbered steps, the pulse on Ask, the `#vorb-label` mic label and `#askhint`.
 - Nav links differ by page: only `/observability` links to Observability, `/slides` drops Dashboards and Slides, and `slides.marketing.html` is an unrouted older deck with its own nav.
-- Duplicate surfaces: run history appears in the `/v1` sidebar, the `/map` `#runs` list and `/observability`; the map plus Listen/Play controls exist on both `/v1` (`#play`, TTS via `/api/tts`) and `/map` (`#sumplay`, via `/api/tts_ts`), and the voice orb is on both.
+- Duplicate surfaces: run history appears in the `/v1` sidebar and in `/observability`; the map plus its summary narration is now on `/`, `/v2` and `/map`, which are the same page (`static/v2.html`), so the retired shell's `#runs` list and `#sumplay` button exist nowhere. The `/v1` `#play` control (TTS via `/api/tts`) and the voice orb are `/v1` only.

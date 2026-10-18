@@ -242,6 +242,10 @@
   watchSwipe(mapCol);
   setPane(mainEl ? mainEl.getAttribute("data-mobile-pane") : "answer");
 
+  // The v2 routes share one tab title; each route's served <title> stays its own for search.
+  var appTitle = mainEl && mainEl.getAttribute("data-app-title");
+  if (appTitle) document.title = appTitle;
+
   // ---------- map helpers (static/map3d.js loads as a module, so it arrives late) ----------
   // window.Docs3D starts as a set of no-op stubs; the real API is filled in once the map has
   // built its scene. explainText (3D) and #pins2 (SVG fallback) only exist after that swap.
@@ -681,6 +685,32 @@
       showPreview(c);
     });
   }
+
+  // ---------- deep link: ?run=<id> reopens a saved run (the legacy /map page did this) ----------
+  function openRun(rid) {
+    if (!rid) return;
+    running = true;
+    setBusy(true);
+    if (answerEl) answerEl.innerHTML = '<p class="v2-working">Opening that run…</p>';
+    fetch("/api/run/" + encodeURIComponent(rid))
+      .then(function (r) {
+        return r.ok ? r.json() : null;
+      })
+      .then(function (d) {
+        if (d && d.result) render(d.result);
+        else if (d && d.partial) return poll(rid); // the run is still going: follow it to the end
+        else if (answerEl) answerEl.innerHTML = '<p class="v2-err">That run is not here any more. Ask a new question.</p>';
+      })
+      .catch(function () {
+        if (answerEl) answerEl.innerHTML = '<p class="v2-err">Network problem. Try again.</p>';
+      })
+      .then(function () {
+        running = false;
+        setBusy(false);
+      });
+  }
+
+  openRun(new URLSearchParams(window.location.search).get("run"));
 
   window.PRECEDENT_V2 = { ask: function (t) { return ask(t, false); }, theme: currentTheme, setTheme: setTheme };
 })();
