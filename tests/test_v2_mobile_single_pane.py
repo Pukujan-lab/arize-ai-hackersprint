@@ -258,3 +258,73 @@ def test_url_citation_tap_shows_preview_without_leaving_or_touring(base, browser
     tr = page.locator("#transcript")
     assert not tr.is_visible(), "citation tap opens the preview only; it must not start the tour behind it"
     ctx.close()
+
+
+TTS_STUB96 = """() => { window.__tts=[]; const of=window.fetch.bind(window); const silent="UklGRiQAAABXQVZFZm10IBAAAAABAAEAESsAACJWAAACABAAZGF0YQAAAAA=";
+ window.fetch=(u,o)=>{ const url=String(u&&u.url||u); if(url.includes("/api/tts")){ let t=""; try{ t=JSON.parse((o&&o.body)||"{}").text||""; }catch(e){} window.__tts.push(t); return Promise.resolve(new Response(JSON.stringify({audio_b64:silent}),{status:200,headers:{"Content-Type":"application/json"}})); } return of(u,o); }; }"""
+
+
+def test_listen_button_on_answer_starts_summary_then_tour_and_stops(base, browser):
+    ctx, page = _ask(browser, base, 390)
+    page.evaluate(TTS_STUB96)
+    btn = page.locator("#listen-btn")
+    assert btn.count() == 1 and btn.is_visible(), "one clear Listen button must sit on the answer"
+    assert page.locator("#tour-controls #listen-btn").count() == 0, "Listen must not live in the tour bar"
+    assert btn.inner_text().strip() == "Listen"
+    page.evaluate("() => { if (window.Docs3D) Docs3D.stopTour(); if (window.AudioMgr) AudioMgr.stopAll(); window.__tts.length = 0; }")
+    page.wait_for_timeout(300)
+    page.evaluate("window.__tts.length = 0")
+    btn.click()
+    page.wait_for_function("window.__tts && window.__tts.length >= 2", timeout=30000)
+    tts = page.evaluate("window.__tts")
+    assert "Alpha summary sentence" in tts[0], f"Listen must start with the summary: {tts[:3]}"
+    assert "Alpha Case" in tts[1], f"tour must follow the summary: {tts[:3]}"
+    page.wait_for_function("document.querySelector(\"#listen-btn\") && document.querySelector(\"#listen-btn\").textContent.trim() === \"Stop\"", timeout=15000)
+    page.locator("#listen-btn").click()
+    page.wait_for_function("document.querySelector(\"#listen-btn\").textContent.trim() === \"Listen\"", timeout=15000)
+    ctx.close()
+
+
+def test_tour_controls_vertical_stack_middle_edge(base, browser):
+    ctx, page = open_page(browser, base, "/", 390)
+    page.wait_for_selector("#tour-controls button", timeout=30000)
+    page.wait_for_timeout(600)
+    bar = page.locator("#tour-controls")
+    kinds = bar.locator("button").evaluate_all("els => els.map(e => e.dataset.tour)")
+    assert kinds == ["prev", "play", "next"], kinds
+    boxes = bar.locator("button").evaluate_all("els => els.map(e => { const r=e.getBoundingClientRect(); return {x:r.x, y:r.y, w:r.width, h:r.height}; })")
+    assert all(b["w"] >= 43 and b["h"] >= 43 for b in boxes), f"tour targets must be >=44px: {boxes}"
+    ys = [b["y"] for b in boxes]
+    assert ys[0] < ys[1] < ys[2], f"tour controls must stack vertically (prev, play, next): {boxes}"
+    assert abs(boxes[0]["x"] - boxes[1]["x"]) < 8 and abs(boxes[1]["x"] - boxes[2]["x"]) < 8, boxes
+    bb = bar.bounding_box(); mb = page.locator(".v2-mapwrap").bounding_box()
+    cy = bb["y"] + bb["height"] / 2 - mb["y"]
+    assert mb["height"] * 0.25 < cy < mb["height"] * 0.8, f"stack must sit at the middle edge, not bottom-center: {bb} vs {mb}"
+    assert bb["x"] + bb["width"] > mb["x"] + mb["width"] - 90, f"stack must hug the right edge: {bb} vs {mb}"
+    stop = page.locator("[data-tour-stop]").first.bounding_box()
+    assert stop and stop["y"] >= boxes[2]["y"], "Stop n of N sits under the buttons in the stack"
+    ctx.close()
+
+
+def test_pin_tap_opens_slim_preview_not_big_card(base, browser):
+    for w in (390, 1440):
+        ctx, page = _ask(browser, base, w)
+        if w == 390:
+            page.locator("[data-pane=\"map\"]").click(); page.wait_for_timeout(500)
+        pt = page.evaluate("""() => { const tags=[...document.querySelectorAll(".v2-mapwrap div")].filter(d=>d.textContent.includes("Colorado Supreme Court") && d.offsetWidth>20 && d.offsetWidth<260); if(!tags.length) return null; const r=tags[0].getBoundingClientRect(); return {x:r.x+r.width/2, y:r.bottom + r.height*0.4}; }""")
+        assert pt, f"no pin tag at {w}"
+        page.mouse.click(pt["x"], pt["y"])
+        page.wait_for_selector("#pin-preview:visible", timeout=15000)
+        doc = page.evaluate("() => { const d=document.querySelector(\"#docpanel\"); return d && !d.classList.contains(\"hidden\") && getComputedStyle(d).display!==\"none\"; }")
+        assert not doc, f"pin tap must not open the big card at {w}"
+        ctx.close()
+
+
+def test_explain_text_has_no_cited_by_numbered_ref(base, browser):
+    ctx, page = _ask(browser, base, 1440)
+    txt = page.evaluate("""() => { const fx={answer: "Short answer: x [1]", question: "q"}; Docs3D.ctx={answer:fx.answer, question:fx.question};
+      const cites=[{id:"Alpha Case, 1 P.3d 1",title:"Alpha Case",court:"Colorado Supreme Court",date:"2001-01-01",ref:"[1]",passage:"Background only."},{id:"Beta Case, 2 P.3d 2",title:"Beta Case",court:"Colorado Supreme Court",date:"2002-02-02",ref:"[2]",passage:"Alpha Case states the governing rule for vehicle searches in Colorado courts today. The court explained the rule in detail for drivers on Colorado roads."}];
+      Docs3D.show(cites,[{src:"Beta Case, 2 P.3d 2",dst:"Alpha Case, 1 P.3d 1"}],[]); Docs3D.stopTour(); return Docs3D.explainText(0); }""")
+    assert "Cited by" not in txt or not re.search(r"Cited by \[\d+\]", txt), txt
+    assert not re.search(r"\[\d+\]", txt), f"numbered refs must not appear in stop text: {txt}"
+    ctx.close()
