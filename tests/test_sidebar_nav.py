@@ -17,9 +17,10 @@ from ui_server import (
 sync_api = pytest.importorskip("playwright.sync_api")
 pytestmark = needs_chromium
 
-# Since #92 the root "/" is the v2 page, which has an icon rail instead of the collapsible sidebar
-# (covered by tests/test_v2_home.py). The sidebar tests cover every other page in PAGES.
-PAGES = [p for p in PAGES if p != "/"]
+# Since #92 the root "/" is the v2 page, and since #102 "/map" serves that same page on its map pane.
+# Both have an icon rail instead of the collapsible sidebar (covered by tests/test_v2_home.py and
+# tests/test_map_v2.py). The sidebar tests cover every other page in PAGES.
+PAGES = [p for p in PAGES if p not in ("/", "/map")]
 
 
 @pytest.fixture(scope="module")
