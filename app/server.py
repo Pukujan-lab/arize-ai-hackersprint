@@ -521,9 +521,25 @@ def sponsor():
     }
 
 
+_V2_APP_TITLE = "Precedent v2 · Ask, read the memo, tour the map"
+_V2_APP_DESC = "Ask a legal question. Four agents plan, retrieve, write and verify, then the 3D citation map tours every source in the memo."
+# /map is the v2 experience opened on the map pane (#102). One file serves both routes, so /map
+# swaps in its own search tags and keeps the app title that static/v2.js puts in the tab.
+_MAP_TITLE = "Precedent v2 · The citation map behind every answer"
+_MAP_DESC = "Ask a legal question, read the memo it returns and tour the 3D map of every authority behind it. This copy opens straight on the map pane."
+
+
 @app.get("/map", response_class=HTMLResponse)
 def map_page():
-    return (ROOT / "static" / "map.html").read_text()
+    html = (ROOT / "static" / "v2.html").read_text()
+    html = html.replace('data-mobile-pane="answer"', 'data-mobile-pane="map"')
+    html = html.replace(f"<title>{_V2_APP_TITLE}</title>", f"<title>{_MAP_TITLE}</title>")
+    html = html.replace(_V2_APP_DESC, _MAP_DESC)
+    html = html.replace('href="https://arize.design-bakery.com/"', 'href="https://arize.design-bakery.com/map"')
+    html = html.replace('content="https://arize.design-bakery.com/"', 'content="https://arize.design-bakery.com/map"')
+    html = html.replace('href="/" title="Demo" aria-label="Demo page" aria-current="page"', 'href="/" title="Demo" aria-label="Demo page"')
+    html = html.replace('href="/map" title="Map" aria-label="Map page"', 'href="/map" title="Map" aria-label="Map page" aria-current="page"')
+    return html
 
 
 @app.get("/observability", response_class=HTMLResponse)

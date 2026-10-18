@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0b1020">
 <meta name="description" content="Ask a legal question. Four agents plan, retrieve, write and verify, then the 3D citation map tours every source in the memo.">
-<!-- SEO: this file is served at / (canonical) and at /v2 (alias) -->
+<!-- SEO: this file is served at / (canonical), at /v2 (alias) and at /map, where server.py swaps in that route's own tags -->
 <link rel="canonical" href="https://arize.design-bakery.com/">
 <link rel="apple-touch-icon" href="/static/logo.svg">
 <meta property="og:type" content="website">
@@ -67,7 +67,7 @@
     </button>
   </aside>
 
-  <main class="v2-main" data-mobile-pane="answer">
+  <main class="v2-main" data-app-title="Precedent v2 · Ask, read the memo, tour the map" data-mobile-pane="answer">
 
     <div class="v2-head">
       <span class="v2-brand">Precedent <em>v2</em></span>
@@ -170,6 +170,6 @@
 <script src="/static/vendor/d3-geo.min.js"></script>
 <script src="/static/audio.js?v=ts4"></script>
 <script type="module" src="/static/map3d.js?v=ts7"></script>
-<script src="/static/v2.js?v=8"></script>
+<script src="/static/v2.js?v=9"></script>
 </body>
 </html>
