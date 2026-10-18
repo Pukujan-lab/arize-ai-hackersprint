@@ -122,7 +122,7 @@
   var pvText = pv ? pv.querySelector(".v2-preview-text") : null;
   var pvRead = pv ? pv.querySelector("[data-preview-read]") : null;
   var pvSource = pv ? pv.querySelector("[data-preview-source]") : null;
-  var pvCite = null, pvExpanded = false, pvGuard = false;
+  var pvCite = null, pvExpanded = false, pvGuard = false, userReading = false;
 
   function hidePreview() {
     pvGuard = false;
@@ -264,7 +264,8 @@
   }
 
   // ---------- markdown (escape first, then a small whitelist) ----------
-  // A source link shows one glyph, never the bare number: ↗ opens the source, › jumps to it on the map.
+  // A source link shows one glyph, never the bare number: ↗ when the citation has a source URL,
+  // › when it has none. Both carry data-ref, so one tap handler covers either form.
   function inline(t, byRef) {
     var s = esc(t)
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
@@ -275,9 +276,10 @@
       var title = esc(c.title || "");
       var label = esc(c.title ? "Open source: " + c.title : "Open citation " + n);
       var u = safeUrl(c.url);
+      var ref = ' data-ref="' + esc(n) + '"';
       return u
-        ? '<a class="v2-ref" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer" title="' + title + '" aria-label="' + label + '">↗</a>'
-        : '<button class="v2-ref" type="button" data-ref="' + n + '" title="' + title + '" aria-label="' + label + '">›</button>';
+        ? '<a class="v2-ref" href="' + esc(u) + '"' + ref + ' target="_blank" rel="noopener noreferrer" title="' + title + '" aria-label="' + label + '">↗</a>'
+        : '<button class="v2-ref" type="button"' + ref + ' title="' + title + '" aria-label="' + label + '">›</button>';
     });
   }
 
@@ -382,6 +384,7 @@
   function render(r) {
     lastRun = r.run_id || lastRun;
     lastResult = r;
+    userReading = false;        // a new memo starts a fresh walk; a citation tap stops it again
     var token = ++renderRun;
     var byRef = {};
     (r.citations || []).forEach(function (c) { byRef[c.ref] = c; });
@@ -426,6 +429,9 @@
     if (token !== renderRun) return;    // a newer question took over while this summary played
     var D = window.Docs3D;
     if (!D) return;
+    // The summary finished after the reader opened a source from the memo: the walk stays stopped.
+    // Releasing the hold and stopping again clears any autostart the map still has pending.
+    if (userReading) { try { D.holdVoice = false; D.stopTour && D.stopTour(); } catch (e) { /* no map */ } return; }
     try { D.holdVoice = false; D.tour(0); } catch (e) { /* map not ready */ }
   }
 
@@ -523,15 +529,31 @@
     }).join("") + "</dl>";
   }
 
-  // A [n] reference in the memo jumps the map to that source and opens the slim strip on it.
+  // A memo citation tap means the reader stopped walking: the tour halts, its caption goes away,
+  // and a summary still being spoken no longer autostarts it behind the strip. The map's own
+  // controls (Tour pill, prev / next, pins) are untouched and still start a stop.
+  function stopTourForPreview() {
+    userReading = true;                 // the pending autoplay (if any) must not start behind the strip
+    var D = window.Docs3D;
+    if (D) { try { D.stopTour && D.stopTour(); } catch (e) { /* no map */ } }
+    var tr = document.getElementById("transcript");
+    if (tr) tr.classList.add("hidden");
+  }
+
+  // A citation in the memo (link or button) opens the slim strip and nothing else: it never
+  // navigates to the external source and never starts the tour behind the strip. The source
+  // stays reachable through the strip's Source button, which opens that card in Sources.
   if (answerEl) {
     answerEl.addEventListener("click", function (e) {
-      var btn = e.target.closest("[data-ref]");
-      if (!btn) return;
-      var n = parseInt(btn.getAttribute("data-ref"), 10);
-      if (mapReady()) { try { window.Docs3D.jumpRef(n); } catch (err) { /* map not ready */ } }
+      var ref = e.target.closest && e.target.closest(".v2-ref");
+      if (!ref) return;
+      e.preventDefault();
+      var n = parseInt(ref.getAttribute("data-ref"), 10);
+      if (!n) return;
       var c = citeForRef(n);
-      if (c) showPreview(c);
+      if (!c) return;
+      stopTourForPreview();
+      showPreview(c);
     });
   }
 

@@ -231,3 +231,30 @@ def test_no_overflow_dark_light(base, browser, w):
         sw = page.evaluate("Math.max(document.documentElement.scrollWidth, document.body.scrollWidth)")
         assert sw <= w + 1, f"@{w} {theme} overflow {sw}"
         ctx.close()
+
+
+def test_url_citation_tap_shows_preview_without_leaving_or_touring(base, browser):
+    import copy
+
+    result = copy.deepcopy(RESULT)
+    for c in result["citations"]:
+        c["url"] = "https://example.com/" + c["title"].split()[0].lower()
+    ctx, page = open_page(browser, base, "/", 390)
+    page.route("**/api/ask", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"run_id": "test96"})))
+    page.route("**/api/run/test96", lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"result": result})))
+    page.wait_for_function("!!(window.Docs3D && Docs3D.tour)", timeout=30000)
+    page.fill("#q", result["question"])
+    page.click("#go")
+    page.wait_for_selector("#answer .v2-ref", timeout=30000)
+    page.evaluate("() => { if (window.Docs3D) Docs3D.stopTour(); if (window.AudioMgr) AudioMgr.stopAll(); }")
+    ref = page.locator("#answer .v2-ref").first
+    assert ref.evaluate("e => e.tagName") == "A", "live citations with URLs render as links; the test needs that shape"
+    pages_before = len(ctx.pages)
+    ref.click()
+    page.wait_for_selector("#pin-preview:visible", timeout=15000)
+    assert "Alpha Case" in page.locator("#pin-preview").inner_text()
+    assert len(ctx.pages) == pages_before, "citation tap must show the preview, not open the external source"
+    assert "/ Alpha" not in page.url and "example.com" not in page.url
+    tr = page.locator("#transcript")
+    assert not tr.is_visible(), "citation tap opens the preview only; it must not start the tour behind it"
+    ctx.close()
