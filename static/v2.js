@@ -83,23 +83,6 @@
     setTimeout(function () { onMapReady(cb, left - 1); }, 250);
   }
 
-  // map3d.js builds the tour bar and expects audio.js to label its mute button; v2 does not
-  // load that script, so the button would stay blank. Label it and show the on/off state.
-  function decorateTourBar() {
-    var bar = $("tour-controls");
-    var mute = bar && bar.querySelector('[data-abtn="mute"]');
-    if (!mute) return;
-    var paint = function () {
-      var on = !window.Docs3D || window.Docs3D.voice !== false;
-      mute.textContent = on ? "🔊" : "🔇";
-      mute.setAttribute("aria-label", on ? "Mute the tour voice" : "Unmute the tour voice");
-      mute.title = mute.getAttribute("aria-label");
-    };
-    mute.addEventListener("click", function () { setTimeout(paint, 0); });
-    paint();
-  }
-  onMapReady(decorateTourBar);
-
   var tourBtn = $("tour-btn");
   if (tourBtn) {
     tourBtn.addEventListener("click", function () {
@@ -137,6 +120,7 @@
   }
 
   // ---------- markdown (escape first, then a small whitelist) ----------
+  // A source link shows one glyph, never the bare number: ↗ opens the source, › jumps to it on the map.
   function inline(t, byRef) {
     var s = esc(t)
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
@@ -145,10 +129,11 @@
       var c = (byRef && (byRef["[" + n + "]"] || byRef[n] || byRef[String(n)])) || null;
       if (!c) return m;
       var title = esc(c.title || "");
+      var label = esc(c.title ? "Open source: " + c.title : "Open citation " + n);
       var u = safeUrl(c.url);
       return u
-        ? '<a class="v2-ref" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer" title="' + title + '">' + n + "</a>"
-        : '<button class="v2-ref" type="button" data-ref="' + n + '" title="' + title + '">' + n + "</button>";
+        ? '<a class="v2-ref" href="' + esc(u) + '" target="_blank" rel="noopener noreferrer" title="' + title + '" aria-label="' + label + '">↗</a>'
+        : '<button class="v2-ref" type="button" data-ref="' + n + '" title="' + title + '" aria-label="' + label + '">›</button>';
     });
   }
 
@@ -178,6 +163,8 @@
 
   // ---------- ask: POST /api/ask, then poll GET /api/run/{rid} ----------
   var running = false, lastRun = null, lastResult = null;
+  var renderRun = 0;     // per-render token: a stale summary can never start a newer run's tour
+  var narrating = false; // the memo's summary line is being spoken: keep the map voice held
 
   function isFollow(q) {
     return /^(and|but|so|also|what if|what about|how about|then|does (that|this|it)|can (they|i still)|is (that|this|it))\b/i.test(q) ||
@@ -216,7 +203,8 @@
       .then(function (v) {
         running = false;
         setBusy(false);
-        if (window.Docs3D) { try { window.Docs3D.holdVoice = false; } catch (e) { /* no map */ } }
+        // while the summary is being spoken the voice stays held, so the map cannot start a tour
+        if (window.Docs3D && !narrating) { try { window.Docs3D.holdVoice = false; } catch (e) { /* no map */ } }
         return v;
       });
   }
@@ -249,6 +237,7 @@
   function render(r) {
     lastRun = r.run_id || lastRun;
     lastResult = r;
+    var token = ++renderRun;
     var byRef = {};
     (r.citations || []).forEach(function (c) { byRef[c.ref] = c; });
     if (answerEl) {
@@ -258,23 +247,41 @@
     renderSources(r);
     renderFollowups(r);
     fillRunInfo();
-    onMapReady(function () { startTourOnMap(r); });
+    onMapReady(function () { startTourOnMap(r, token); });
   }
 
-  // Memo first, then the tour autoplays from stop 1 (Docs3D.tour(0)).
-  function startTourOnMap(r) {
+  // The short answer line the memo is read out with (same rule as the old page).
+  function shortLine(a) {
+    var l = String(a == null ? "" : a).split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
+    var t = l.filter(function (x) { return /short answer/i.test(x); })[0] || l[0] || "";
+    t = t.replace(/\*\*?short answer:?\*\*?:?/i, "").replace(/\[\d+\]/g, "").replace(/[*#>`_]/g, "").replace(/\s+/g, " ").trim();
+    return t.length > 300 ? t.slice(0, 300).replace(/\s\S*$/, "") + "." : t;
+  }
+
+  // Memo first, the summary line is spoken next, and only then does the tour start at stop 1.
+  // No tour clip is requested or played before the summary clip.
+  function startTourOnMap(r, token) {
     var D = window.Docs3D;
     if (!D) return;
     try {
       D.ctx = { answer: r.answer || "", question: r.question || "" };
-      D.holdVoice = true;
+      D.holdVoice = true;               // the map keeps quiet while the summary is heard
       D.show(r.citations || [], r.edges || [], r.documents || []);
-      D.holdVoice = false;
-      D.stopTour && D.stopTour();
-      setTimeout(function () {
-        try { window.Docs3D.tour(0); } catch (e) { /* map not ready */ }
-      }, 700);
-    } catch (e) { /* map not ready */ }
+      D.stopTour && D.stopTour();       // an older tour must not run under the new memo
+    } catch (e) { return; }
+    var M = window.AudioMgr;
+    var line = (M && !M.isMuted() && D.voice !== false) ? shortLine(r.answer) : "";
+    if (!line) { beginTour(token); return; }   // no voice: caption tour right away
+    narrating = true;
+    var after = function () { narrating = false; beginTour(token); };
+    try { Promise.resolve(M.say(line)).then(after, after); } catch (e) { after(); }
+  }
+
+  function beginTour(token) {
+    if (token !== renderRun) return;    // a newer question took over while this summary played
+    var D = window.Docs3D;
+    if (!D) return;
+    try { D.holdVoice = false; D.tour(0); } catch (e) { /* map not ready */ }
   }
 
   // ---------- sources ----------
