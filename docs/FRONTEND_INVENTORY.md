@@ -151,7 +151,7 @@ Visible on first load: the memo (`#answer`), the existing 3D map (`#docs3d`) and
 
 Behaviour notes:
 
-- The memo renders first; then the map shows the citations with the voice held, the summary line is spoken (`AudioMgr.say(shortLine(answer))`) and only when that clip ends does the tour autoplay from stop 1 (`Docs3D.tour(0)`) — never tour-voice-first. With no `AudioMgr`, or when it is muted, the tour starts straight away as a caption tour. Pause and stop are the map's own tour controls; prev/next and pin or memo links skip to that stop and start it at once.
+- The memo renders first; then the map shows the citations with the voice held, the summary line is spoken (`AudioMgr.say(shortLine(answer))`) and only when that clip ends does the tour autoplay from stop 1 (`Docs3D.tour(0)`) — never tour-voice-first. With no `AudioMgr`, or when it is muted, the tour starts straight away as a caption tour. Pause and stop are the map's own tour controls; prev/next and pin or memo links skip to that stop and start it at once, and that stop holds long enough to read the line before the walk carries on.
 - v2 loads `audio.js` (`window.AudioMgr`) for the summary narration; it does not load `followup.js`, it renders follow-ups itself and styles the map's tour buttons in `v2.css`.
 - Dark is the default theme (`data-theme="dark"` on `<html>`, set in the markup and re-applied from localStorage before the stylesheet paints). Light mode sets `data-theme="light"`.
 - At 390/768 the layout stacks (head, answer, map, pills and composer); at 1024/1440 it splits (map left, answer column right).

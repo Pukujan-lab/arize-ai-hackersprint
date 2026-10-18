@@ -163,10 +163,13 @@ if(!webgl){
     /* Stops follow the memo's own numbering: every source with a numeric ref that has something to say
        (a holding sentence, a cited-by line, or a line of the memo that mentions its ref), in [n] order — so stop 1 is [1]. */
     order(){ const q=(api.ctx||{}).question; return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0,holding(c,q)||citedBy(c)||explain(i).rel]).filter(x=>x[1]>0&&x[2]).sort((a,b)=>a[1]-b[1]).map(x=>x[0]); },
-    jump(k){ const O=api.order(); const n=O.indexOf(k); if(n<0){ api.focus(k); return; } api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; api.tour(n); },
-    tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; const tg=api._tg=(api._tg||0)+1; showStop(Math.max(0,Math.min(start,O.length-1)),O.length); if(!start) api._ttsDown=false; tbtn.innerHTML=(window.ICON?ICON("pause",16):"")+" Pause";
+    jump(k){ const O=api.order(); const n=O.indexOf(k); if(n<0){ api.focus(k); return; } api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; api._hold=true; api.tour(n); },
+    tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; const hold=!!api._hold; api._hold=false; touring=true; const tg=api._tg=(api._tg||0)+1; showStop(Math.max(0,Math.min(start,O.length-1)),O.length); if(!start) api._ttsDown=false; tbtn.innerHTML=(window.ICON?ICON("pause",16):"")+" Pause";
       if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.innerHTML=TOURH; return; }
-      const step=n=>{ if(!touring||tg!==api._tg) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.innerHTML=TOURH; return; } tpos=n; showStop(n,O.length); api.focus(O[n]); const ms=typeOut(O[n]); api.prefetch(O[n+1]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,a?600:Math.max(2600,ms+1200)); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
+      const step=n=>{ if(!touring||tg!==api._tg) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.innerHTML=TOURH; return; } tpos=n; showStop(n,O.length); api.focus(O[n]); const ms=typeOut(O[n]); api.prefetch(O[n+1]); const a=api._audio;
+        /* the stop you skipped to (prev / next / a pin / a memo link) holds long enough to read the line; an automatic step moves on when its clip ends */
+        const wait=(n===start&&hold)?Math.max(2600,api.explainText(O[n]).length*30):(a?600:Math.max(2600,ms+1200));
+        Promise.all([new Promise(r=>{ tour=setTimeout(r,wait); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
     replay(){ if(cur<0) return; api.stopTour(); typeOut(cur); },   /* deliberate: interrupts */
     jumpRef(n){ const k=cites.findIndex(c=>parseInt(String(c.ref||"").replace(/\D/g,""))===+n); if(k>=0) api.jump(k); },
     summaryStop(t){ clearInterval(trT); if(sync) sync.dead=true; cur=-1; api.fit(); label.innerHTML='<b class="text-indigo-300">Summary</b> Colorado overview'; tr.classList.remove("hidden"); const esc=x=>x.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;"); let n=0; const L=String(t||""); trT=setInterval(()=>{ n+=2; tr.innerHTML='<b style="color:#a5b4fc">Summary</b> '+esc(L.slice(0,n))+(n<L.length?"<span class='animate-pulse'>▍</span>":""); if(n>=L.length) clearInterval(trT); },30); },
@@ -184,7 +187,7 @@ if(!webgl){
   const mk=(t,f)=>{ const b=document.createElement("button"); b.dataset.tourctl="1"; if(SV[t]){ b.innerHTML=SV[t]; b.setAttribute("aria-label",t==="◀"?"Previous stop":"Next stop"); b.title=b.getAttribute("aria-label"); } else b.textContent=t; b.className="abtn"; b.onclick=e=>{e.stopPropagation();f();}; tbar.appendChild(b); return b; };
   /* prev / next skip to that stop and START it now: cancel everything pending (same path as jump) so no earlier clip plays */
   const gotoStop=d=>{ const O=api.order(); if(!O.length) return; const i=Math.max(0,Math.min(O.length-1,tpos+d)); tpos=i;
-    api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; showStop(i,O.length); api.tour(i); };
+    api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; showStop(i,O.length); api._hold=true; api.tour(i); };
   mk("◀",()=>{ gotoStop(-1); });
   if(window.AudioMgr&&AudioMgr.isMuted()) api.voice=false; document.addEventListener("precedent:mute",e=>{ api.voice=!e.detail; });
   const TOURH='<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg> Tour'; const tbtn=mk("",()=>{ touring?api.stopTour():api.tour(0); });
