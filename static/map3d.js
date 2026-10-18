@@ -158,15 +158,18 @@ if(!webgl){
       /* autostart only when nothing holds the voice (memo / answer summary still speaking: the page starts the tour itself) */
       coView(); clearTimeout(tour); tour=setTimeout(()=>{ if(api.holdVoice||api.awaitSummary) return; api.tour(); },1000+Math.min(6,g.size)*200); },
     focus(k){ if(!cites[k]) return; cur=k; const p=pins.find(p=>p.userData.G.items.includes(k)); if(!p) return;
-      label.innerHTML=`<b class="text-indigo-300">${cites[k].ref||"retrieved"}</b> ${cites[k].title.replace(/</g,"&lt;")}<br><span class="text-slate-400">${cites[k]._loc.label}</span>`;
+      label.innerHTML=`<b class="text-indigo-300">${cites[k].title.replace(/</g,"&lt;")}</b><br><span class="text-slate-400">${cites[k]._loc.label}</span>`;
       const cat=p.userData.G.cat, far=cat==="federal", d=far?2.6:(cat==="county"?0.75:1.0); lookT.copy(p.position); camT.set(p.position.x,p.position.y-d*0.25,d); if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ cam.position.copy(camT); look.copy(lookT); } },
     /* Stops follow the memo's own numbering: every source with a numeric ref that has something to say
        (a holding sentence, a cited-by line, or a line of the memo that mentions its ref), in [n] order — so stop 1 is [1]. */
     order(){ const q=(api.ctx||{}).question; return cites.map((c,i)=>[i,parseInt(String(c.ref||"").replace(/\D/g,""))||0,holding(c,q)||citedBy(c)||explain(i).rel]).filter(x=>x[1]>0&&x[2]).sort((a,b)=>a[1]-b[1]).map(x=>x[0]); },
-    jump(k){ const O=api.order(); const n=O.indexOf(k); if(n<0){ api.focus(k); return; } api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; api.tour(n); },
-    tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; touring=true; const tg=api._tg=(api._tg||0)+1; if(!start) api._ttsDown=false; tbtn.innerHTML=(window.ICON?ICON("pause",16):"")+" Pause";
+    jump(k){ const O=api.order(); const n=O.indexOf(k); if(n<0){ api.focus(k); return; } api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; api._hold=true; api.tour(n); },
+    tour(start=0){ clearTimeout(tour); const O=api.order(); if(!O.length) return; const hold=!!api._hold; api._hold=false; touring=true; const tg=api._tg=(api._tg||0)+1; showStop(Math.max(0,Math.min(start,O.length-1)),O.length); if(!start) api._ttsDown=false; tbtn.innerHTML=(window.ICON?ICON("pause",16):"")+" Pause";
       if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ api.focus(O[0]); touring=false; tbtn.innerHTML=TOURH; return; }
-      const step=n=>{ if(!touring||tg!==api._tg) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.innerHTML=TOURH; return; } tpos=n; api.focus(O[n]); const ms=typeOut(O[n]); api.prefetch(O[n+1]); const a=api._audio; Promise.all([new Promise(r=>{ tour=setTimeout(r,a?600:Math.max(2600,ms+1200)); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
+      const step=n=>{ if(!touring||tg!==api._tg) return; if(n>=O.length){ api.fit(); if(api._done){ const d=api._done; api._done=null; d(); } setTimeout(()=>{ if(!touring) tr.classList.add("hidden"); },4000); touring=false; tbtn.innerHTML=TOURH; return; } tpos=n; showStop(n,O.length); api.focus(O[n]); const ms=typeOut(O[n]); api.prefetch(O[n+1]); const a=api._audio;
+        /* the stop you skipped to (prev / next / a pin / a memo link) holds long enough to read the line; an automatic step moves on when its clip ends */
+        const wait=(n===start&&hold)?Math.max(2600,api.explainText(O[n]).length*30):(a?600:Math.max(2600,ms+1200));
+        Promise.all([new Promise(r=>{ tour=setTimeout(r,wait); }),a||0]).then(()=>{ if(touring) step(n+1); }); }; step(start); },
     replay(){ if(cur<0) return; api.stopTour(); typeOut(cur); },   /* deliberate: interrupts */
     jumpRef(n){ const k=cites.findIndex(c=>parseInt(String(c.ref||"").replace(/\D/g,""))===+n); if(k>=0) api.jump(k); },
     summaryStop(t){ clearInterval(trT); if(sync) sync.dead=true; cur=-1; api.fit(); label.innerHTML='<b class="text-indigo-300">Summary</b> Colorado overview'; tr.classList.remove("hidden"); const esc=x=>x.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;"); let n=0; const L=String(t||""); trT=setInterval(()=>{ n+=2; tr.innerHTML='<b style="color:#a5b4fc">Summary</b> '+esc(L.slice(0,n))+(n<L.length?"<span class='animate-pulse'>▍</span>":""); if(n>=L.length) clearInterval(trT); },30); },
@@ -178,13 +181,18 @@ if(!webgl){
     ray.setFromCamera(mouse,cam); ray.params.Line.threshold=0.01; const hit=ray.intersectObjects(pins.flatMap(p=>[p.userData.head,p.children[0]]),false)[0];
     R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.jump(k); openDoc(cites[k]); } } });
   let touring=false, tpos=0; const tbar=document.createElement("div"); tbar.className="absolute bottom-10 right-4 z-20 flex gap-1 text-xs";
+  const tstop=document.createElement("span"); tstop.className="tour-stop"; tstop.setAttribute("data-tour-stop",""); tstop.setAttribute("aria-live","polite"); tstop.textContent="No stops yet";   /* the only stop numbering in the UI */
+  const showStop=(i,n)=>{ tstop.textContent=(n>0&&i>=0)?("Stop "+(i+1)+" of "+n):"No stops yet"; };
   const SV={"◀":'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>',"▶":'<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>'};
   const mk=(t,f)=>{ const b=document.createElement("button"); b.dataset.tourctl="1"; if(SV[t]){ b.innerHTML=SV[t]; b.setAttribute("aria-label",t==="◀"?"Previous stop":"Next stop"); b.title=b.getAttribute("aria-label"); } else b.textContent=t; b.className="abtn"; b.onclick=e=>{e.stopPropagation();f();}; tbar.appendChild(b); return b; };
-  mk("◀",()=>{ api.stopTour(); const O=api.order(); tpos=Math.max(0,tpos-1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
-  if(window.AudioMgr&&AudioMgr.isMuted()) api.voice=false; const vbtn=mk("",()=>{ const on=!api.voice; if(window.AudioMgr) AudioMgr.setMuted(!on); else { try{curAudio&&curAudio.pause();}catch(e){} } api.voice=on; }); vbtn.dataset.abtn="mute"; document.addEventListener("precedent:mute",e=>{ api.voice=!e.detail; });
+  /* prev / next skip to that stop and START it now: cancel everything pending (same path as jump) so no earlier clip plays */
+  const gotoStop=d=>{ const O=api.order(); if(!O.length) return; const i=Math.max(0,Math.min(O.length-1,tpos+d)); tpos=i;
+    api.stopTour(); try{ window.AudioMgr&&AudioMgr.stopAll(); }catch(e){} if(sync) sync.dead=true; showStop(i,O.length); api._hold=true; api.tour(i); };
+  mk("◀",()=>{ gotoStop(-1); });
+  if(window.AudioMgr&&AudioMgr.isMuted()) api.voice=false; document.addEventListener("precedent:mute",e=>{ api.voice=!e.detail; });
   const TOURH='<svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg> Tour'; const tbtn=mk("",()=>{ touring?api.stopTour():api.tour(0); });
-  mk("▶",()=>{ api.stopTour(); const O=api.order(); tpos=Math.min(O.length-1,tpos+1); if(O[tpos]!==undefined) api.focus(O[tpos]); });
-  tbtn.innerHTML=TOURH; tbtn.setAttribute("aria-label","Play or pause the guided tour"); tbtn.title="Guided tour: walks through each cited source"; tbar.setAttribute("role","toolbar"); tbar.setAttribute("aria-label","Map tour controls"); tbar.classList.add("tourbar"); tbar.id=tbar.id||"tour-controls"; const _tb=tbar.querySelectorAll("button"); ["prev","voice","play","next"].forEach((k,i)=>{ if(_tb[i]) _tb[i].dataset.tour=k; }); tbar.addEventListener("pointerdown",e=>e.stopPropagation()); host.parentElement.appendChild(tbar);
+  mk("▶",()=>{ gotoStop(1); });
+  tbtn.innerHTML=TOURH; tbtn.setAttribute("aria-label","Play or pause the guided tour"); tbtn.title="Guided tour: walks through each cited source"; tbar.setAttribute("role","toolbar"); tbar.setAttribute("aria-label","Map tour controls"); tbar.classList.add("tourbar"); tbar.id=tbar.id||"tour-controls"; const _tb=tbar.querySelectorAll("button"); ["prev","play","next"].forEach((k,i)=>{ if(_tb[i]) _tb[i].dataset.tour=k; }); tbar.appendChild(tstop); tbar.addEventListener("pointerdown",e=>e.stopPropagation()); host.parentElement.appendChild(tbar);
   let _pd=null; R.domElement.addEventListener("pointerdown",e=>{ _pd=[e.clientX,e.clientY]; },{passive:true}); addEventListener("pointerup",()=>{ _pd=null; });
   R.domElement.addEventListener("pointermove",e=>{ if(_pd&&e.buttons&&Math.hypot(e.clientX-_pd[0],e.clientY-_pd[1])>5){ _pd=null; if(touring) api.stopTour(); } },{passive:true});
   R.domElement.addEventListener("wheel",()=>{ if(touring) api.stopTour(); },{passive:true});
@@ -194,9 +202,9 @@ if(!webgl){
     const xs=C.polys.flat().map(p=>p[0]), ys=C.polys.flat().map(p=>p[1]); return {C,d,key:C.name.toLowerCase(),v:new THREE.Vector3((C.c[0]-487.5)*U,-(C.c[1]-305)*U,0.066),w:Math.max(...xs)-Math.min(...xs)}; });
   let pTags=[];
   function pinTags(){ pTags.forEach(t=>t.d.remove()); pTags=pins.filter(p=>p.userData.G.items.length).map(p=>{ const G=p.userData.G; const its=G.items.filter(i=>cites[i]&&cites[i].ref).sort((a,b)=>parseInt(String(cites[a].ref).replace(/\D/g,""))-parseInt(String(cites[b].ref).replace(/\D/g,""))); const lead=its.length?its:G.items;
-      const c0=cites[lead[0]]||{}; const court=(c0.court||"").trim()||G.label; const refs=its.slice(0,3).map(i=>cites[i].ref).join("");
+      const c0=cites[lead[0]]||{}; const court=(c0.court||"").trim()||G.label;
       const d=document.createElement("div"); d.style.cssText="position:absolute;left:0;top:0;white-space:nowrap;font-size:11px;padding:2px 7px;border-radius:999px;background:rgba(15,18,30,.6);backdrop-filter:blur(6px);border:1px solid rgba(165,180,252,.35);color:#e2e8f0;transform:translate(-50%,-140%)";
-      d.innerHTML=(refs?`<b style="color:#a5b4fc">${refs}</b> `:`<span style="color:#94a3b8">related</span> `)+court.replace(/</g,"&lt;").slice(0,38); ov.appendChild(d); return {p,d,items:G.items}; }); }
+      d.innerHTML=(its.length?"":`<span style="color:#94a3b8">related</span> `)+court.replace(/</g,"&lt;").slice(0,38); ov.appendChild(d); return {p,d,items:G.items}; }); }   /* court label only: no [n] badges on the map */
   const _v=new THREE.Vector3();
   function overlay(){ requestAnimationFrame(overlay); const W=host.clientWidth,H=host.clientHeight; if(!W) return; const boxes=[];
     const fm=document.getElementById("fullmap"); if(fm){ const a=fm.getBoundingClientRect(), r=host.getBoundingClientRect(); boxes.push([a.left-r.left-6,a.top-r.top-6,a.width+12,a.height+12]); } const lb=label.getBoundingClientRect(), rr=host.getBoundingClientRect(); if(lb.width) boxes.push([lb.left-rr.left,lb.top-rr.top,lb.width,lb.height]);
@@ -276,7 +284,7 @@ if(!webgl){
         a.addEventListener("playing",()=>{ S.ok=true; arm(); }); a.onended=()=>{ clearTimeout(sf); res(true); }; a.onerror=()=>{ clearTimeout(sf); if(!S.ok) S.fail=true; res(!!S.ok); };
         a.play().then(()=>{ S.ok=true; },()=>{ clearTimeout(sf); res(!!S.ok); }); }); }).catch(()=>{ S.fail=true; return false; }).finally(()=>{ S.ended=true; });
     return S; }
-  function typeOut(k){ clearInterval(trT); cancelAnimationFrame(api._raf||0); if(sync) sync.dead=true; const {sum,rel}=explain(k); const full=`<button title="Replay this stop" aria-label="Replay this stop" onclick="Docs3D.replay()" style="float:right;margin-left:8px;color:#a5b4fc"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button><b style="color:#a5b4fc">${(cites[k]||{}).ref||""}</b> `; const txt=sum+(rel?"\n"+rel:"");
+  function typeOut(k){ clearInterval(trT); cancelAnimationFrame(api._raf||0); if(sync) sync.dead=true; const {sum,rel}=explain(k); const full=`<button title="Replay this stop" aria-label="Replay this stop" onclick="Docs3D.replay()" style="float:right;margin-left:8px;color:#a5b4fc"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>`; const txt=sum+(rel?"\n"+rel:"");   /* the caption is the stop text; the bar shows Stop n of N */
     tr.classList.remove("hidden"); const esc=t=>t.replace(/[<&]/g,m=>m=="<"?"&lt;":"&amp;");
     const paint=n=>{ tr.innerHTML=full+esc(txt.slice(0,n)).replace("\n","<br><span style='color:#6ee7b7'>")+(n<txt.length?"<span class='animate-pulse'>▍</span>":""); };
     try{ window.AudioMgr&&AudioMgr.loadCancel&&AudioMgr.loadCancel(true); }catch(e){}   /* tour advanced: clear a stale 'loading' (keep a fresh 'unavailable' notice) */

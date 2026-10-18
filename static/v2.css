@@ -126,7 +126,8 @@ html[data-theme="light"] .v2-i-sun{display:block}
 #docs3d{position:absolute;inset:0}
 /* the map's own legend is moved behind the Legend pill */
 .v2-mapwrap>.absolute.top-3.left-4{display:none}
-/* tour controls created by map3d.js (styles live in audio.js, which v2 does not load) */
+/* tour controls created by map3d.js: prev, play/pause, next and the Stop n of N indicator.
+   The map stays dark in both themes, so these keep their own dark colours. */
 .v2-mapwrap .abtn{
   display:inline-flex;align-items:center;justify-content:center;gap:5px;
   min-width:34px;height:34px;padding:0 9px;border-radius:999px;
@@ -134,6 +135,11 @@ html[data-theme="light"] .v2-i-sun{display:block}
   font-size:12px;line-height:1;cursor:pointer;
 }
 .v2-mapwrap .abtn:hover{background:rgba(79,70,229,.62)}
+.v2-mapwrap .tour-stop{
+  display:inline-flex;align-items:center;height:34px;padding:0 9px;border-radius:999px;
+  border:1px solid rgba(129,140,248,.28);background:rgba(15,23,42,.72);color:#cbd5e1;
+  font-size:11px;line-height:1;white-space:nowrap;
+}
 
 /* ---------- pills + composer ---------- */
 .v2-foot{grid-area:foot;display:flex;flex-direction:column;gap:8px;min-width:0}

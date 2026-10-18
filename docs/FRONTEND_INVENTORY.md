@@ -8,7 +8,7 @@ There is no `/runs` page. Run history is the `/api/runs` JSON route, shown insid
 
 The 3D county map and the guided tour are the product's moat. v2 rebuilds the UI around them and does not touch these files:
 
-- `static/map3d.js`: 3D US map (Albers USA, d3-geo), Colorado raised, one pin per cited document, arcs for graph links, guided tour. Calls `POST /api/tour/prefetch`, `POST /api/tts_ts`, and loads `/static/vendor/us_states_proj.json` and `/static/vendor/co_counties_proj.json`. Creates `#docpanel`, `#transcript`, tour controls (aria-label "Map tour controls", "Play or pause the guided tour", "Replay this stop").
+- `static/map3d.js`: 3D US map (Albers USA, d3-geo), Colorado raised, one pin per cited document, arcs for graph links, guided tour. Calls `POST /api/tour/prefetch`, `POST /api/tts_ts`, and loads `/static/vendor/us_states_proj.json` and `/static/vendor/co_counties_proj.json`. Creates `#docpanel`, `#transcript` and the tour bar (`#tour-controls`: prev / play-pause / next, plus a `Stop n of N` indicator and no voice button; aria-label "Map tour controls", "Play or pause the guided tour", "Replay this stop"). Pin tags, the tour caption and the map's now-showing label carry no `[n]` badges — the only stop numbering is the bar's indicator.
 - `static/map3d.co.js`: Colorado-only county variant (county seats, pins, arcs).
 - `static/vendor/` county and state data (`co_counties_proj.json`, `us_states_proj.json`) and the d3 builds it needs (`d3-array.min.js`, `d3-geo.min.js`).
 
@@ -129,7 +129,7 @@ Pitch deck. File: `static/slides.html` (`static/slides.marketing.html` is an old
 
 ## `/v2`
 
-Alias of `/`: `GET /v2` serves the same `static/v2.html` as the root. Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, map3d (module), v2. No top `<nav>`; one icon rail on the left holds the logo link, the page links and the theme toggle.
+Alias of `/`: `GET /v2` serves the same `static/v2.html` as the root. Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, audio, map3d (module), v2. No top `<nav>`; one icon rail on the left holds the logo link, the page links and the theme toggle.
 
 Visible on first load: the memo (`#answer`), the existing 3D map (`#docs3d`) and the composer at the bottom. Everything else sits in collapsed bottom sheets.
 
@@ -140,19 +140,19 @@ Visible on first load: the memo (`#answer`), the existing 3D map (`#docs3d`) and
 | Question box and Ask | `#q`, `#go` aria-label "Ask: run the research agents" | `v2.html`, `v2.js` | `POST /api/ask`, `GET /api/run/{rid}` |
 | Empty-ask hint | `#v2-hint` | `v2.js` | none |
 | Memo | `#answer` | `v2.js` | `GET /api/run/{rid}` |
-| Source reference `[n]` in the memo | `button.v2-ref` | `v2.js` | none (`Docs3D.jumpRef`) |
+| Source link in the memo (one glyph, no number: ↗ opens the source, › jumps to it on the map; aria-label names the title) | `a.v2-ref`, `button.v2-ref` | `v2.js` | none (`Docs3D.jumpRef`) |
 | 3D map | `#docs3d` | `map3d.js` (KEEP) | see KEEP AS IS |
 | Sources pill and sheet | `#sources-btn` → `#sources-panel` (collapsed by default), `#cites` | `v2.js` | none (`Docs3D.jump` / `open`) |
 | Follow-ups pill and sheet | `#followups-btn` → `#followups-panel` (collapsed by default), `#fu-chips` | `v2.js` | `POST /api/ask` with `prev_run_id` |
 | Legend pill and sheet | `#legend-btn` → `#legend-panel` | `v2.js` | none |
 | Tour pill | `#tour-btn` aria-label "Play the map tour from the first stop" | `v2.js` | none (`Docs3D.tour(0)`) |
-| Tour controls inside the map (prev, voice, pause/play, next) | `#tour-controls`, `[data-tour]` | `map3d.js` (KEEP) | `POST /api/tts_ts` |
+| Tour controls inside the map (prev, play/pause, next — no voice button) and the `Stop n of N` indicator | `#tour-controls`, `[data-tour]`, `[data-tour-stop]` | `map3d.js` (KEEP) | `POST /api/tts_ts` |
 | Run info pill and sheet | `#runinfo-btn` → `#runinfo-panel`, `#runinfo-body` | `v2.js` | none (shows the last run) |
 
 Behaviour notes:
 
-- The memo renders first; then the map shows the citations and the tour autoplays from stop 1 (`Docs3D.tour(0)`). Pause and stop are the map's own tour controls.
-- `static/v2.js` does not load `audio.js` or `followup.js`; it renders follow-ups itself and styles the map's tour buttons in `v2.css`.
+- The memo renders first; then the map shows the citations with the voice held, the summary line is spoken (`AudioMgr.say(shortLine(answer))`) and only when that clip ends does the tour autoplay from stop 1 (`Docs3D.tour(0)`) — never tour-voice-first. With no `AudioMgr`, or when it is muted, the tour starts straight away as a caption tour. Pause and stop are the map's own tour controls; prev/next and pin or memo links skip to that stop and start it at once, and that stop holds long enough to read the line before the walk carries on.
+- v2 loads `audio.js` (`window.AudioMgr`) for the summary narration; it does not load `followup.js`, it renders follow-ups itself and styles the map's tour buttons in `v2.css`.
 - Dark is the default theme (`data-theme="dark"` on `<html>`, set in the markup and re-applied from localStorage before the stylesheet paints). Light mode sets `data-theme="light"`.
 - At 390/768 the layout stacks (head, answer, map, pills and composer); at 1024/1440 it splits (map left, answer column right).
 - The rail links only route to pages that exist: `/`, `/map`, `/observability`, `/guide`, `/slides`. There is no Runs link, because `/runs` has no HTML route yet (issue #53 open, live `/runs` is 404, only `/api/runs` JSON) — `/observability` loads `/api/runs` and is the closest working target.
