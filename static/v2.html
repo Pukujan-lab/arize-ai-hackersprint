@@ -44,7 +44,7 @@
 <script src="/static/vendor/tailwind.js"></script>
 <script src="/static/links.js?v=cf2"></script>
 <link rel="stylesheet" href="/static/theme/precedent-theme.css?v=ux1">
-<link rel="stylesheet" href="/static/v2.css?v=3">
+<link rel="stylesheet" href="/static/v2.css?v=5">
 <link rel="icon" type="image/svg+xml" href="/static/theme/favicon.svg?v=ux1">
 </head>
 <body>
@@ -64,10 +64,14 @@
     </button>
   </aside>
 
-  <main class="v2-main">
+  <main class="v2-main" data-mobile-pane="answer">
 
     <div class="v2-head">
       <span class="v2-brand">Precedent <em>v2</em></span>
+      <div class="v2-pane-tabs" role="tablist" aria-label="Which pane to show">
+        <button class="v2-pane-tab" type="button" role="tab" data-pane="answer" aria-controls="answer" aria-selected="true" aria-pressed="true">Answer</button>
+        <button class="v2-pane-tab" type="button" role="tab" data-pane="map" aria-controls="docs3d" aria-selected="false" aria-pressed="false">Map</button>
+      </div>
       <button id="runinfo-btn" class="v2-ghost" type="button" data-sheet="runinfo-panel" aria-label="Run info" title="Run info">i</button>
     </div>
 
@@ -77,7 +81,22 @@
     </div>
 
     <div class="v2-mapcol">
-      <div class="v2-mapwrap"><div id="docs3d"></div></div>
+      <div class="v2-mapwrap">
+        <div id="docs3d"></div>
+        <div id="pin-preview" class="v2-preview" hidden>
+          <div class="v2-preview-row">
+            <div class="v2-preview-main">
+              <p class="v2-preview-title"></p>
+              <p class="v2-preview-meta"></p>
+            </div>
+            <div class="v2-preview-actions">
+              <button class="v2-preview-btn" type="button" data-preview-read aria-expanded="false">Read</button>
+              <button class="v2-preview-btn" type="button" data-preview-source>Source</button>
+            </div>
+          </div>
+          <div class="v2-preview-text"></div>
+        </div>
+      </div>
     </div>
 
     <div class="v2-foot">
@@ -127,7 +146,7 @@
     <li><span class="v2-swatch" style="background:#f59e0b"></span>case to statute</li>
     <li><span class="v2-swatch" style="background:#f472b6"></span>federal or out of state</li>
   </ul>
-  <p class="v2-legend-note">Each pin is one cited source. Colorado is raised; click a pin to open the source.</p>
+  <p class="v2-legend-note">Each pin is one cited source. Colorado is raised; tap a pin for a short strip at the top of the map, then Read it or open Source.</p>
 </section>
 
 <section id="runinfo-panel" class="v2-sheet" aria-label="Run info" hidden>
@@ -141,7 +160,7 @@
 <script src="/static/vendor/d3-array.min.js"></script>
 <script src="/static/vendor/d3-geo.min.js"></script>
 <script src="/static/audio.js?v=ts4"></script>
-<script type="module" src="/static/map3d.js?v=ts4"></script>
-<script src="/static/v2.js?v=2"></script>
+<script type="module" src="/static/map3d.js?v=ts6"></script>
+<script src="/static/v2.js?v=4"></script>
 </body>
 </html>

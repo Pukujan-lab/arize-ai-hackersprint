@@ -177,9 +177,16 @@ if(!webgl){
     tbtn.innerHTML=TOURH; },
     fit(){ const fed=pins.some(p=>p.userData.G.cat==="federal"); if(fed){ camT.copy(homeCam); lookT.copy(homeLook); } else coView(); },
     pulse(v){ level=v; }, idle(){ mode="idle"; }, view(m){ clearTimeout(tour); if(m==="co") coView(); else { camT.copy(homeCam); lookT.copy(homeLook); } } });
+  /* Optional page hook. A page may set window.Docs3D.onCiteTap = fn(cite, index); when fn returns true the
+     page has taken over the pin / county TAP (a slim preview strip, say). Returning anything else — or no
+     hook at all — keeps the old behaviour: jump to the stop and open the source card. A drag is never a tap. */
+  let _tp=null, _tapMoved=false;
+  R.domElement.addEventListener("pointerdown",e=>{ _tp=[e.clientX,e.clientY]; _tapMoved=false; },{passive:true});
+  R.domElement.addEventListener("pointermove",e=>{ if(_tp&&e.buttons&&Math.hypot(e.clientX-_tp[0],e.clientY-_tp[1])>6) _tapMoved=true; },{passive:true});
+  function citeTap(k){ if(typeof api.onCiteTap!=="function") return false; if(_tapMoved) return true; return api.onCiteTap(cites[k],k)===true; }
   R.domElement.addEventListener("click",ev=>{ const r=R.domElement.getBoundingClientRect(); mouse.set(((ev.clientX-r.left)/r.width)*2-1,-((ev.clientY-r.top)/r.height)*2+1);
     ray.setFromCamera(mouse,cam); ray.params.Line.threshold=0.01; const hit=ray.intersectObjects(pins.flatMap(p=>[p.userData.head,p.children[0]]),false)[0];
-    R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined){ api.jump(k); openDoc(cites[k]); } } });
+    R._ph=!!hit; if(hit){ const G=hit.object.parent.userData.G; const k=G.items.includes(cur)?cur:G.items[0]; if(k!==undefined&&!citeTap(k)){ api.jump(k); openDoc(cites[k]); } } });
   let touring=false, tpos=0; const tbar=document.createElement("div"); tbar.className="absolute bottom-10 right-4 z-20 flex gap-1 text-xs";
   const tstop=document.createElement("span"); tstop.className="tour-stop"; tstop.setAttribute("data-tour-stop",""); tstop.setAttribute("aria-live","polite"); tstop.textContent="No stops yet";   /* the only stop numbering in the UI */
   const showStop=(i,n)=>{ tstop.textContent=(n>0&&i>=0)?("Stop "+(i+1)+" of "+n):"No stops yet"; };
@@ -310,7 +317,7 @@ if(!webgl){
     const r=host.parentElement.getBoundingClientRect(); tip.style.left=(ev.clientX-r.left+14)+"px"; tip.style.top=(ev.clientY-r.top+14)+"px"; tip.classList.remove("hidden");
     tip.innerHTML=`<b class="text-emerald-300">${esc(o.C.name)} County</b> <span class="text-slate-400">FIPS ${o.C.fips}</span>`+(o.n?`<div class="mt-1 text-slate-400">${o.n} retrieved case${o.n>1?"s":""} · click to open</div><ul class="mt-1 list-disc pl-4">${o.items.slice(0,6).map(i=>`<li>${esc(cites[i].title).slice(0,70)}</li>`).join("")}</ul>`:'<div class="text-slate-500">no retrieved cases</div>'); });
   R.domElement.addEventListener("mouseleave",()=>tip.classList.add("hidden"));
-  R.domElement.addEventListener("click",ev=>{ const o=countyAt(ev); if(!R._ph&&o&&o.n){ const k=o.items[0]; api.jump(k); openDoc(cites[k]); } });
+  R.domElement.addEventListener("click",ev=>{ const o=countyAt(ev); if(!R._ph&&o&&o.n){ const k=o.items[0]; if(!citeTap(k)){ api.jump(k); openDoc(cites[k]); } } });
   function resize(){ const w=host.clientWidth,h=host.clientHeight; R.setSize(w,h); cam.aspect=w/h; cam.updateProjectionMatrix(); }
   new ResizeObserver(resize).observe(host); resize();
   R.setAnimationLoop(now=>{ const t=now/1000;

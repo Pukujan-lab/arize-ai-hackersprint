@@ -65,7 +65,148 @@
   });
   document.querySelectorAll("[data-close]").forEach(function (b) { b.addEventListener("click", closeSheets); });
   if (backdrop) backdrop.addEventListener("click", closeSheets);
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeSheets(); });
+  document.addEventListener("keydown", function (e) {
+    if (e.key !== "Escape") return;
+    if (pv && !pv.hidden) hidePreview(); else closeSheets();
+  });
+
+  // ---------- phones and tablets under 900px: one full-height pane at a time ----------
+  // The Answer / Map buttons swap panes; so does a left/right swipe in the BOTTOM THIRD of a pane.
+  // The top two thirds are left alone, because that is where the map is dragged.
+  var mainEl = document.querySelector(".v2-main");
+  var mapCol = document.querySelector(".v2-mapcol");
+  var mapWrap = document.querySelector(".v2-mapwrap");
+  var paneTabs = [].slice.call(document.querySelectorAll("[data-pane]"));
+  var paneMQ = window.matchMedia ? window.matchMedia("(max-width: 899px)") : null;
+
+  function isMobile() { return !!(paneMQ && paneMQ.matches); }
+
+  function setPane(p) {
+    if (!mainEl) return;
+    var want = p === "map" ? "map" : "answer";
+    mainEl.setAttribute("data-mobile-pane", want);
+    paneTabs.forEach(function (b) {
+      var on = b.getAttribute("data-pane") === want;
+      b.setAttribute("aria-selected", on ? "true" : "false");
+      b.setAttribute("aria-pressed", on ? "true" : "false");
+    });
+    if (want === "answer") hidePreview();
+  }
+
+  function watchSwipe(el) {
+    if (!el) return;
+    var start = null;
+    el.addEventListener("touchstart", function (e) {
+      var t = e.changedTouches && e.changedTouches[0];
+      start = t && isMobile() ? { x: t.clientX, y: t.clientY } : null;
+    }, { passive: true });
+    el.addEventListener("touchcancel", function () { start = null; }, { passive: true });
+    el.addEventListener("touchend", function (e) {
+      var s = start, t = e.changedTouches && e.changedTouches[0];
+      start = null;
+      if (!s || !t || !isMobile()) return;
+      var r = el.getBoundingClientRect();
+      if (!r.height) return;
+      if ((s.y - r.top) / r.height < 0.66) return;                 // top of the pane: not a pane switch
+      var dx = t.clientX - s.x, dy = t.clientY - s.y;
+      if (Math.abs(dx) < 40 || Math.abs(dx) < Math.abs(dy) * 1.4) return;  // a tap, or a vertical scroll
+      setPane(dx < 0 ? "map" : "answer");
+    }, { passive: true });
+  }
+
+  // ---------- slim preview strip at the top of the map ----------
+  // One line — case, court, year, Read, Source. Read expands the strip downward in place.
+  var pv = $("pin-preview");
+  var pvTitle = pv ? pv.querySelector(".v2-preview-title") : null;
+  var pvMeta = pv ? pv.querySelector(".v2-preview-meta") : null;
+  var pvText = pv ? pv.querySelector(".v2-preview-text") : null;
+  var pvRead = pv ? pv.querySelector("[data-preview-read]") : null;
+  var pvSource = pv ? pv.querySelector("[data-preview-source]") : null;
+  var pvCite = null, pvExpanded = false, pvGuard = false;
+
+  function hidePreview() {
+    pvGuard = false;
+    if (pv) pv.hidden = true;
+    pvCite = null; pvExpanded = false;
+    if (pvText) pvText.textContent = "";
+    if (pvRead) { pvRead.textContent = "Read"; pvRead.setAttribute("aria-expanded", "false"); }
+  }
+
+  // Court and year only: the strip never carries the bare [n] badge.
+  function showPreview(c) {
+    if (!pv || !c) return;
+    pvCite = c; pvExpanded = false;
+    if (pvTitle) pvTitle.textContent = c.title || "Source";
+    if (pvMeta) pvMeta.textContent = [c.court || "", String(c.date || "").slice(0, 4)].filter(Boolean).join(" · ");
+    if (pvText) pvText.textContent = "";
+    if (pvRead) { pvRead.textContent = "Read"; pvRead.setAttribute("aria-expanded", "false"); }
+    pv.hidden = false;
+    pvGuard = true;                                   // the tap that opened this strip is still bubbling
+    setTimeout(function () { pvGuard = false; }, 0);
+    if (isMobile()) setPane("map");
+  }
+
+  function passageOf(c) {
+    var raw = String(c.passage || "");
+    if (!raw) return "No passage stored for this source.";
+    var p = raw;
+    if (window.cleanPassage) {
+      try { p = String(window.cleanPassage(raw, input ? input.value : "")) || raw; } catch (e) { p = raw; }
+    }
+    return p.slice(0, 900);
+  }
+
+  if (pvRead) pvRead.addEventListener("click", function () {
+    if (!pvCite) return;
+    pvExpanded = !pvExpanded;
+    if (pvText) pvText.textContent = pvExpanded ? passageOf(pvCite) : "";
+    if (pvRead) {
+      pvRead.textContent = pvExpanded ? "Hide" : "Read";
+      pvRead.setAttribute("aria-expanded", pvExpanded ? "true" : "false");
+    }
+  });
+
+  // Source opens the Sources panel on that source's own card.
+  if (pvSource) pvSource.addEventListener("click", function () {
+    if (!pvCite) return;
+    var c = pvCite;
+    hidePreview();
+    openSheet("sources-panel");
+    var i = ((lastResult && lastResult.citations) || []).indexOf(c);
+    var card = i >= 0 ? document.querySelector('#cites [data-src="' + i + '"]') : null;
+    if (card) { try { card.scrollIntoView({ block: "center" }); } catch (e) { card.scrollIntoView(); } }
+  });
+
+  // A click on the map, outside the strip, closes it.
+  if (mapWrap) mapWrap.addEventListener("click", function (e) {
+    if (!pv || pv.hidden || pvGuard) return;
+    var t = e.target;
+    if (t && t.closest && t.closest("#pin-preview")) return;
+    hidePreview();
+  });
+
+  function citeForRef(n) {
+    var arr = (lastResult && lastResult.citations) || [];
+    for (var i = 0; i < arr.length; i++) {
+      if (String(arr[i].ref || "").replace(/\D/g, "") === String(n)) return arr[i];
+    }
+    return arr[n - 1] || null;
+  }
+
+  // On a phone a pin or county tap takes over the map's own source card and shows the strip instead.
+  function onCiteTap(c) {
+    if (!isMobile()) return false;
+    showPreview(c);
+    return true;
+  }
+  if (window.Docs3D) window.Docs3D.onCiteTap = onCiteTap;
+
+  paneTabs.forEach(function (b) {
+    b.addEventListener("click", function () { setPane(b.getAttribute("data-pane")); });
+  });
+  watchSwipe($("answer"));
+  watchSwipe(mapCol);
+  setPane(mainEl ? mainEl.getAttribute("data-mobile-pane") : "answer");
 
   // ---------- map helpers (static/map3d.js loads as a module, so it arrives late) ----------
   // window.Docs3D starts as a set of no-op stubs; the real API is filled in once the map has
@@ -82,6 +223,9 @@
     if (left <= 0) return;
     setTimeout(function () { onMapReady(cb, left - 1); }, 250);
   }
+
+  // The map's tap hook goes in as soon as its API exists (it is a module, so it arrives late).
+  onMapReady(function (D) { D.onCiteTap = onCiteTap; });
 
   var tourBtn = $("tour-btn");
   if (tourBtn) {
@@ -178,6 +322,7 @@
     running = true;
     setBusy(true);
     closeSheets();
+    hidePreview();
     if (answerEl) answerEl.innerHTML = '<p class="v2-working">Agents working…</p>';
     if (mapReady()) { try { window.Docs3D.holdVoice = true; window.Docs3D.busy(); } catch (e) { /* no map */ } }
 
@@ -378,12 +523,15 @@
     }).join("") + "</dl>";
   }
 
-  // A [n] reference in the memo jumps the map to that source.
+  // A [n] reference in the memo jumps the map to that source and opens the slim strip on it.
   if (answerEl) {
     answerEl.addEventListener("click", function (e) {
       var btn = e.target.closest("[data-ref]");
-      if (!btn || !mapReady()) return;
-      try { window.Docs3D.jumpRef(parseInt(btn.getAttribute("data-ref"), 10)); } catch (err) { /* map not ready */ }
+      if (!btn) return;
+      var n = parseInt(btn.getAttribute("data-ref"), 10);
+      if (mapReady()) { try { window.Docs3D.jumpRef(n); } catch (err) { /* map not ready */ } }
+      var c = citeForRef(n);
+      if (c) showPreview(c);
     });
   }
 

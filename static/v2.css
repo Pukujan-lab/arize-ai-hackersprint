@@ -93,6 +93,16 @@ html[data-theme="light"] .v2-i-sun{display:block}
 }
 .v2-ghost:hover{color:var(--v2-ink);background:var(--v2-soft)}
 
+/* pane tabs: only shown under 900px, where the content area holds one pane at a time */
+.v2-pane-tabs{display:none;margin-left:auto;gap:4px;flex:0 0 auto}
+.v2-pane-tab{
+  min-height:44px;padding:0 12px;border:1px solid var(--v2-line);border-radius:12px;
+  background:var(--v2-panel);color:var(--v2-muted);font:inherit;font-size:13px;font-weight:600;cursor:pointer;
+}
+.v2-pane-tab:hover{color:var(--v2-ink);background:var(--v2-soft)}
+.v2-pane-tab:focus-visible{outline:2px solid var(--v2-accent);outline-offset:2px}
+.v2-pane-tab[aria-selected="true"]{border-color:var(--v2-accent);color:var(--v2-accent);background:var(--v2-quote)}
+
 /* ---------- memo ---------- */
 .v2-answer{
   grid-area:answer;min-width:0;min-height:0;overflow:auto;
@@ -140,6 +150,30 @@ html[data-theme="light"] .v2-i-sun{display:block}
   border:1px solid rgba(129,140,248,.28);background:rgba(15,23,42,.72);color:#cbd5e1;
   font-size:11px;line-height:1;white-space:nowrap;
 }
+
+/* ---------- slim pin / citation strip docked at the top of the map ---------- */
+/* One line: case name, court, year, Read, Source. Read expands the strip downward in place.
+   Like the map itself it keeps its dark colours in both themes. */
+.v2-preview{
+  position:absolute;top:8px;left:8px;right:8px;z-index:40;
+  padding:10px 12px;border:1px solid rgba(129,140,248,.45);border-radius:14px;
+  background:rgba(11,16,32,.96);color:#e6ebf5;box-shadow:0 12px 32px rgba(2,6,18,.5);
+  animation:v2-drop .14s ease-out;
+}
+@keyframes v2-drop{from{transform:translateY(-10px);opacity:.4}to{transform:none;opacity:1}}
+.v2-preview-row{display:flex;align-items:center;gap:10px;min-width:0}
+.v2-preview-main{flex:1 1 auto;min-width:0}
+.v2-preview-title{margin:0;font-size:14px;font-weight:600;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v2-preview-meta{margin:2px 0 0;font-size:12px;color:#94a3b8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v2-preview-actions{flex:0 0 auto;display:flex;gap:6px}
+.v2-preview-btn{
+  min-height:36px;padding:0 12px;border-radius:999px;border:1px solid rgba(129,140,248,.5);
+  background:rgba(15,23,42,.82);color:#e2e8f0;font:inherit;font-size:13px;cursor:pointer;
+}
+.v2-preview-btn:hover{background:rgba(79,70,229,.62)}
+.v2-preview-btn:focus-visible{outline:2px solid #8b93f8;outline-offset:2px}
+.v2-preview-text{margin-top:8px;max-height:38vh;overflow:auto;padding-left:10px;
+  border-left:2px solid rgba(129,140,248,.7);font-size:13px;line-height:1.55;color:#cbd5e1;overflow-wrap:anywhere}
 
 /* ---------- pills + composer ---------- */
 .v2-foot{grid-area:foot;display:flex;flex-direction:column;gap:8px;min-width:0}
@@ -212,17 +246,41 @@ html[data-theme="light"] .v2-i-sun{display:block}
 .v2-dl dd{margin:0;overflow-wrap:anywhere}
 .v2-empty{margin:0;font-size:13px;color:var(--v2-muted)}
 
-/* ---------- stacked layout: head, answer, map, pills + composer ---------- */
+/* ---------- stacked layout: one pane at a time, head above, composer below ---------- */
 @media (max-width:899px){
   .v2-rail{flex-basis:48px;width:48px;gap:4px;padding:8px 0}
   .v2-main{
     padding:8px;gap:8px;
     grid-template-columns:minmax(0,1fr);
-    grid-template-rows:auto minmax(0,1fr) minmax(0,1fr) auto;
-    grid-template-areas:"head" "answer" "map" "foot";
+    grid-template-rows:auto minmax(0,1fr) auto;
+    grid-template-areas:"head" "pane" "foot";
+  }
+  .v2-head{gap:6px}
+  .v2-ghost{margin-left:6px}
+  .v2-pane-tabs{display:flex}
+  /* One pane at a time: both share the single pane row and the unselected one is hidden.
+     It is hidden with visibility, not display, so the map keeps its box (the page measures it) and
+     the tour bar stays reachable while the memo is up. The canvas itself stays out of sight,
+     because the memo panel is a translucent glass and would let the map show through. */
+  .v2-answer,.v2-mapcol{grid-area:pane}
+  .v2-main[data-mobile-pane="answer"] .v2-mapcol,
+  .v2-main[data-mobile-pane="map"] .v2-answer{visibility:hidden}
+  .v2-main[data-mobile-pane="answer"] .v2-answer{position:relative;z-index:5}
+  .v2-main[data-mobile-pane="answer"] #docs3d{visibility:visible}
+  .v2-main[data-mobile-pane="answer"] #docs3d>*{visibility:hidden}
+  /* the tour controls float over the bottom of the memo on phones */
+  .v2-main[data-mobile-pane="answer"] #tour-controls{
+    visibility:visible;left:8px;right:8px;bottom:6px;justify-content:center;gap:6px;
+    padding:6px;border-radius:14px;background:rgba(11,16,32,.78);backdrop-filter:blur(8px);
   }
   .v2-pill{min-height:44px}
-  .v2-sheet{max-height:76vh}
+  /* panels open from the top of the same pane area instead of sliding up from the bottom */
+  .v2-sheet{
+    top:60px;left:8px;right:8px;bottom:auto;max-height:calc(100% - 68px);
+    border:1px solid var(--v2-line);border-radius:16px;box-shadow:0 12px 32px rgba(2,6,18,.45);
+    animation:v2-down .14s ease-out;
+  }
+  @keyframes v2-down{from{transform:translateY(-10px);opacity:.4}to{transform:none;opacity:1}}
   /* keep the map's source card inside the clipped map wrapper on phones */
   .v2-mapwrap #docpanel{left:8px;right:8px;width:auto}
 }
