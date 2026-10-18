@@ -8,14 +8,12 @@ sync_api = pytest.importorskip("playwright.sync_api")
 pytestmark = needs_chromium
 WIDTHS = [390, 768, 1024, 1440]
 EXPECTED = [("/", "Demo page"), ("/map", "Map page"), ("/observability", "Observability page"), ("/guide", "Guide page"), ("/slides", "Slides page")]
-EMOJI = ["\u2696", "\U0001f5fa", "\U0001f4ca", "\U0001f4d6", "\U0001f5bc"]
-
+EMOJI = ["\u2696", "\U0001F5FA", "\U0001F4CA", "\U0001F4D6", "\U0001F5BC"]
 
 @pytest.fixture(scope="module")
 def base():
     with app_server() as url:
         yield url
-
 
 @pytest.fixture(scope="module")
 def browser():
@@ -24,10 +22,8 @@ def browser():
         yield b
         b.close()
 
-
 def _rail(page):
     return page.locator("aside.v2-rail")
-
 
 def test_rail_links_route_to_canonical_pages(base, browser):
     ctx, page = open_page(browser, base, "/", 1440)
@@ -46,7 +42,6 @@ def test_rail_links_route_to_canonical_pages(base, browser):
         assert bad not in all_hrefs, f"legacy/dead href {bad} still in rail: {all_hrefs}"
     ctx.close()
 
-
 def test_rail_logo_mark_links_home(base, browser):
     ctx, page = open_page(browser, base, "/", 1440)
     rail = _rail(page)
@@ -58,7 +53,6 @@ def test_rail_logo_mark_links_home(base, browser):
     box = first.bounding_box()
     assert box and box["width"] >= 20 and box["height"] >= 20
     ctx.close()
-
 
 def test_rail_icons_are_svg_no_emoji(base, browser):
     ctx, page = open_page(browser, base, "/", 1440)
@@ -77,14 +71,12 @@ def test_rail_icons_are_svg_no_emoji(base, browser):
     assert (btn.get_attribute("aria-label") or "").strip()
     ctx.close()
 
-
 def test_rail_active_state(base, browser):
     ctx, page = open_page(browser, base, "/", 1440)
     active = _rail(page).locator("a.v2-rail-btn[aria-current=\"page\"]")
     assert active.count() == 1, f"expected exactly 1 aria-current rail link, got {active.count()}"
     assert active.first.get_attribute("href") == "/"
     ctx.close()
-
 
 @pytest.mark.parametrize("w", WIDTHS)
 def test_v2_icons_no_overflow_dark_and_light(base, browser, w):
