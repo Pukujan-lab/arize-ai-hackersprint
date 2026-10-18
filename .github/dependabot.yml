@@ -14,3 +14,9 @@ updates:
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+    # OIO manages .github/workflows/issue-triage.yml by content hash and its
+    # installer refuses any drift, so bumps to actions used in that file fail the
+    # gates job. Ignore them until the OIO pin is updated and reinstalled.
+    ignore:
+      - dependency-name: "actions/checkout"
+      - dependency-name: "actions/setup-python"
