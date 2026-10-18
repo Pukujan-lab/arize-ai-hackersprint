@@ -18,7 +18,8 @@ Both map files mount into `#docs3d` and expose `window.Docs3D` (`focus`, `open`,
 
 | Control | id / aria-label | Owner | API |
 |---|---|---|---|
-| Top nav: Demo, Map, Dashboards, Slides, Guide | plain `<a>` links in each page's `<nav>` | each HTML file | none |
+| Sidebar navigation on the v1 pages: Home, Map, Run history, Dashboard, Observability, Guide, Slides | `<nav id="sidebar">` (`#side-links`), toggle `#sidebar-toggle` | `navbar.js` | none |
+| Navigation on the v2 root: Demo, Map, Observability, Guide, Slides — icon rail only, in that order | `aside.v2-rail[role=navigation]` (`a.v2-rail-btn`) | `v2.html` | none |
 | Partner logo strip | `#partner-strip`, links aria-label "{partner} — open dashboard" | `navbar.js` + `partners.js` | none |
 | Examples dropdown (replaces `#examples` chips) | `#exBtn`, `#exMenu` | `navbar.js` | none (fills `#q`, triggers ask) |
 | Nav logo | `#nav-logo` | `navbar.js` | none |
@@ -31,6 +32,8 @@ Both map files mount into `#docs3d` and expose `window.Docs3D` (`focus`, `open`,
 ## `/`
 
 Canonical home. File: `static/v2.html`, the minimal, map-centric v2 page. `GET /` and `GET /v2` serve the same file, so the controls are the ones listed under `/v2` below. The old page is still available at `/v1`.
+
+One navigation only (#101): the icon rail is the page's whole menu. `/` loads no `navbar.js` and renders no `#sidebar-toggle`, "Menu" button, drawer or sidebar, so there is no second list of destinations to keep in sync. The rail is the single navigation landmark (`aside.v2-rail` with `role="navigation"`), and `/dashboard` is never linked from this page: `/observability` is the dashboard.
 
 ## `/v1`
 
@@ -129,13 +132,13 @@ Pitch deck. File: `static/slides.html` (`static/slides.marketing.html` is an old
 
 ## `/v2`
 
-Alias of `/`: `GET /v2` serves the same `static/v2.html` as the root. Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, audio, map3d (module), v2. No top `<nav>`; one icon rail on the left holds the logo link, the page links and the theme toggle.
+Alias of `/`: `GET /v2` serves the same `static/v2.html` as the root. Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, audio, map3d (module), v2. No top `<nav>` and no `navbar.js`: one icon rail on the left holds the logo link, the page links and the theme toggle, and it is the page's only navigation.
 
 Visible on first load: the memo (`#answer`), the existing 3D map (`#docs3d`) and the composer at the bottom. Everything else sits in collapsed bottom sheets. Once a memo is on screen, a Listen button (`#listen-btn`) appears above it. Below 900px only ONE of the memo and the map is shown at a time, full height, with Answer/Map buttons in the head.
 
 | Control | id / aria-label | Owner | API |
 |---|---|---|---|
-| Icon rail: logo link to `/`, then Demo `/`, Map `/map`, Observability `/observability`, Guide `/guide`, Slides `/slides`, each one inline SVG line icon | `aside.v2-rail` (`a.v2-rail-logo`, `a.v2-rail-btn`) | `v2.html` | none |
+| Icon rail (the only navigation): logo link to `/`, then Demo `/`, Map `/map`, Observability `/observability`, Guide `/guide`, Slides `/slides` in that order, each one inline SVG line icon; the entry for the page you are on is the only one with `aria-current="page"` | `aside.v2-rail` (`role="navigation"`, `a.v2-rail-logo`, `a.v2-rail-btn`) | `v2.html` | none |
 | Theme toggle (dark by default, remembered) | `#theme-toggle` aria-label "Toggle dark or light theme" | `v2.js` | none (localStorage `precedent-theme`) |
 | Question box and Ask | `#q`, `#go` aria-label "Ask: run the research agents" | `v2.html`, `v2.js` | `POST /api/ask`, `GET /api/run/{rid}` |
 | Empty-ask hint | `#v2-hint` | `v2.js` | none |
@@ -159,7 +162,8 @@ Behaviour notes:
 - Dark is the default theme (`data-theme="dark"` on `<html>`, set in the markup and re-applied from localStorage before the stylesheet paints). Light mode sets `data-theme="light"`.
 - At 1024/1440 the layout splits (map left, answer column right, both full height). Under 900px it is single pane: head above, then ONE pane (memo or map) at full height, then pills and composer below. The Answer / Map buttons swap panes and so does a left/right swipe, but only in the bottom third of the pane — the top two thirds stay with the map drag. The unselected pane is hidden (kept laid out so the canvas keeps its box and the tour bar stays reachable over the memo). Sheets open from the top of the same pane area (`top:60px`), not as bottom sheets.
 - Tapping a pin, a county or a citation in the memo (either `↗` link form or `›` button form — both carry `data-ref`) opens `#pin-preview` at every width, phone and desktop alike: one slim strip docked at the top of the map with the case name, court and year, plus Read (expands the strip downward with a short piece of the passage, in place) and Source (opens the Sources sheet on that card). A pin or county tap takes the map's own hook over (`Docs3D.onCiteTap` returns `true`), so the big `#docpanel` card never opens from a tap; it is still reached from the Sources sheet. A memo citation tap opens the strip ONLY: it never navigates to the external source and never starts the tour, and the external source stays reachable through that Sources card's own links. A click on the map outside the strip closes it, as does Escape. The strip never carries a `[n]` badge, and it is height-capped (`max-height`) so an opened strip never covers the tour stack parked at the middle of the edge.
-- The rail links only route to pages that exist: `/`, `/map`, `/observability`, `/guide`, `/slides`. There is no Runs link, because `/runs` has no HTML route yet (issue #53 open, live `/runs` is 404, only `/api/runs` JSON) — `/observability` loads `/api/runs` and is the closest working target.
+- The rail links only route to pages that exist, in one fixed order: `/` (Demo), `/map` (Map), `/observability` (Observability), `/guide` (Guide), `/slides` (Slides). There is no Runs link, because `/runs` has no HTML route yet (issue #53 open, live `/runs` is 404, only `/api/runs` JSON) — `/observability` loads `/api/runs` and is the closest working target. There is no `/dashboard` link either: `/observability` is the canonical dashboard (#101).
+- One navigation, no drawer (#101): the rail is the only menu at every width, so the v2 page loads no `navbar.js` and has no `#sidebar-toggle`, "Menu" button, `.tb-drawer` or `#side` sidebar. Under 900px the rail narrows from 56px to 48px and still shows all five icons, so there is no mobile menu that could hold a different list of destinations. If a collapse toggle is ever added, its drawer must repeat these same five hrefs in the same order, with the same active entry.
 
 ## Known clutter
 

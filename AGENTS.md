@@ -11,6 +11,14 @@ Before any change, read these. Frontend work starts from the inventory, not from
 - `contracts/agents/`: agent contracts (`coding-agent.json` is yours).
 - `docs/UX_GUIDELINES.md`: how the UI should look and read.
 
+## ABA scope
+
+ABA (`Pukujan/app-builder-automation`, dyad headless) is the only builder for the frontend, the backend and the Octo schema and migrations. It runs on the MacBook Pro.
+
+ABA does not file issue logs, write specs, docs, PR prose, contracts or CI, and it does not do verification or coordination. Those belong to the other agents. ABA receives an already-filed issue number and builds against it.
+
+If ABA cannot run, report to Alex. Never hand-code the frontend.
+
 ## Writing rule at boot
 
 Paste the block below into your system prompt when you start. It comes verbatim from the pinned writing helper (`.content-system/system-version.json` names the version and commit) and CI fails if it drifts. Do not edit the text between the markers by hand; change the pin and copy the new block instead.
@@ -70,7 +78,7 @@ Direct dependencies go in `requirements.in`. `requirements.txt` is the lock: run
 - pip-audit finds no known vulnerability in the pins CI installs (it fails only when the PR changes the requirements; otherwise it warns), and
 - every new direct dependency has a PyPI release in the last 12 months.
 
-Dependabot (`.github/dependabot.yml`) opens weekly update PRs for pip and GitHub Actions, and they go through the same gates.
+Dependabot (`.github/dependabot.yml`) opens weekly update PRs for GitHub Actions, and they go through the same gates. It does not open pip version updates: Dependabot cannot reproduce a uv universal lock with `python_full_version` branches, so its PRs pin the newest release for every Python and fail to install. Bump Python dependencies by editing `requirements.in` and rerunning the `uv pip compile` command at the top of `requirements.txt`; pip security updates still come through Dependabot.
 
 ## What never goes in git
 
@@ -101,6 +109,8 @@ python3 acs/claim.py release HACK-04 --agent <you> --status done --note "PR #NN"
 ```
 
 `POST /api/claim` and `POST /api/release` do the same over HTTP. Every claim and release is appended to `events.jsonl` on the board, and `acs/hotload.py` picks up board and seat changes without restarting the app (`GET /api/acs/hotload` shows what it loaded).
+
+Board claims belong to the agents that file, spec and verify work. ABA does not claim tasks or file issue logs; it receives an already-filed issue number from the coordinating agent.
 
 The four pipeline agents use a separate claim file, `.coord/assignment.json`, locked by `.coord/claim.lock` and written only by `app/coord.py`. Their inputs, outputs, allowed paths and data stores are in `contracts/agents/<role>.json`.
 

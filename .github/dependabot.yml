@@ -5,12 +5,22 @@ updates:
     directory: "/"
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      python-minor-and-patch:
-        update-types: [minor, patch]
+    # Version updates are off: requirements.txt is a uv universal lock with
+    # python_full_version branches, and Dependabot's pip updater re-resolves it
+    # without them, pinning the newest release for every Python (networkx==3.7
+    # needs >=3.12, numpy 2.5 needs >=3.11), so its PRs cannot install on the
+    # 3.9/3.10/3.11 images. Update dependencies by editing requirements.in and
+    # rerunning the uv pip compile command at the top of requirements.txt.
+    # Limit 0 disables version-update PRs but leaves security updates enabled.
+    open-pull-requests-limit: 0
   - package-ecosystem: github-actions
     directory: "/"
     schedule:
       interval: weekly
     open-pull-requests-limit: 3
+    # OIO manages .github/workflows/issue-triage.yml by content hash and its
+    # installer refuses any drift, so bumps to actions used in that file fail the
+    # gates job. Ignore them until the OIO pin is updated and reinstalled.
+    ignore:
+      - dependency-name: "actions/checkout"
+      - dependency-name: "actions/setup-python"
