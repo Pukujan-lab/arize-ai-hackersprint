@@ -308,22 +308,36 @@ def test_tour_controls_vertical_stack_middle_edge(base, browser):
 
 
 PIN_POINT = """() => {
-  const tags=[...document.querySelectorAll(".v2-mapwrap div")].filter(d=>d.textContent.includes("Colorado Supreme Court") && d.offsetWidth>20 && d.offsetWidth<260);
-  if(!tags.length) return null;
-  const r=tags[0].getBoundingClientRect();
-  return {x:r.x+r.width/2, y:r.bottom + r.height*0.4};
+  const pane = document.querySelector(".v2-mapwrap");
+  if (!pane) return {err: "no map pane"};
+  const pr = pane.getBoundingClientRect();
+  const chips = [...document.querySelectorAll(".v2-mapwrap div[data-pin-refs]")].filter(d => d.offsetWidth > 20);
+  const seen = [];
+  let best = null, bestD = 1e9;
+  for (const t of chips) {
+    const r = t.getBoundingClientRect();
+    // a chip hangs above its pin point
+    const x = r.x + r.width / 2, y = r.bottom + r.height * 0.4;
+    seen.push({label: t.textContent.trim().slice(0, 40), x: Math.round(x), y: Math.round(y)});
+    const m = 24;   // the pin must be well inside the pane: a clipped pin is not a tap target
+    if (x < pr.left + m || x > pr.right - m || y < pr.top + m || y > pr.bottom - m) continue;
+    const d = Math.abs(x - (pr.left + pr.right) / 2) + Math.abs(y - (pr.top + pr.bottom) / 2);
+    if (d < bestD) { bestD = d; best = {x, y, label: t.textContent.trim().slice(0, 40)}; }
+  }
+  return best || {err: "no pin inside the pane", pane: {x: pr.x, y: pr.y, w: pr.width, h: pr.height}, chips: seen};
 }"""
 
 
 def _settled_pin_point(page, timeout_ms=8000):
     """The map eases the camera into place after an answer; a chip read mid-ease is stale by the
-    time a tap lands. Wait until the chip holds still for two samples before aiming at it."""
+    time a tap lands. Wait until the pin holds still for two samples before aiming at it."""
     prev = None
     waited = 0
     while waited < timeout_ms:
         pt = page.evaluate(PIN_POINT)
-        if pt and prev and abs(pt["x"] - prev["x"]) < 2 and abs(pt["y"] - prev["y"]) < 2:
-            return pt
+        if pt and "err" not in pt and prev and "err" not in prev:
+            if abs(pt["x"] - prev["x"]) < 2 and abs(pt["y"] - prev["y"]) < 2:
+                return pt
         prev = pt
         page.wait_for_timeout(250)
         waited += 250
@@ -337,7 +351,7 @@ def test_pin_tap_opens_slim_preview_not_big_card(base, browser):
             page.locator("[data-pane=\"map\"]").click()
             page.wait_for_timeout(500)
         pt = _settled_pin_point(page)
-        assert pt, f"no pin tag at {w}"
+        assert pt and "err" not in pt, f"no pin to tap at {w}: {pt}"
         seen = []
         for _ in range(3):
             page.mouse.click(pt["x"], pt["y"])
@@ -349,14 +363,13 @@ def test_pin_tap_opens_slim_preview_not_big_card(base, browser):
                     page.evaluate(
                         """(pt) => { const el=document.elementFromPoint(pt.x, pt.y);
                              const pv=document.querySelector("#pin-preview");
-                             const tag=[...document.querySelectorAll(".v2-mapwrap div")].find(d=>d.textContent.includes("Colorado Supreme Court")&&d.offsetWidth>20&&d.offsetWidth<260);
-                             const r=tag&&tag.getBoundingClientRect();
-                             return {hit: el && (el.id||el.className||el.tagName), pvHidden: pv && pv.hidden,
-                                     chip: r && {x:r.x,y:r.y,w:r.width,h:r.height}, pt: pt}; }""",
+                             return {hit: el && (el.id||el.className||el.tagName), pvHidden: pv && pv.hidden, pt: pt}; }""",
                         pt,
                     )
                 )
                 pt = _settled_pin_point(page, 3000)
+                if not pt or "err" in pt:
+                    break
         assert page.locator("#pin-preview").is_visible(), f"pin tap must open the slim preview at {w}: {seen}"
         doc = page.evaluate(
             "() => { const d=document.querySelector(\"#docpanel\"); return d && !d.classList.contains(\"hidden\") && getComputedStyle(d).display!==\"none\"; }"
