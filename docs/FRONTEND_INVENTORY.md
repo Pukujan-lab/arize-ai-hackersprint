@@ -129,13 +129,13 @@ Pitch deck. File: `static/slides.html` (`static/slides.marketing.html` is an old
 
 ## `/v2`
 
-Alias of `/`: `GET /v2` serves the same `static/v2.html` as the root. Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, map3d (module), v2. No top `<nav>`; one icon rail on the left holds the page links and the theme toggle.
+Alias of `/`: `GET /v2` serves the same `static/v2.html` as the root. Minimal, map-centric home. File: `static/v2.html`, styles `static/v2.css`, behaviour `static/v2.js`. Scripts: session, tailwind, links, d3-array, d3-geo, map3d (module), v2. No top `<nav>`; one icon rail on the left holds the logo link, the page links and the theme toggle.
 
 Visible on first load: the memo (`#answer`), the existing 3D map (`#docs3d`) and the composer at the bottom. Everything else sits in collapsed bottom sheets.
 
 | Control | id / aria-label | Owner | API |
 |---|---|---|---|
-| Icon rail links: Demo, Map, Dashboards, Guide, Slides | `aside.v2-rail` links | `v2.html` | none |
+| Icon rail: logo link to `/`, then Demo `/`, Map `/map`, Observability `/observability`, Guide `/guide`, Slides `/slides`, each one inline SVG line icon | `aside.v2-rail` (`a.v2-rail-logo`, `a.v2-rail-btn`) | `v2.html` | none |
 | Theme toggle (dark by default, remembered) | `#theme-toggle` aria-label "Toggle dark or light theme" | `v2.js` | none (localStorage `precedent-theme`) |
 | Question box and Ask | `#q`, `#go` aria-label "Ask: run the research agents" | `v2.html`, `v2.js` | `POST /api/ask`, `GET /api/run/{rid}` |
 | Empty-ask hint | `#v2-hint` | `v2.js` | none |
@@ -155,6 +155,7 @@ Behaviour notes:
 - `static/v2.js` does not load `audio.js` or `followup.js`; it renders follow-ups itself and styles the map's tour buttons in `v2.css`.
 - Dark is the default theme (`data-theme="dark"` on `<html>`, set in the markup and re-applied from localStorage before the stylesheet paints). Light mode sets `data-theme="light"`.
 - At 390/768 the layout stacks (head, answer, map, pills and composer); at 1024/1440 it splits (map left, answer column right).
+- The rail links only route to pages that exist: `/`, `/map`, `/observability`, `/guide`, `/slides`. There is no Runs link, because `/runs` has no HTML route yet (issue #53 open, live `/runs` is 404, only `/api/runs` JSON) — `/observability` loads `/api/runs` and is the closest working target.
 
 ## Known clutter
 
