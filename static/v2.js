@@ -135,6 +135,7 @@
   // Court and year only: the strip never carries the bare [n] badge.
   function showPreview(c) {
     if (!pv || !c) return;
+    hideSent();                                   // the sent question gives the map's top to this strip
     pvCite = c; pvExpanded = false;
     if (pvTitle) pvTitle.textContent = c.title || "Source";
     if (pvMeta) pvMeta.textContent = [c.court || "", String(c.date || "").slice(0, 4)].filter(Boolean).join(" · ");
@@ -153,7 +154,7 @@
     if (!raw) return "No passage stored for this source.";
     var p = raw;
     if (window.cleanPassage) {
-      try { p = String(window.cleanPassage(raw, input ? input.value : "")) || raw; } catch (e) { p = raw; }
+      try { p = String(window.cleanPassage(raw, lastQuestion)) || raw; } catch (e) { p = raw; }
     }
     return p.length > 360 ? p.slice(0, 360).replace(/\s\S*$/, "") + "…" : p;
   }
@@ -276,24 +277,87 @@
     }
   });
 
-  var tourBtn = $("tour-btn");
-  if (tourBtn) {
-    tourBtn.addEventListener("click", function () {
-      if (!mapReady()) return;
-      var D = window.Docs3D;
-      try { D.stopTour && D.stopTour(); } catch (e) { /* map not ready */ }
-      userStopped = false;              // this press asks for the walk, it does not end it
-      try { D.tour(0); } catch (e) { /* map not ready */ }
-    });
-  }
-
-  // ---------- composer ----------
+  // ---------- composer: Ask, then Follow-up in the same thread ----------
+  // Before the first answer the submit button says Ask and nothing sits above the input.
+  // Once a memo has rendered it says Follow-up, a New question button appears above the input,
+  // and every submit in between continues that thread (prev_run_id of the last run).
   var form = $("ask-form");
   var input = $("q");
   var go = $("go");
   var hint = $("v2-hint");
   var answerEl = $("answer");
+  var foot = document.querySelector(".v2-foot");
+  var sentEl = $("sent-question");
+  var newBtn = null;
   var hintTimer = null;
+  var sentTimer = null;
+  var lastQuestion = "";    // the question on screen, kept after the input is cleared on submit
+  var SENT_HOLD_MS = 4200;  // the strip holds a few seconds, then fades out
+
+  var EMPTY_MEMO =
+    '<p class="v2-lead">Your cited memo will appear here.</p>' +
+    '<p class="v2-sub">Ask a legal question below. Four agents plan, retrieve, write and verify; ' +
+    "then the map tours every source.</p>";
+
+  // The question just sent, shown at the top of the map. Text only: the question is escaped first.
+  function showSent(q) {
+    if (!sentEl) return;
+    clearTimeout(sentTimer);
+    sentEl.innerHTML = esc(q);
+    sentEl.classList.remove("v2-sent-out");
+    sentEl.hidden = false;
+    sentTimer = setTimeout(function () { sentEl.classList.add("v2-sent-out"); }, SENT_HOLD_MS);
+  }
+
+  // Take the strip away at once (a new thread, or the map's own source strip needs the top edge).
+  function hideSent() {
+    clearTimeout(sentTimer);
+    if (!sentEl) return;
+    sentEl.classList.remove("v2-sent-out");
+    sentEl.hidden = true;
+  }
+
+  function setThread(on) {
+    if (go) {
+      go.textContent = on ? "Follow-up" : "Ask";
+      go.setAttribute("aria-label", on ? "Follow-up: keep asking in this thread" : "Ask: run the research agents");
+    }
+    if (on && !newBtn && foot && form) {
+      newBtn = document.createElement("button");
+      newBtn.id = "new-question";
+      newBtn.type = "button";
+      newBtn.className = "v2-newq";
+      newBtn.textContent = "New question";
+      newBtn.addEventListener("click", newQuestion);
+      foot.insertBefore(newBtn, form);          // directly above the input
+    }
+    if (!on && newBtn) {
+      newBtn.remove();
+      newBtn = null;
+    }
+  }
+
+  // New question drops the thread: no run to continue, no memo, no sources, and the submit
+  // button says Ask again. The map keeps what it shows until the next answer replaces it.
+  function newQuestion() {
+    lastRun = null;
+    lastResult = null;
+    lastQuestion = "";
+    renderRun++;                 // a summary still being heard must not start the old memo's tour
+    narrating = false;
+    closeSheets();
+    hidePreview();
+    hideSent();
+    if (window.Docs3D) { try { window.Docs3D.stopTour && window.Docs3D.stopTour(); } catch (e) { /* no map */ } }
+    if (window.AudioMgr && window.AudioMgr.stopAll) { try { window.AudioMgr.stopAll(); } catch (e) { /* no audio */ } }
+    if (answerEl) { answerEl.innerHTML = EMPTY_MEMO; answerEl.scrollTop = 0; }
+    if (citesEl) citesEl.innerHTML = '<li class="v2-empty">Ask a question to list its sources.</li>';
+    if (chipsEl) chipsEl.innerHTML = '<p class="v2-empty">Ask a question to get follow-ups.</p>';
+    fillRunInfo();
+    showListenBar(false);        // no memo on screen any more, so nothing to listen to
+    setThread(false);
+    if (input) input.focus();
+  }
 
   function showHint(msg) {
     if (!hint) return;
@@ -313,6 +377,8 @@
       ask(input ? input.value : "");
     });
   }
+
+  setThread(false);   // a fresh page is a fresh thread: Ask, and no New question button yet
 
   // ---------- markdown (escape first, then a small whitelist) ----------
   // A source link shows one glyph, never the bare number: ↗ when the citation has a source URL,
@@ -365,12 +431,7 @@
   var userStopped = false; // the walk was stopped on purpose: a summary still finishing must not restart it
   var internalStop = 0;     // the app stopping the walk itself (speaking, reset) is not the reader's word
 
-  function isFollow(q) {
-    return /^(and|but|so|also|what if|what about|how about|then|does (that|this|it)|can (they|i still)|is (that|this|it))\b/i.test(q) ||
-      /\b(this|that|it|they|them|those|here|above)\b[?.!]*$/i.test(q);
-  }
-
-  function ask(text, asFollow) {
+  function ask(text) {
     var q = String(text == null ? "" : text).trim();
     if (!q) { showHint("Type a question first."); if (input) input.focus(); return Promise.resolve(null); }
     if (running) return Promise.resolve(null);
@@ -379,16 +440,21 @@
     closeSheets();
     hidePreview();
     showListenBar(false);        // no memo on screen yet, so nothing to listen to
+    lastQuestion = q;                             // the question the passages are scored against
+    showSent(q);                                  // the strip at the top of the map shows what was sent
+    if (input) input.value = "";                  // the composer is empty again while the agents work
     if (answerEl) answerEl.innerHTML = '<p class="v2-working">Agents working…</p>';
     if (mapReady()) { try { window.Docs3D.holdVoice = true; window.Docs3D.busy(); } catch (e) { /* no map */ } }
 
     var body = { question: q };
-    if (lastRun && (asFollow || isFollow(q))) body.prev_run_id = lastRun;
+    // State-aware thread: once a memo is on screen #go says Follow-up and the question continues
+    // that run. New question clears lastRun, so a fresh thread sends no prev_run_id.
+    if (lastRun) body.prev_run_id = lastRun;
 
     return fetch("/api/ask", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body, null, 2)
     })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (j) { return { ok: r.ok, j: j }; }); })
       .then(function (res) {
@@ -439,6 +505,7 @@
     lastRun = r.run_id || lastRun;
     lastResult = r;
     userReading = false;        // a new memo starts a fresh walk; a citation tap stops it again
+    setThread(true);            // the memo is on screen: the button now continues this thread
     var token = ++renderRun;
     var byRef = {};
     (r.citations || []).forEach(function (c) { byRef[c.ref] = c; });
@@ -576,7 +643,7 @@
     citesEl.innerHTML = list.map(function (c, i) {
       var labels = window.citeLabels ? window.citeLabels(c) : { type: c.type || "Authority", jurisdiction: c.court || "Jurisdiction not given" };
       var passage = c.passage
-        ? String(window.cleanPassage ? window.cleanPassage(c.passage, input ? input.value : "") : c.passage).slice(0, 300)
+        ? String(window.cleanPassage ? window.cleanPassage(c.passage, lastQuestion) : c.passage).slice(0, 300)
         : "";
       var note = window.citeNote ? window.citeNote(c) : "";
       var links = window.caseLinks ? window.caseLinks(c) : "";
@@ -630,7 +697,7 @@
       b.textContent = text;
       b.addEventListener("click", function () {
         if (input) input.value = text;
-        ask(text, true);
+        ask(text);
       });
       chipsEl.appendChild(b);
     });
@@ -659,7 +726,7 @@
 
   // A memo citation tap means the reader stopped walking: the tour halts, its caption goes away,
   // and a summary still being spoken no longer autostarts it behind the strip. The map's own
-  // controls (Tour pill, prev / next, pins) are untouched and still start a stop.
+  // controls (prev / next, pins) are untouched and still start a stop.
   function stopTourForPreview() {
     userReading = true;                 // the pending autoplay (if any) must not start behind the strip
     setListen(false);                   // the walk is over, so the Listen button says Listen again
@@ -712,5 +779,5 @@
 
   openRun(new URLSearchParams(window.location.search).get("run"));
 
-  window.PRECEDENT_V2 = { ask: function (t) { return ask(t, false); }, theme: currentTheme, setTheme: setTheme };
+  window.PRECEDENT_V2 = { ask: ask, theme: currentTheme, setTheme: setTheme };
 })();
