@@ -44,7 +44,7 @@
 <script src="/static/vendor/tailwind.js"></script>
 <script src="/static/links.js?v=cf2"></script>
 <link rel="stylesheet" href="/static/theme/precedent-theme.css?v=ux1">
-<link rel="stylesheet" href="/static/v2.css?v=5">
+<link rel="stylesheet" href="/static/v2.css?v=6">
 <link rel="icon" type="image/svg+xml" href="/static/theme/favicon.svg?v=ux1">
 </head>
 <body>
@@ -78,9 +78,15 @@
       <button id="runinfo-btn" class="v2-ghost" type="button" data-sheet="runinfo-panel" aria-label="Run info" title="Run info">i</button>
     </div>
 
-    <div id="answer" class="v2-answer" aria-live="polite">
-      <p class="v2-lead">Your cited memo will appear here.</p>
-      <p class="v2-sub">Ask a legal question below. Four agents plan, retrieve, write and verify; then the map tours every source.</p>
+    <div class="v2-anscol">
+      <div class="v2-answer-head" hidden>
+        <button id="listen-btn" class="v2-pill" type="button" aria-pressed="false" aria-label="Listen to this memo" title="Reads the summary, then every source on the map">Listen</button>
+        <p class="v2-answer-note">Summary first, then the map reads each source.</p>
+      </div>
+      <div id="answer" class="v2-answer" aria-live="polite">
+        <p class="v2-lead">Your cited memo will appear here.</p>
+        <p class="v2-sub">Ask a legal question below. Four agents plan, retrieve, write and verify; then the map tours every source.</p>
+      </div>
     </div>
 
     <div class="v2-mapcol">
@@ -163,7 +169,7 @@
 <script src="/static/vendor/d3-array.min.js"></script>
 <script src="/static/vendor/d3-geo.min.js"></script>
 <script src="/static/audio.js?v=ts4"></script>
-<script type="module" src="/static/map3d.js?v=ts6"></script>
-<script src="/static/v2.js?v=5"></script>
+<script type="module" src="/static/map3d.js?v=ts7"></script>
+<script src="/static/v2.js?v=8"></script>
 </body>
 </html>

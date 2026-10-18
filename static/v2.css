@@ -103,12 +103,20 @@ html[data-theme="light"] .v2-i-sun{display:block}
 .v2-pane-tab:focus-visible{outline:2px solid var(--v2-accent);outline-offset:2px}
 .v2-pane-tab[aria-selected="true"]{border-color:var(--v2-accent);color:var(--v2-accent);background:var(--v2-quote)}
 
-/* ---------- memo ---------- */
+/* ---------- memo: the answer column (Listen bar above the memo) ---------- */
+.v2-anscol{grid-area:answer;display:flex;flex-direction:column;gap:8px;min-width:0;min-height:0}
 .v2-answer{
-  grid-area:answer;min-width:0;min-height:0;overflow:auto;
+  flex:1 1 auto;min-width:0;min-height:0;overflow:auto;
   padding:14px 16px;border:1px solid var(--v2-line);border-radius:16px;background:var(--v2-panel);
   font-size:15px;line-height:1.6;overflow-wrap:anywhere;
 }
+/* Answer header: one clear control that reads the memo out loud. It lives on the answer, never in
+   the tour bar, and v2.js hides the whole row until a memo is on screen. */
+.v2-answer-head{flex:0 0 auto;display:flex;align-items:center;gap:10px;min-width:0;padding:0 2px}
+/* the id, so it beats the .v2-pill sizing that comes later in this file: a thumb-sized target */
+#listen-btn{min-height:44px;padding:0 18px;font-weight:600}
+.v2-answer-note{margin:0;min-width:0;font-size:12px;line-height:1.35;color:var(--v2-muted)}
+@media (max-width:559px){.v2-answer-note{display:none}}
 .v2-answer>*+*{margin-top:.7em}
 .v2-answer p{margin:0}
 .v2-answer h3{margin:0;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--v2-accent)}
@@ -139,16 +147,25 @@ html[data-theme="light"] .v2-i-sun{display:block}
 /* tour controls created by map3d.js: prev, play/pause, next and the Stop n of N indicator.
    The map stays dark in both themes, so these keep their own dark colours. */
 .v2-mapwrap .abtn{
-  display:inline-flex;align-items:center;justify-content:center;gap:5px;
-  min-width:34px;height:34px;padding:0 9px;border-radius:999px;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;flex:0 0 auto;
+  min-width:44px;height:44px;padding:0 10px;border-radius:12px;
   border:1px solid rgba(129,140,248,.5);background:rgba(15,23,42,.82);color:#e2e8f0;
   font-size:12px;line-height:1;cursor:pointer;
 }
 .v2-mapwrap .abtn:hover{background:rgba(79,70,229,.62)}
 .v2-mapwrap .tour-stop{
-  display:inline-flex;align-items:center;height:34px;padding:0 9px;border-radius:999px;
-  border:1px solid rgba(129,140,248,.28);background:rgba(15,23,42,.72);color:#cbd5e1;
-  font-size:11px;line-height:1;white-space:nowrap;
+  display:inline-flex;align-items:center;justify-content:center;min-height:26px;padding:3px 8px;
+  border-radius:10px;border:1px solid rgba(129,140,248,.28);background:rgba(15,23,42,.72);
+  color:#cbd5e1;font-size:11px;line-height:1.25;text-align:center;
+}
+/* One compact vertical stack on the middle of the map's right edge: thumb-sized, clear of the
+   slim source strip at the top and of the composer below. The id beats the utility classes that
+   map3d.js puts on the same element (absolute bottom-10 right-4 flex gap-1). */
+#tour-controls{
+  display:flex;flex-direction:column;align-items:stretch;gap:5px;
+  top:50%;bottom:auto;left:auto;right:10px;transform:translateY(-50%);
+  z-index:45;padding:5px;border-radius:16px;background:rgba(11,16,32,.74);backdrop-filter:blur(8px);
+  max-height:calc(100% - 24px);overflow:hidden;
 }
 
 /* ---------- slim pin / citation strip docked at the top of the map ---------- */
@@ -159,6 +176,8 @@ html[data-theme="light"] .v2-i-sun{display:block}
   padding:10px 12px;border:1px solid rgba(129,140,248,.45);border-radius:14px;
   background:rgba(11,16,32,.96);color:#e6ebf5;box-shadow:0 12px 32px rgba(2,6,18,.5);
   animation:v2-drop .14s ease-out;
+  /* capped so an opened strip never reaches the tour stack parked at the middle of the edge */
+  max-height:max(120px,calc(50% - 116px));overflow:auto;
 }
 @keyframes v2-drop{from{transform:translateY(-10px);opacity:.4}to{transform:none;opacity:1}}
 .v2-preview-row{display:flex;align-items:center;gap:10px;min-width:0}
@@ -172,7 +191,7 @@ html[data-theme="light"] .v2-i-sun{display:block}
 }
 .v2-preview-btn:hover{background:rgba(79,70,229,.62)}
 .v2-preview-btn:focus-visible{outline:2px solid #8b93f8;outline-offset:2px}
-.v2-preview-text{margin-top:8px;max-height:38vh;overflow:auto;padding-left:10px;
+.v2-preview-text{margin-top:8px;padding-left:10px;
   border-left:2px solid rgba(129,140,248,.7);font-size:13px;line-height:1.55;color:#cbd5e1;overflow-wrap:anywhere}
 
 /* ---------- pills + composer ---------- */
@@ -262,17 +281,15 @@ html[data-theme="light"] .v2-i-sun{display:block}
      It is hidden with visibility, not display, so the map keeps its box (the page measures it) and
      the tour bar stays reachable while the memo is up. The canvas itself stays out of sight,
      because the memo panel is a translucent glass and would let the map show through. */
-  .v2-answer,.v2-mapcol{grid-area:pane}
+  .v2-anscol,.v2-mapcol{grid-area:pane}
   .v2-main[data-mobile-pane="answer"] .v2-mapcol,
-  .v2-main[data-mobile-pane="map"] .v2-answer{visibility:hidden}
-  .v2-main[data-mobile-pane="answer"] .v2-answer{position:relative;z-index:5}
+  .v2-main[data-mobile-pane="map"] .v2-anscol{visibility:hidden}
+  .v2-main[data-mobile-pane="answer"] .v2-anscol{position:relative;z-index:5}
   .v2-main[data-mobile-pane="answer"] #docs3d{visibility:visible}
   .v2-main[data-mobile-pane="answer"] #docs3d>*{visibility:hidden}
-  /* the tour controls float over the bottom of the memo on phones */
-  .v2-main[data-mobile-pane="answer"] #tour-controls{
-    visibility:visible;left:8px;right:8px;bottom:6px;justify-content:center;gap:6px;
-    padding:6px;border-radius:14px;background:rgba(11,16,32,.78);backdrop-filter:blur(8px);
-  }
+  /* the map column is only hidden with visibility on phones, so the tour stack is shown again;
+     it keeps the same place as on a desktop: the middle of the map's right edge */
+  .v2-main[data-mobile-pane="answer"] #tour-controls{visibility:visible}
   .v2-pill{min-height:44px}
   /* panels open from the top of the same pane area instead of sliding up from the bottom */
   .v2-sheet{
