@@ -194,16 +194,47 @@ html[data-theme="light"] .v2-i-sun{display:block}
 .v2-preview-text{margin-top:8px;padding-left:10px;
   border-left:2px solid rgba(129,140,248,.7);font-size:13px;line-height:1.55;color:#cbd5e1;overflow-wrap:anywhere}
 
+/* ---------- the question just sent: a transparent strip at the top of the map ---------- */
+/* One line, no controls, taps fall through to the map. It fades out a few seconds after the
+   submit and comes back with the next question. Both themes stay readable over the dark map. */
+.v2-sent{
+  position:absolute;top:8px;left:8px;right:8px;z-index:45;pointer-events:none;
+  padding:7px 12px;border:1px solid rgba(129,140,248,.4);border-radius:12px;
+  background:rgba(6,10,21,.55);color:#e6ebf5;
+  font-size:13px;font-weight:500;line-height:1.45;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  opacity:1;transition:opacity 1s ease;
+}
+html[data-theme="light"] .v2-sent{
+  border-color:rgba(15,23,42,.22);background:rgba(246,248,253,.6);color:#121a2b;
+}
+.v2-sent.v2-sent-out{opacity:0}
+
 /* ---------- pills + composer ---------- */
 .v2-foot{grid-area:foot;display:flex;flex-direction:column;gap:8px;min-width:0}
-.v2-pills{display:flex;flex-wrap:wrap;gap:6px;min-width:0}
+/* the pill row is one horizontal track that slides sideways instead of wrapping onto a second line */
+.v2-pills{
+  display:flex;flex-wrap:nowrap;gap:6px;min-width:0;
+  overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;
+  padding:2px 0 6px;-webkit-overflow-scrolling:touch;scrollbar-width:none;
+}
+.v2-pills::-webkit-scrollbar{width:0;height:0}
 .v2-pill{
-  display:inline-flex;align-items:center;gap:5px;min-height:40px;padding:0 13px;
+  flex:0 0 auto;display:inline-flex;align-items:center;gap:5px;min-height:40px;padding:0 13px;
   border:1px solid var(--v2-line);border-radius:999px;background:var(--v2-panel);
-  color:var(--v2-ink);font-size:13px;font-weight:500;cursor:pointer;
+  color:var(--v2-ink);font-size:13px;font-weight:500;white-space:nowrap;cursor:pointer;
 }
 .v2-pill:hover{background:var(--v2-soft)}
+.v2-pill:focus-visible{outline:2px solid var(--v2-accent);outline-offset:-2px}
 .v2-pill[aria-expanded="true"]{border-color:var(--v2-accent);color:var(--v2-accent)}
+/* New question: shows above the input once there is an answer to follow up on */
+.v2-newq{
+  align-self:flex-start;display:inline-flex;align-items:center;min-height:36px;padding:0 13px;
+  border:1px solid var(--v2-line);border-radius:999px;background:var(--v2-panel);
+  color:var(--v2-muted);font:inherit;font-size:13px;font-weight:600;white-space:nowrap;cursor:pointer;
+}
+.v2-newq:hover{color:var(--v2-ink);background:var(--v2-soft)}
+.v2-newq:focus-visible{outline:2px solid var(--v2-accent);outline-offset:-2px}
 .v2-composer{display:flex;gap:8px;min-width:0}
 #q{
   flex:1 1 auto;min-width:0;height:48px;padding:0 14px;
@@ -290,7 +321,7 @@ html[data-theme="light"] .v2-i-sun{display:block}
   /* the map column is only hidden with visibility on phones, so the tour stack is shown again;
      it keeps the same place as on a desktop: the middle of the map's right edge */
   .v2-main[data-mobile-pane="answer"] #tour-controls{visibility:visible}
-  .v2-pill{min-height:44px}
+  .v2-pill,.v2-newq{min-height:44px}
   /* panels open from the top of the same pane area instead of sliding up from the bottom */
   .v2-sheet{
     top:60px;left:8px;right:8px;bottom:auto;max-height:calc(100% - 68px);
@@ -308,4 +339,10 @@ html[data-theme="light"] .v2-i-sun{display:block}
     max-height:min(70vh,560px);border:1px solid var(--v2-line);border-radius:16px;
     box-shadow:0 18px 44px rgba(0,0,0,.45);
   }
+}
+
+/* ---------- reduced motion: the sent strip appears and goes away at once, no fade ---------- */
+@media (prefers-reduced-motion: reduce){
+  .v2-sent{transition:none}
+  .v2-sent.v2-sent-out{display:none}
 }
