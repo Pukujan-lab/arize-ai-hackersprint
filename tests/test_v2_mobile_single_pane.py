@@ -297,7 +297,8 @@ def test_tour_controls_vertical_stack_middle_edge(base, browser):
     ys = [b["y"] for b in boxes]
     assert ys[0] < ys[1] < ys[2], f"tour controls must stack vertically (prev, play, next): {boxes}"
     assert abs(boxes[0]["x"] - boxes[1]["x"]) < 8 and abs(boxes[1]["x"] - boxes[2]["x"]) < 8, boxes
-    bb = bar.bounding_box(); mb = page.locator(".v2-mapwrap").bounding_box()
+    bb = bar.bounding_box()
+    mb = page.locator(".v2-mapwrap").bounding_box()
     cy = bb["y"] + bb["height"] / 2 - mb["y"]
     assert mb["height"] * 0.25 < cy < mb["height"] * 0.8, f"stack must sit at the middle edge, not bottom-center: {bb} vs {mb}"
     assert bb["x"] + bb["width"] > mb["x"] + mb["width"] - 90, f"stack must hug the right edge: {bb} vs {mb}"
@@ -310,12 +311,17 @@ def test_pin_tap_opens_slim_preview_not_big_card(base, browser):
     for w in (390, 1440):
         ctx, page = _ask(browser, base, w)
         if w == 390:
-            page.locator("[data-pane=\"map\"]").click(); page.wait_for_timeout(500)
-        pt = page.evaluate("""() => { const tags=[...document.querySelectorAll(".v2-mapwrap div")].filter(d=>d.textContent.includes("Colorado Supreme Court") && d.offsetWidth>20 && d.offsetWidth<260); if(!tags.length) return null; const r=tags[0].getBoundingClientRect(); return {x:r.x+r.width/2, y:r.bottom + r.height*0.4}; }""")
+            page.locator("[data-pane=\"map\"]").click()
+            page.wait_for_timeout(500)
+        pt = page.evaluate(
+            """() => { const tags=[...document.querySelectorAll(".v2-mapwrap div")].filter(d=>d.textContent.includes("Colorado Supreme Court") && d.offsetWidth>20 && d.offsetWidth<260); if(!tags.length) return null; const r=tags[0].getBoundingClientRect(); return {x:r.x+r.width/2, y:r.bottom + r.height*0.4}; }"""
+        )
         assert pt, f"no pin tag at {w}"
         page.mouse.click(pt["x"], pt["y"])
         page.wait_for_selector("#pin-preview:visible", timeout=15000)
-        doc = page.evaluate("() => { const d=document.querySelector(\"#docpanel\"); return d && !d.classList.contains(\"hidden\") && getComputedStyle(d).display!==\"none\"; }")
+        doc = page.evaluate(
+            "() => { const d=document.querySelector(\"#docpanel\"); return d && !d.classList.contains(\"hidden\") && getComputedStyle(d).display!==\"none\"; }"
+        )
         assert not doc, f"pin tap must not open the big card at {w}"
         ctx.close()
 

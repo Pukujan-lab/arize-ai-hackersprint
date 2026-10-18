@@ -211,7 +211,8 @@ if(!webgl){
   function pinTags(){ pTags.forEach(t=>t.d.remove()); pTags=pins.filter(p=>p.userData.G.items.length).map(p=>{ const G=p.userData.G; const its=G.items.filter(i=>cites[i]&&cites[i].ref).sort((a,b)=>parseInt(String(cites[a].ref).replace(/\D/g,""))-parseInt(String(cites[b].ref).replace(/\D/g,""))); const lead=its.length?its:G.items;
       const c0=cites[lead[0]]||{}; const court=(c0.court||"").trim()||G.label;
       const d=document.createElement("div"); d.style.cssText="position:absolute;left:0;top:0;white-space:nowrap;font-size:11px;padding:2px 7px;border-radius:999px;background:rgba(15,18,30,.6);backdrop-filter:blur(6px);border:1px solid rgba(165,180,252,.35);color:#e2e8f0;transform:translate(-50%,-140%)";
-      d.innerHTML=(its.length?"":`<span style="color:#94a3b8">related</span> `)+court.replace(/</g,"&lt;").slice(0,38); ov.appendChild(d); return {p,d,items:G.items}; }); }   /* court label only: no [n] badges on the map */
+      d.innerHTML=(its.length?"":`<span style="color:#94a3b8">related</span> `)+court.replace(/</g,"&lt;").slice(0,38);
+      d.dataset.pinIdx=String(G.items[0]); d.dataset.pinRefs=G.items.join(",");   /* so a page can route a tap on this chip to its sources without a mesh hit */ ov.appendChild(d); return {p,d,items:G.items}; }); }   /* court label only: no [n] badges on the map */
   const _v=new THREE.Vector3();
   function overlay(){ requestAnimationFrame(overlay); const W=host.clientWidth,H=host.clientHeight; if(!W) return; const boxes=[];
     const fm=document.getElementById("fullmap"); if(fm){ const a=fm.getBoundingClientRect(), r=host.getBoundingClientRect(); boxes.push([a.left-r.left-6,a.top-r.top-6,a.width+12,a.height+12]); } const lb=label.getBoundingClientRect(), rr=host.getBoundingClientRect(); if(lb.width) boxes.push([lb.left-rr.left,lb.top-rr.top,lb.width,lb.height]);

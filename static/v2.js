@@ -179,12 +179,43 @@
     if (card) { try { card.scrollIntoView({ block: "center" }); } catch (e) { card.scrollIntoView(); } }
   });
 
-  // A click on the map, outside the strip, closes it.
+  // A click on the map, outside the strip and outside the tour stack, closes it. And because the
+  // map's own 3D hit test can miss a pin by a hair while the camera is still settling, a tap that
+  // lands on the point a pin chip floats over is treated as that pin's tap: the chip carries the
+  // source indices, so the slim strip answers the way the reader meant it to, at any width.
+  function pinChipAt(ev) {
+    var chips = mapWrap ? mapWrap.querySelectorAll("[data-pin-refs]") : [];
+    var best = null, bd = 1e9;
+    [].slice.call(chips).forEach(function (d) {
+      if (!d.offsetWidth) return;
+      var r = d.getBoundingClientRect();
+      var ax = r.x + r.width / 2, ay = r.bottom + r.height * 0.4;   // a chip hangs above its pin point
+      var dd = Math.sqrt((ev.clientX - ax) * (ev.clientX - ax) + (ev.clientY - ay) * (ev.clientY - ay));
+      if (dd < bd) { bd = dd; best = d; }
+    });
+    return bd <= 44 ? best : null;
+  }
+
+  function citeOfChip(chip) {
+    var pool = (window.Docs3D && window.Docs3D._c) || [];
+    var arr = (lastResult && lastResult.citations) || [];
+    var refs = String(chip.getAttribute("data-pin-refs") || "").split(",");
+    for (var i = 0; i < refs.length; i++) {
+      var c = pool[Number(refs[i])];
+      if (c && arr.indexOf(c) >= 0) return c;      // prefer the memo's own source
+    }
+    return pool[Number(chip.getAttribute("data-pin-idx"))] || null;
+  }
+
   if (mapWrap) mapWrap.addEventListener("click", function (e) {
-    if (!pv || pv.hidden || pvGuard) return;
+    // A press on a tour button stops at the button; only a click on the map glass reaches this far.
     var t = e.target;
     if (t && t.closest && t.closest("#pin-preview")) return;
-    hidePreview();
+    if (pv && !pv.hidden && !pvGuard) { hidePreview(); return; }
+    if (pv && pv.hidden) {
+      var chip = pinChipAt(e);
+      if (chip) { var c = citeOfChip(chip); if (c) onCiteTap(c); }
+    }
   });
 
   function citeForRef(n) {
@@ -228,14 +259,27 @@
   }
 
   // The map's tap hook goes in as soon as its API exists (it is a module, so it arrives late).
-  onMapReady(function (D) { D.onCiteTap = onCiteTap; });
+  // The stop is wrapped too: a stop is the reader's last word, and the summary clip that is still
+  // speaking must not restart the walk a moment behind it. Stops the app makes itself (speaking the
+  // summary, a reset) and soft stops (stop advancing, let the line finish) are not the reader's word.
+  // Tour, Listen, prev/next and a jump clear the flag again, because each of those is a fresh ask.
+  onMapReady(function (D) {
+    D.onCiteTap = onCiteTap;
+    if (!D.__v2StopWired) {
+      D.__v2StopWired = true;
+      var stopNative = D.stopTour;
+      D.stopTour = function (soft) { if (!internalStop && soft !== true) userStopped = true; return stopNative.call(D, soft); };
+    }
+  });
 
   var tourBtn = $("tour-btn");
   if (tourBtn) {
     tourBtn.addEventListener("click", function () {
       if (!mapReady()) return;
       var D = window.Docs3D;
-      try { D.stopTour && D.stopTour(); D.tour(0); } catch (e) { /* map not ready */ }
+      try { D.stopTour && D.stopTour(); } catch (e) { /* map not ready */ }
+      userStopped = false;              // this press asks for the walk, it does not end it
+      try { D.tour(0); } catch (e) { /* map not ready */ }
     });
   }
 
@@ -314,6 +358,8 @@
   var running = false, lastRun = null, lastResult = null;
   var renderRun = 0;     // per-render token: a stale summary can never start a newer run's tour
   var narrating = false; // the memo's summary line is being spoken: keep the map voice held
+  var userStopped = false; // the walk was stopped on purpose: a summary still finishing must not restart it
+  var internalStop = 0;     // the app stopping the walk itself (speaking, reset) is not the reader's word
 
   function isFollow(q) {
     return /^(and|but|so|also|what if|what about|how about|then|does (that|this|it)|can (they|i still)|is (that|this|it))\b/i.test(q) ||
@@ -420,7 +466,9 @@
       D.ctx = { answer: r.answer || "", question: r.question || "" };
       D.holdVoice = true;               // the map keeps quiet while the summary is heard
       D.show(r.citations || [], r.edges || [], r.documents || []);
-      D.stopTour && D.stopTour();       // an older tour must not run under the new memo
+      internalStop++;                   // an older tour must not run under the new memo
+      try { D.stopTour && D.stopTour(); } finally { internalStop--; }
+      userStopped = false;              // a fresh memo may walk again once its summary is heard
     } catch (e) { return; }
     speakThenTour(r, token);
   }
@@ -436,16 +484,17 @@
     if (!line) { beginTour(token); return; }   // no voice: caption tour right away
     narrating = true;
     var after = function () { narrating = false; beginTour(token); };
-    try { Promise.resolve(M.say(line)).then(after, after); } catch (e) { after(); }
+    internalStop++;                   // the summary clip silences the tour; that is not a reader stop
+    try { Promise.resolve(M.say(line)).then(after, after); } catch (e) { after(); } finally { internalStop--; }
   }
 
   function beginTour(token) {
     if (token !== renderRun) return;    // a newer question took over while this summary played
     var D = window.Docs3D;
     if (!D) return;
-    // The summary finished after the reader opened a source from the memo: the walk stays stopped.
-    // Releasing the hold and stopping again clears any autostart the map still has pending.
-    if (userReading) { try { D.holdVoice = false; D.stopTour && D.stopTour(); } catch (e) { /* no map */ } return; }
+    // The summary finished after the reader opened a source from the memo, or stopped the walk:
+    // it stays stopped. Releasing the hold and stopping again clears any autostart the map has pending.
+    if (userReading || userStopped) { try { D.holdVoice = false; D.stopTour && D.stopTour(); } catch (e) { /* no map */ } return; }
     try { D.holdVoice = false; D.tour(0); } catch (e) { /* map not ready */ }
   }
 
@@ -502,6 +551,7 @@
     if (!r || !mapReady()) { showHint("Ask a legal question first."); return; }
     var D = window.Docs3D;
     userReading = false;                               // this press asks for the walk, it does not end it
+    userStopped = false;
     var token = ++renderRun;                           // any older pending autoplay is now void
     try { if (window.AudioMgr) AudioMgr.failedAt = 0; } catch (e) { /* an old failure must not mute this */ }
     setListen(true);
