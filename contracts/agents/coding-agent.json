@@ -2,7 +2,7 @@
   "schema_version": "precedent.agent-contract.v1",
   "role": "coding-agent",
   "kind": "coding",
-  "purpose": "ABA (Pukujan/app-builder-automation, dyad headless) runs on the MacBook Pro and builds only application code: the backend in app/ and server.py, the frontend in static/, the Octo schema/ and migrations/, and its own tests. It does not write docs, contracts, CI, specs or issue logs.",
+  "purpose": "ABA (Pukujan/app-builder-automation, dyad headless) runs on the MacBook Pro and builds only application code: the backend in app/ and server.py, the frontend in web/, the Octo schema/ and migrations/, and its own tests. It does not write docs, contracts, CI, specs or issue logs.",
   "implemented_in": "AGENTS.md",
   "read_first": [
     "docs/FRONTEND_INVENTORY.md",
@@ -56,6 +56,7 @@
     ],
     "write": [
       "app/",
+      "web/",
       "static/",
       "schema/",
       "migrations/",
@@ -71,16 +72,16 @@
     "writes": []
   },
   "rules": [
-    "ABA is the app builder (Pukujan/app-builder-automation, dyad headless) and runs on the MacBook Pro; it builds only application code: backend app/ and server.py, frontend static/, and the Octo schema/ and migrations/",
+    "ABA is the app builder (Pukujan/app-builder-automation, dyad headless) and runs on the MacBook Pro; it builds only application code: backend app/ and server.py, frontend web/, and the Octo schema/ and migrations/",
     "ABA never files or edits issues; it receives an already-filed issue number and builds against that issue",
     "ABA never writes docs/, contracts/ or .github/; specs, docs, PR prose, contracts, CI and issue logs belong to the other agents",
-    "ABA never adds dependencies or edits requirements files; dependencies are not part of its scope",
+    "ABA chooses its own implementation and its own frontend dependencies inside web/; no issue, spec, handoff or contract prescribes its technology",
+    "ABA does not change Python dependencies or requirements files; if a Python dependency seems necessary, stop and report it to the coordinating agent, which owns requirements.in, the uv lock and tools/dep_policy.py",
     "Never write vendored ACS files (acs/seat_protocol.py, acs/watchdog_check.py, acs/LICENSE.acs, acs/assignment.schema.json)",
     "Never commit cache/, runs/, data/, logs/ or any secret",
     "Check repo.manifest.json before adding a top-level file or folder",
     "Never hand-write custom code when mature OSS or an existing tool plus thin glue code can do the job; manual coding is allowed only for confirmed debugging or fixing logic pipelines (AGENTS.md, Reuse before you write)",
     "A PR that adds a source file or more than 150 non-test lines under app/, acs/ or tools/ needs an 'OSS considered' section naming a specific project or SDK and why it does not fit, or a bugfix label or line plus Closes #N for an issue with confirmed evidence; tools/pr_policy.py enforces it in gates",
-    "Call providers through their official SDK when one exists instead of raw httpx or requests (AGENTS.md, Dependencies and SDKs)",
-    "ABA does not add or change dependencies: if a build seems to need one, stop and report it to the coordinating agent, which owns requirements.in, the uv lock and tools/dep_policy.py"
+    "Call providers through their official SDK when one exists instead of raw httpx or requests (AGENTS.md, Dependencies and SDKs)"
   ]
 }

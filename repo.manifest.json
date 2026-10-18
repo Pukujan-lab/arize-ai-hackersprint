@@ -69,9 +69,17 @@
       "path": "static/",
       "kind": "dir",
       "owner": "app",
-      "purpose": "Frontend: plain HTML and JS pages (demo, map, dashboard, slides, guide, observability), no build step.",
+      "purpose": "Current frontend pages (demo, map, dashboard, slides, guide, observability). Deleted at the v3 cutover; the builder owns web/ and chooses its implementation.",
       "agents_may_edit": true,
       "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "web/",
+      "kind": "dir",
+      "owner": "app",
+      "purpose": "Frontend source and build root, owned by the builder. The built output is served by the app and is not committed.",
+      "agents_may_edit": true,
+      "runtime_data": "node_modules/, dist/ and releases/ are build output on the app host; see runtime_paths"
     },
     {
       "path": "tests/",
@@ -214,6 +222,24 @@
     }
   ],
   "runtime_paths": [
+    {
+      "path": "web/node_modules/",
+      "purpose": "installed frontend packages, produced by the build",
+      "lives": "the app host and CI",
+      "in_git": false
+    },
+    {
+      "path": "web/dist/",
+      "purpose": "built frontend output served by the app",
+      "lives": "the app host; a symlink to the current release",
+      "in_git": false
+    },
+    {
+      "path": "web/releases/",
+      "purpose": "built frontend releases kept for rollback",
+      "lives": "the app host",
+      "in_git": false
+    },
     {
       "path": "cache/",
       "purpose": "LLM, Octo, TTS and graph caches",
