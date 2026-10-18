@@ -106,7 +106,9 @@ def test_summary_narration_starts_before_any_tour_clip(base, browser):
     assert "Alpha Case" in tts[1], f"tour stop 1 must follow the summary, got {tts[:3]}"
     assert not any("Beta Case" in t or "Gamma Case" in t for t in tts[:1])
     # minimal Stop n of N (poll: the tour may already be advancing on a slow runner), and no bare-number badges
-    page.wait_for_function("document.querySelector('[data-tour-stop]') && document.querySelector('[data-tour-stop]').textContent.includes('Stop 1 of 3')", timeout=30000)
+    page.wait_for_function(
+        "document.querySelector('[data-tour-stop]') && document.querySelector('[data-tour-stop]').textContent.includes('Stop 1 of 3')", timeout=30000
+    )
     refs = page.locator("#answer .v2-ref").evaluate_all("els => els.map(e => e.textContent.trim())")
     assert refs, "answer citations must still be present/clickable"
     assert not any(re.fullmatch(r"\[?\d+\]?", r) for r in refs), f"numbered citation badges visible: {refs}"
@@ -134,7 +136,9 @@ def test_skip_to_stop_next_prev_and_jump(base, browser):
     # next -> stop 2 starts immediately
     page.locator("#tour-controls [data-tour=next]").click()
     page.wait_for_function("document.querySelector('#transcript') && document.querySelector('#transcript').textContent.includes('Beta Case')", timeout=15000)
-    page.wait_for_function("document.querySelector('[data-tour-stop]') && document.querySelector('[data-tour-stop]').textContent.includes('Stop 2 of 3')", timeout=15000)
+    page.wait_for_function(
+        "document.querySelector('[data-tour-stop]') && document.querySelector('[data-tour-stop]').textContent.includes('Stop 2 of 3')", timeout=15000
+    )
     page.wait_for_function("window.__tts.length >= 1", timeout=15000)
     tts = page.evaluate("window.__tts")
     assert "Beta Case" in tts[0], f"next must start stop 2 clip/caption first, got {tts[:3]}"
@@ -143,14 +147,18 @@ def test_skip_to_stop_next_prev_and_jump(base, browser):
     page.evaluate("() => { window.__tts.length = 0; }")
     page.locator("#tour-controls [data-tour=prev]").click()
     page.wait_for_function("document.querySelector('#transcript') && document.querySelector('#transcript').textContent.includes('Alpha Case')", timeout=15000)
-    page.wait_for_function("document.querySelector('[data-tour-stop]') && document.querySelector('[data-tour-stop]').textContent.includes('Stop 1 of 3')", timeout=15000)
+    page.wait_for_function(
+        "document.querySelector('[data-tour-stop]') && document.querySelector('[data-tour-stop]').textContent.includes('Stop 1 of 3')", timeout=15000
+    )
     page.wait_for_function("window.__tts.length >= 1", timeout=15000)
     tts = page.evaluate("window.__tts")
     assert "Alpha Case" in tts[0], tts[:3]
     # jump (pin/citation path) -> stop 3, cancelling pending earlier clips
     page.evaluate("() => { window.__tts.length = 0; Docs3D.jump(Docs3D.order()[2]); }")
     page.wait_for_function("document.querySelector('#transcript') && document.querySelector('#transcript').textContent.includes('Gamma Case')", timeout=15000)
-    page.wait_for_function("document.querySelector('[data-tour-stop]') && document.querySelector('[data-tour-stop]').textContent.includes('Stop 3 of 3')", timeout=15000)
+    page.wait_for_function(
+        "document.querySelector('[data-tour-stop]') && document.querySelector('[data-tour-stop]').textContent.includes('Stop 3 of 3')", timeout=15000
+    )
     page.wait_for_function("window.__tts.length >= 1", timeout=15000)
     tts = page.evaluate("window.__tts")
     assert "Gamma Case" in tts[0], tts[:3]
