@@ -307,18 +307,57 @@ def test_tour_controls_vertical_stack_middle_edge(base, browser):
     ctx.close()
 
 
+PIN_POINT = """() => {
+  const tags=[...document.querySelectorAll(".v2-mapwrap div")].filter(d=>d.textContent.includes("Colorado Supreme Court") && d.offsetWidth>20 && d.offsetWidth<260);
+  if(!tags.length) return null;
+  const r=tags[0].getBoundingClientRect();
+  return {x:r.x+r.width/2, y:r.bottom + r.height*0.4};
+}"""
+
+
+def _settled_pin_point(page, timeout_ms=8000):
+    """The map eases the camera into place after an answer; a chip read mid-ease is stale by the
+    time a tap lands. Wait until the chip holds still for two samples before aiming at it."""
+    prev = None
+    waited = 0
+    while waited < timeout_ms:
+        pt = page.evaluate(PIN_POINT)
+        if pt and prev and abs(pt["x"] - prev["x"]) < 2 and abs(pt["y"] - prev["y"]) < 2:
+            return pt
+        prev = pt
+        page.wait_for_timeout(250)
+        waited += 250
+    return prev
+
+
 def test_pin_tap_opens_slim_preview_not_big_card(base, browser):
     for w in (390, 1440):
         ctx, page = _ask(browser, base, w)
         if w == 390:
             page.locator("[data-pane=\"map\"]").click()
             page.wait_for_timeout(500)
-        pt = page.evaluate(
-            """() => { const tags=[...document.querySelectorAll(".v2-mapwrap div")].filter(d=>d.textContent.includes("Colorado Supreme Court") && d.offsetWidth>20 && d.offsetWidth<260); if(!tags.length) return null; const r=tags[0].getBoundingClientRect(); return {x:r.x+r.width/2, y:r.bottom + r.height*0.4}; }"""
-        )
+        pt = _settled_pin_point(page)
         assert pt, f"no pin tag at {w}"
-        page.mouse.click(pt["x"], pt["y"])
-        page.wait_for_selector("#pin-preview:visible", timeout=15000)
+        seen = []
+        for _ in range(3):
+            page.mouse.click(pt["x"], pt["y"])
+            try:
+                page.wait_for_selector("#pin-preview:visible", timeout=3000)
+                break
+            except sync_api.TimeoutError:
+                seen.append(
+                    page.evaluate(
+                        """(pt) => { const el=document.elementFromPoint(pt.x, pt.y);
+                             const pv=document.querySelector("#pin-preview");
+                             const tag=[...document.querySelectorAll(".v2-mapwrap div")].find(d=>d.textContent.includes("Colorado Supreme Court")&&d.offsetWidth>20&&d.offsetWidth<260);
+                             const r=tag&&tag.getBoundingClientRect();
+                             return {hit: el && (el.id||el.className||el.tagName), pvHidden: pv && pv.hidden,
+                                     chip: r && {x:r.x,y:r.y,w:r.width,h:r.height}, pt: pt}; }""",
+                        pt,
+                    )
+                )
+                pt = _settled_pin_point(page, 3000)
+        assert page.locator("#pin-preview").is_visible(), f"pin tap must open the slim preview at {w}: {seen}"
         doc = page.evaluate(
             "() => { const d=document.querySelector(\"#docpanel\"); return d && !d.classList.contains(\"hidden\") && getComputedStyle(d).display!==\"none\"; }"
         )
