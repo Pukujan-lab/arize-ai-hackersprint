@@ -50,7 +50,10 @@
 <body>
 <div class="v2-app">
 
-  <aside class="v2-rail" aria-label="Site links">
+  <!-- #101: this icon rail is the page's only navigation. The v2 page loads no navbar.js and has no
+       top <nav>, sidebar or "Menu" drawer; the five buttons below are the destinations, in this order:
+       Demo, Map, Observability, Guide, Slides. The canonical dashboard is /observability, never /dashboard. -->
+  <aside class="v2-rail" role="navigation" aria-label="Site links">
     <a class="v2-rail-logo" href="/" aria-label="Precedent home" title="Precedent home"><img src="/static/logo.svg" alt="" width="28" height="28"></a>
     <a class="v2-rail-btn" href="/" title="Demo" aria-label="Demo page" aria-current="page"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v16"/><path d="M8 20h8"/><path d="M5 7h14"/><path d="m5 7-3 6h6z"/><path d="m19 7-3 6h6z"/></svg></a>
     <a class="v2-rail-btn" href="/map" title="Map" aria-label="Map page"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3 3 6v15l6-3 6 3 6-3V3l-6 3z"/><path d="M9 3v15"/><path d="M15 6v15"/></svg></a>
