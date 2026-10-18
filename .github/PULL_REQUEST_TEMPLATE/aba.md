@@ -2,6 +2,8 @@ Closes #
 
 Built by ABA (`Pukujan/app-builder-automation`, dyad headless, iterate mode), test-first. No hand edits.
 
+Scope: app code only (`app/`, `static/`, `schema/`, `migrations/`, `tests/`, `server.py`); no docs, contracts, CI or issue paperwork.
+
 ## What changed
 
 ## Tests

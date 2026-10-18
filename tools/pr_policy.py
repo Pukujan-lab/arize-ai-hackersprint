@@ -18,6 +18,7 @@ import subprocess
 import sys
 
 WATCHED = ("app/", "acs/", "tools/")
+ABA_PATHS = ("app/", "static/", "schema/", "migrations/", "tests/", "server.py")
 SOURCE_EXT = (".py", ".js", ".ts", ".sh")
 LINE_LIMIT = 150
 PROVIDER_HOSTS = {
@@ -30,6 +31,7 @@ PROVIDER_HOSTS = {
     "otlp.arize.com": "arize-otel",
 }
 RAW_HTTP = re.compile(r"\b(httpx|requests|urllib\.request|aiohttp)\b")
+ABA_MARK = re.compile(r"built by aba|app-builder-automation", re.I)
 PLACEHOLDER = re.compile(r"(name the open-source packages|write \"no new module\"|<[^>]+>|\bTODO\b|\bTBD\b)", re.I)
 EMPTY = re.compile(r"^\W*(none|n/?a|no new module|not applicable)\W*$", re.I)
 PROJECT = re.compile(r"(https?://\S+|`[^`\s][^`]*`|\b[\w.-]+/[\w.-]+\b|\b(pypi|npm):\S+)")
@@ -48,6 +50,15 @@ def scope(files: list[dict]) -> dict:
     new = [f["path"] for f in watched if f.get("status") == "added" and f["path"].endswith(SOURCE_EXT)]
     lines = sum(int(f.get("additions") or 0) for f in watched)
     return {"new_modules": new, "lines": lines, "needs_reason": bool(new) or lines > LINE_LIMIT}
+
+
+def aba_scope_violations(files: list[dict], body: str) -> list[str]:
+    """Changed paths in an ABA PR that are outside the app code ABA may touch."""
+    if not ABA_MARK.search(body or ""):
+        return []
+    dirs = tuple(p for p in ABA_PATHS if p.endswith("/"))
+    exact = tuple(p for p in ABA_PATHS if not p.endswith("/"))
+    return [f["path"] for f in files if f["path"] not in exact and not f["path"].startswith(dirs)]
 
 
 def oss_section(body: str) -> str:
@@ -101,6 +112,10 @@ def evaluate(pr: dict) -> dict:
         "reason": "exempt (no new module, at most %d new lines under app/, acs/, tools/)" % LINE_LIMIT,
         "warnings": sdk_warnings(files),
     }
+    outside = aba_scope_violations(files, pr.get("body") or "")
+    if outside:
+        msg = f"This ABA PR changes paths outside its scope: {', '.join(outside)}. ABA may only touch: {', '.join(ABA_PATHS)}."
+        return dict(v, ok=False, reason=msg)
     if not s["needs_reason"]:
         return v
     if oss_ok(oss_section(pr.get("body") or "")):

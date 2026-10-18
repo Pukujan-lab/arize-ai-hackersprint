@@ -11,6 +11,14 @@ Before any change, read these. Frontend work starts from the inventory, not from
 - `contracts/agents/`: agent contracts (`coding-agent.json` is yours).
 - `docs/UX_GUIDELINES.md`: how the UI should look and read.
 
+## ABA scope
+
+ABA (`Pukujan/app-builder-automation`, dyad headless) is the only builder for the frontend, the backend and the Octo schema and migrations. It runs on the MacBook Pro.
+
+ABA does not file issue logs, write specs, docs, PR prose, contracts or CI, and it does not do verification or coordination. Those belong to the other agents. ABA receives an already-filed issue number and builds against it.
+
+If ABA cannot run, report to Alex. Never hand-code the frontend.
+
 ## Writing rule at boot
 
 Paste the block below into your system prompt when you start. It comes verbatim from the pinned writing helper (`.content-system/system-version.json` names the version and commit) and CI fails if it drifts. Do not edit the text between the markers by hand; change the pin and copy the new block instead.
@@ -101,6 +109,8 @@ python3 acs/claim.py release HACK-04 --agent <you> --status done --note "PR #NN"
 ```
 
 `POST /api/claim` and `POST /api/release` do the same over HTTP. Every claim and release is appended to `events.jsonl` on the board, and `acs/hotload.py` picks up board and seat changes without restarting the app (`GET /api/acs/hotload` shows what it loaded).
+
+Board claims belong to the agents that file, spec and verify work. ABA does not claim tasks or file issue logs; it receives an already-filed issue number from the coordinating agent.
 
 The four pipeline agents use a separate claim file, `.coord/assignment.json`, locked by `.coord/claim.lock` and written only by `app/coord.py`. Their inputs, outputs, allowed paths and data stores are in `contracts/agents/<role>.json`.
 

@@ -55,6 +55,75 @@
       }
     },
     {
+      "name": "ABA app and tests only",
+      "expect": "pass",
+      "pr": {
+        "body": "Built by ABA (`Pukujan/app-builder-automation`, dyad headless)",
+        "labels": [],
+        "files": [
+          {
+            "path": "static/map.js",
+            "status": "modified",
+            "additions": 80
+          },
+          {
+            "path": "tests/test_map.py",
+            "status": "added",
+            "additions": 40
+          }
+        ],
+        "linked_issues": []
+      }
+    },
+    {
+      "name": "ABA PR touching docs",
+      "expect": "fail",
+      "pr": {
+        "body": "Built by ABA (`Pukujan/app-builder-automation`, dyad headless)",
+        "labels": [],
+        "files": [
+          {
+            "path": "docs/FRONTEND_INVENTORY.md",
+            "status": "modified",
+            "additions": 10
+          }
+        ],
+        "linked_issues": []
+      }
+    },
+    {
+      "name": "ABA PR touching CI",
+      "expect": "fail",
+      "pr": {
+        "body": "Built by ABA (`Pukujan/app-builder-automation`, dyad headless)",
+        "labels": [],
+        "files": [
+          {
+            "path": ".github/workflows/ci.yml",
+            "status": "modified",
+            "additions": 5
+          }
+        ],
+        "linked_issues": []
+      }
+    },
+    {
+      "name": "non-ABA PR touching docs",
+      "expect": "pass",
+      "pr": {
+        "body": "Update the inventory.",
+        "labels": [],
+        "files": [
+          {
+            "path": "docs/FRONTEND_INVENTORY.md",
+            "status": "modified",
+            "additions": 10
+          }
+        ],
+        "linked_issues": []
+      }
+    },
+    {
       "name": "small edit under app/",
       "expect": "pass",
       "pr": {

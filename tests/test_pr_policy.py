@@ -37,6 +37,14 @@ def test_aba_template_fills_the_section():
     assert pr_policy.evaluate(pr)["ok"]
 
 
+def test_aba_scope_allows_server_and_flags_contracts():
+    """ABA may touch app code such as server.py, but never contracts."""
+    body = "Built by ABA (`Pukujan/app-builder-automation`, dyad headless)"
+    files = [{"path": "server.py"}, {"path": "contracts/agents/coding-agent.json"}]
+    assert pr_policy.aba_scope_violations(files, body) == ["contracts/agents/coding-agent.json"]
+    assert pr_policy.aba_scope_violations(files, "Human change.") == []
+
+
 def test_threshold_is_about_150_lines():
     files = [{"path": "app/agents.py", "status": "modified", "additions": 150}]
     assert pr_policy.evaluate({"body": "", "labels": [], "files": files, "linked_issues": []})["ok"]
