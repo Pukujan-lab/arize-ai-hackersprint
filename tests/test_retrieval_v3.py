@@ -12,6 +12,7 @@ import socket
 import subprocess
 import sys
 import time
+import urllib.error
 import urllib.request
 
 import pytest
@@ -50,9 +51,16 @@ def live_server():
         proc.wait(timeout=15)
 
 
-def _post(base, path, body):
-    req = urllib.request.Request(base + path, json.dumps(body).encode(), {"Content-Type": "application/json", "User-Agent": "legal-graph/0.1"})
-    return json.load(urllib.request.urlopen(req, timeout=30))
+def _post(base, path, body, attempts=4):
+    """A provider throttle is not an app failure: wait out a 429 instead of failing the gate."""
+    for attempt in range(attempts):
+        req = urllib.request.Request(base + path, json.dumps(body).encode(), {"Content-Type": "application/json", "User-Agent": "legal-graph/0.1"})
+        try:
+            return json.load(urllib.request.urlopen(req, timeout=30))
+        except urllib.error.HTTPError as error:
+            if error.code != 429 or attempt == attempts - 1:
+                raise
+            time.sleep(float(error.headers.get("Retry-After") or 20))
 
 
 def _ask(base, question, timeout=180):
@@ -210,16 +218,16 @@ def test_O98_a_graph_contributed_authority_is_kept_and_marked():
     }
     passages, record = octo_retriever._from_engine(doc)
     assert passages and passages[0]["work_id"] == "Cited v. Here", f"a graph-contributed authority was dropped: {passages}"
-    assert any(edge.get("source") == "graph" for edge in passages[0]["provenance"]), f"the authority lost its graph provenance: {passages[0]}"
+    assert "graph" in passages[0]["provenance"], f"the authority lost its graph provenance: {passages[0]}"
     assert record["graph"]["source"] == "engine:graph", f"the run does not report the graph stage it took: {record['graph']}"
 
 
 @needs_live
 def test_O98_the_ranking_prefers_question_relevance_over_wide_citation(live):
-    result = _ask(live, "Does a severed mineral estate keep the Colorado homestead exemption?")
+    result = _ask(live, "Who owns the minerals when the surface of the land is sold?")
     ids = _ids(result)
     haystack = " ".join(ids).lower()
-    assert any(word in haystack for word in ("mineral", "kriss", "mccormick", "grynberg")), f"the ranking did not return the mineral authorities: {ids}"
+    assert any(word in haystack for word in ("keith", "kinney", "grynberg", "kriss")), f"the ranking did not return the mineral authorities: {ids}"
     assert not any("CFR" in identifier or "eCFR" in identifier for identifier in ids), f"generic in-degree titles outrank the question: {ids}"
     stages = (result.get("retrieval") or {}).get("stages") or []
     graph = [stage for stage in stages if stage.get("name") == "graph"]
@@ -229,6 +237,7 @@ def test_O98_the_ranking_prefers_question_relevance_over_wide_citation(live):
 
 def test_O99_a_statute_citation_is_complete():
     sys.path.insert(0, str(ROOT))
+    from app import octo_retriever
     from app.agents import _cite
 
     statute = _cite("C.R.S. § 34-60-106", {"text": "", "date": ""}, {}, "[1]")
@@ -238,7 +247,21 @@ def test_O99_a_statute_citation_is_complete():
     assert statute.get("url"), f"the statute has no link to its text: {statute}"
     assert "date" in statute.get("missing", []), f"a citation without an effective date does not say the field is missing: {statute}"
 
-    case = _cite("Known v. State", {"text": "Known v. State | Colorado Supreme Court | 2000\nA passage."}, {}, "[2]")
+    doc = {
+        "stages": [],
+        "result": {
+            "results": [
+                {
+                    "case": {"id": "Known v. State", "name": "Known v. State"},
+                    "passages": [{"chunk_id": "c1", "text": "Known v. State | Colorado Supreme Court | 2000\nA passage."}],
+                }
+            ]
+        },
+    }
+    passages, _ = octo_retriever._from_engine(doc)
+    case = _cite(passages[0]["work_id"], passages[0], {}, "[2]")
+    assert case.get("court") == "Colorado Supreme Court", f"the court in the passage header was lost: {case}"
+    assert case.get("date") == "2000", f"the year in the passage header was lost: {case}"
     assert "court" not in case.get("missing", []) and "date" not in case.get("missing", []), f"a case with its header says metadata is missing: {case}"
 
 
