@@ -17,17 +17,24 @@ const MAX_EXTENSIONS = 3;
 
 const cache = new Map<string, Promise<Clip>>();
 
+/** A clip that has not arrived by now is treated as absent, so a slow server cannot stall the walk. */
+const REQUEST_GIVE_UP_MS = 7000;
+
 function request(text: string): Promise<Clip> {
   const key = text.slice(0, CLIP_CHARS);
   const hit = cache.get(key);
   if (hit) return hit;
-  const pending = fetch("/api/tts_ts", {
+  const ask = fetch("/api/tts_ts", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ text: key }),
   })
     .then((r) => (r.ok ? (r.json() as Promise<Clip>) : null))
     .catch(() => null);
+  const pending = Promise.race([
+    ask,
+    new Promise<Clip>((resolve) => window.setTimeout(() => resolve(null), REQUEST_GIVE_UP_MS)),
+  ]);
   cache.set(key, pending);
   return pending;
 }

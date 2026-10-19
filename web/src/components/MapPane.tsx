@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Minus, Plus, RotateCcw } from "lucide-react";
+import { Layers, Minus, Plus, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MapEngine, type MapView } from "@/map/engine";
 
@@ -19,6 +19,13 @@ const DRAG_SLOP = 5;
 const zoomButtonClass =
   "grid h-11 w-11 place-items-center rounded-md border border-border bg-card/95 text-card-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground";
 
+const LEGEND: { colour: string; label: string }[] = [
+  { colour: "#10b981", label: "county↔county" },
+  { colour: "#3b82f6", label: "county → court" },
+  { colour: "#f59e0b", label: "statute" },
+  { colour: "#ec4899", label: "federal" },
+];
+
 type Props = {
   engine: MapEngine;
   view: MapView;
@@ -30,11 +37,13 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
+  const keyRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ x: number; y: number } | null>(null);
   /** Set once a press has travelled far enough to be a drag, so the press cannot also click a pin. */
   const draggedRef = useRef(false);
   const countyRef = useRef<string | null>(null);
   const [basemap, setBasemap] = useState(true);
+  const [keyOpen, setKeyOpen] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -47,19 +56,20 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
     const measure = () => {
       const rect = element.getBoundingClientRect();
       engine.resize(Math.round(rect.width), Math.round(rect.height));
-      const controls = controlsRef.current;
-      if (!controls) return;
-      const box = controls.getBoundingClientRect();
-      engine.setAvoidRects([
-        { x: box.left - rect.left, y: box.top - rect.top, w: box.width, h: box.height },
-      ]);
+      const rects: { x: number; y: number; w: number; h: number }[] = [];
+      for (const node of [controlsRef.current, keyRef.current]) {
+        if (!node) continue;
+        const box = node.getBoundingClientRect();
+        rects.push({ x: box.left - rect.left, y: box.top - rect.top, w: box.width, h: box.height });
+      }
+      engine.setAvoidRects(rects);
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     if (controlsRef.current) observer.observe(controlsRef.current);
     return () => observer.disconnect();
-  }, [engine]);
+  }, [engine, keyOpen]);
 
   // React's own wheel handler is passive, so the listener that can hold the page still is this one.
   useEffect(() => {
@@ -77,6 +87,25 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
     return () => element.removeEventListener("wheel", onWheel);
   }, [engine]);
 
+  // The map key closes on Escape and on a click outside it, like any other drawer.
+  useEffect(() => {
+    if (!keyOpen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setKeyOpen(false);
+    };
+    const onDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (keyRef.current && target && keyRef.current.contains(target)) return;
+      setKeyOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onDown);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onDown);
+    };
+  }, [keyOpen]);
+
   const trackCounty = (event: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const key = engine.countyAtScreen(event.clientX - rect.left, event.clientY - rect.top);
@@ -84,6 +113,13 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
     countyRef.current = key;
     if (key) engine.hoverCounty(key);
     else engine.clearTooltip();
+  };
+
+  const clickMap = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (draggedRef.current) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const key = engine.countyAtScreen(event.clientX - rect.left, event.clientY - rect.top);
+    if (key) engine.zoomToCounty(key);
   };
 
   const tour = view.tour;
@@ -96,9 +132,15 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
         pane !== "map" && "invisible lg:visible",
       )}
     >
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border px-2 py-1 lg:hidden">
-        <span className="text-xs font-semibold text-muted-foreground">Citation map</span>
-        <button type="button" onClick={onShowMemo} className="h-11 rounded-md border border-border px-3 text-xs font-medium">
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-2 py-1 text-xs">
+        <span className="shrink-0 font-semibold">Citation map</span>
+        <span className="min-w-0 truncate text-muted-foreground">{view.summary}</span>
+        {view.label && <span className="ml-auto min-w-0 truncate font-medium">{view.label}</span>}
+        <button
+          type="button"
+          onClick={onShowMemo}
+          className="ml-auto h-11 shrink-0 rounded-md border border-border px-3 text-xs font-medium lg:hidden"
+        >
           Show memo
         </button>
       </div>
@@ -139,67 +181,71 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
           dragRef.current = null;
         }}
       >
-        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" onMouseMove={trackCounty} />
+        <canvas
+          ref={canvasRef}
+          className="absolute inset-0 h-full w-full"
+          onMouseMove={trackCounty}
+          onClick={clickMap}
+        />
 
-        <div className="pointer-events-none absolute left-2 top-1 max-w-[56%] rounded-md bg-card/90 px-2 py-1 text-xs leading-snug text-card-foreground shadow-sm">
-          <div className="font-semibold">U.S. citation map · Colorado focus</div>
-          <div>{view.summary}</div>
-          <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground">
-            <span>
-              <span style={{ color: "#10b981" }}>━</span> county↔county
-            </span>
-            <span>
-              <span style={{ color: "#3b82f6" }}>━</span> county → court
-            </span>
-            <span>
-              <span style={{ color: "#f59e0b" }}>━</span> statute
-            </span>
-            <span>
-              <span style={{ color: "#ec4899" }}>━</span> federal
-            </span>
+        {view.labels.map((label) => (
+          <div
+            key={label.key}
+            className={cn(
+              "pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded px-1 text-xs leading-tight",
+              label.strong
+                ? "bg-card/90 font-semibold text-card-foreground shadow-sm"
+                : "bg-card/60 text-muted-foreground",
+            )}
+            style={{ left: label.x, top: label.y }}
+          >
+            {label.text}
           </div>
-        </div>
-
-        <label className="absolute right-1 top-1 flex h-11 items-center gap-1 rounded-md bg-card/90 px-1 text-xs text-card-foreground shadow-sm">
-          <input
-            type="checkbox"
-            className="h-11 w-11 accent-indigo-500"
-            checked={basemap}
-            onChange={(event) => {
-              setBasemap(event.target.checked);
-              engine.setBasemap(event.target.checked);
-            }}
-          />
-          <span className="pr-1">Basemap</span>
-        </label>
-
-        {view.basemapReady && basemap && (
-          <div className="pointer-events-none absolute bottom-0 right-1 rounded-t bg-background/80 px-1 text-xs text-muted-foreground">
-            Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors
-          </div>
-        )}
+        ))}
 
         {view.pins.map((pin) => {
           const size = Math.min(22, 10 + pin.count * 3);
+          const colour = PIN_COLORS[pin.cat] || "#94a3b8";
           return (
             <button
               key={pin.key}
               type="button"
               aria-label={pin.titles.join("; ")}
-              className="absolute grid place-items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
-              style={{ left: pin.x, top: pin.y, width: 44, height: 44, transform: "translate(-50%, -50%)" }}
+              className="absolute grid h-11 w-11 place-items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+              style={{ left: pin.x, top: pin.y, transform: "translate(-50%, -50%)" }}
               onMouseEnter={() => engine.hoverPin(pin.key)}
               onMouseLeave={() => engine.clearTooltip()}
               onFocus={() => engine.hoverPin(pin.key)}
               onBlur={() => engine.clearTooltip()}
-              onClick={() => {
+              onClick={(event) => {
                 // The press that ended this click may have been a drag across the map.
-                if (!draggedRef.current) engine.focus(pin.index);
+                if (draggedRef.current) return;
+                // The dot is the target; the rest of the 44px box belongs to the place underneath it,
+                // so a county whose centre sits beside a pin is still reachable.
+                const box = event.currentTarget.getBoundingClientRect();
+                const off = Math.hypot(
+                  event.clientX - (box.left + box.width / 2),
+                  event.clientY - (box.top + box.height / 2),
+                );
+                if (off <= size / 2 + 1) {
+                  engine.focus(pin.index);
+                  return;
+                }
+                const pane = containerRef.current;
+                if (!pane) return;
+                const rect = pane.getBoundingClientRect();
+                const key = engine.countyAtScreen(event.clientX - rect.left, event.clientY - rect.top);
+                if (key) engine.zoomToCounty(key);
               }}
             >
               <span
                 className="block rounded-full ring-2 ring-white/70"
-                style={{ width: size, height: size, background: PIN_COLORS[pin.cat] || "#94a3b8" }}
+                style={{ width: size, height: size, background: colour }}
+              />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute left-1/2 top-full h-[18px] w-px -translate-x-1/2"
+                style={{ background: colour, opacity: 0.65 }}
               />
             </button>
           );
@@ -209,9 +255,19 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
           ref={controlsRef}
           role="group"
           aria-label="Map view"
-          className="absolute right-1 top-14 flex flex-col gap-1"
+          className="absolute right-2 top-2 z-20 flex flex-col items-end gap-1"
           onPointerDown={(event) => event.stopPropagation()}
         >
+          <button
+            type="button"
+            aria-label="Map key"
+            aria-expanded={keyOpen}
+            className="flex h-11 items-center gap-1 rounded-md border border-border bg-card/95 px-2 text-xs font-medium text-card-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground"
+            onClick={() => setKeyOpen((open) => !open)}
+          >
+            <Layers aria-hidden="true" className="h-4 w-4" />
+            Map key
+          </button>
           <button
             type="button"
             aria-label="Zoom in"
@@ -224,7 +280,7 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
             type="button"
             aria-label="Zoom out"
             className={zoomButtonClass}
-            onClick={() => engine.zoomAround(1 / ZOOM_STEP)}
+            onClick={() => engine.zoomOutLevel()}
           >
             <Minus aria-hidden="true" className="h-5 w-5" />
           </button>
@@ -238,6 +294,40 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
           </button>
         </div>
 
+        {keyOpen && (
+          <div
+            ref={keyRef}
+            className="absolute right-[4.75rem] top-2 z-30 max-h-[calc(100%-1rem)] w-[13rem] max-w-[calc(100%-5.5rem)] overflow-y-auto rounded-md border border-border bg-card/95 p-2 text-xs text-card-foreground shadow-lg"
+          >
+            <div className="font-semibold">Legend</div>
+            <div className="mt-1 space-y-0.5">
+              {LEGEND.map((row) => (
+                <div key={row.label} className="flex items-center gap-1.5">
+                  <span aria-hidden="true" style={{ color: row.colour }}>
+                    ━
+                  </span>
+                  <span>{row.label}</span>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 border-t border-border pt-1 text-muted-foreground">{view.summary}</div>
+            <label className="mt-1 flex items-center gap-1">
+              <input
+                type="checkbox"
+                aria-label="Basemap"
+                className="h-11 w-11 accent-indigo-500"
+                checked={basemap}
+                onChange={(event) => {
+                  setBasemap(event.target.checked);
+                  engine.setBasemap(event.target.checked);
+                }}
+              />
+              <span>Basemap</span>
+            </label>
+            <div className="mt-1 text-muted-foreground">Basemap © Esri, HERE, Garmin, © OpenStreetMap contributors</div>
+          </div>
+        )}
+
         {view.tooltip && (
           <div className="pointer-events-none absolute bottom-2 left-2 right-2 rounded-md border border-border bg-card/95 px-3 py-2 text-xs text-card-foreground shadow">
             {view.tooltip}
@@ -246,7 +336,11 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
       </div>
 
       {tour.active && (
-        <div className="max-h-28 shrink-0 overflow-y-auto border-t border-border px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+        <div
+          role="log"
+          aria-label="Tour transcript"
+          className="max-h-24 shrink-0 overflow-y-auto border-t border-border px-3 py-2 text-xs leading-relaxed text-muted-foreground"
+        >
           {engine.spokenTextAt(tour.index)}
         </div>
       )}

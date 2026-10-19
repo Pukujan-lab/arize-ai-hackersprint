@@ -1,6 +1,7 @@
-// The citation map: extruded states, the Colorado county layer, typed links, pins, and the tour.
-// Everything is drawn into one canvas in the projected plane the vendored geometry already uses;
-// pins are real buttons laid out in screen space on top of it.
+// The citation map: extruded states, the raised Colorado county layer, typed links, pins and the tour.
+// The scene is drawn by the WebGL renderer in a perspective camera; where the browser has no
+// three-dimensional surface it falls back to a flat drawing of the same geometry, and the debug surface
+// says which one is on screen. Pins are real buttons laid out in screen space above the surface.
 
 import {
   arcType,
@@ -22,17 +23,29 @@ import {
   project,
   unproject,
   type CountyShape,
-  type StateShape,
   type World,
 } from "@/lib/geo";
+import {
+  SURFACE_Y,
+  SceneRenderer,
+  buildCamera,
+  buildScene,
+  projectPoint,
+  unprojectGround,
+  type Camera3,
+  type SceneBuffers,
+} from "./gl";
 import { narrate, prefetchClip, type Narration } from "./narrator";
 
 export type Camera = { x: number; y: number; zoom: number };
 export type TourState = { active: boolean; index: number; count: number; playing: boolean };
+export type Level = "national" | "state" | "county" | "court";
 
 /** How far the reader may pull the map out of, or into, the national view. */
 const MIN_ZOOM = 0.6;
-const MAX_ZOOM = 8;
+const MAX_ZOOM = 10;
+/** The camera distance each jurisdiction view sits at. */
+const LEVEL_ZOOM: Record<Level, number> = { national: 1, state: 2.9, county: 5.2, court: 8.6 };
 
 export type PinView = {
   key: string;
@@ -40,6 +53,7 @@ export type PinView = {
   label: string;
   count: number;
   titles: string[];
+  items: number[];
   index: number;
   x: number;
   y: number;
@@ -47,10 +61,15 @@ export type PinView = {
   ay: number;
 };
 
+export type LabelView = { key: string; text: string; x: number; y: number; strong: boolean };
+
 export type MapView = {
   pins: PinView[];
+  labels: LabelView[];
   tooltip: string | null;
   summary: string;
+  level: Level;
+  label: string | null;
   tour: TourState;
   narrating: boolean;
   basemapReady: boolean;
@@ -64,10 +83,9 @@ const CAMERA_MS = 700;
 /** A stop the reader arrives at holds long enough to read before the tour moves on. */
 const STOP_HOLD_MS = 2600;
 const PIN_SIZE = 44;
-const PIN_TOP_BAND = 64;
-const PIN_BOTTOM_BAND = 26;
-const STATE_DEPTH = 3.2;
-const COUNTY_DEPTH = 1.6;
+/** How far above its anchor a pin's button stands, so the anchor stays clear for the county itself. */
+const PIN_LIFT = 42;
+const PIN_MARGIN = 4;
 
 const PIN_COLORS: Record<Category, string> = {
   county: "#10b981",
@@ -90,7 +108,7 @@ const PALETTE = {
     stateTop: "#1b2444",
     stateWall: "#0c1230",
     stateLine: "#4f46e5",
-    coTop: "#332e83",
+    coTop: "#3b3596",
     coWall: "#1a1747",
     coLine: "#a5b4fc",
     countyTop: "#242c5c",
@@ -117,6 +135,12 @@ const PALETTE = {
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 const round4 = (v: number) => Math.round(v * 10000) / 10000;
+const countyKey = (name: string) =>
+  String(name || "")
+    .toLowerCase()
+    .replace(/^c:/, "")
+    .replace(/\s+county$/, "")
+    .trim();
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -152,16 +176,33 @@ export class MapEngine {
   ctx: { question?: string; answer?: string } = {};
   locs: Location[] = [];
   pins: PinView[] = [];
+  labels: LabelView[] = [];
   heat: Record<string, number> = {};
   arcCounts: Record<ArcType, number> = { cc: 0, cs: 0, st: 0, fed: 0, other: 0 };
   summaryText = "0 counties linked · 0 jurisdictions · 0 links";
 
+  level: Level = "national";
+  focusCounty: string | null = null;
+  label: string | null = null;
+
   private canvas: HTMLCanvasElement | null = null;
+  private renderer: SceneRenderer | null = null;
+  private buffers: SceneBuffers = {
+    stateTop: [],
+    stateWall: [],
+    countyTop: [],
+    countyWall: [],
+    arcs: [],
+    stateMeshes: 0,
+    countyMeshes: 0,
+    coloradoRaised: true,
+  };
   private world: World | null = null;
   private countyShapes: (CountyShape & { key: string; minX: number; minY: number; maxX: number; maxY: number })[] = [];
   private groups = new Map<string, Group>();
   private arcs: Arc[] = [];
   private staticLayer: HTMLCanvasElement | null = null;
+  private flat: CanvasRenderingContext2D | null = null;
   private basemapImage: HTMLCanvasElement | null = null;
   private basemapOn = true;
 
@@ -170,6 +211,7 @@ export class MapEngine {
   private cam: Camera = { ...NATIONAL_CAMERA };
   private camFrom: Camera = { ...NATIONAL_CAMERA };
   private camTarget: Camera = { ...NATIONAL_CAMERA };
+  private cam3: Camera3 | null = null;
   private animStart = 0;
   private animating = false;
   private focusIndex: number | null = null;
@@ -191,6 +233,15 @@ export class MapEngine {
       typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
         ? "dark"
         : "light";
+    this.renderer = SceneRenderer.create(canvas);
+    if (this.renderer) {
+      const box = canvas.getBoundingClientRect();
+      this.width = Math.round(box.width) || this.width;
+      this.height = Math.round(box.height) || this.height;
+      this.renderer.resize(this.width, this.height);
+    } else {
+      this.flat = canvas.getContext("2d");
+    }
     const world = await loadWorld();
     this.world = world;
     this.countyShapes = world.counties.map((c) => {
@@ -212,7 +263,7 @@ export class MapEngine {
     });
     const scheme = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
     scheme?.addEventListener("change", (event) => this.setTheme(event.matches ? "dark" : "light"));
-    this.buildStatic();
+    this.rebuild();
     this.ready = true;
     this.refresh();
     void this.loadBasemap();
@@ -227,6 +278,7 @@ export class MapEngine {
     if (width === this.width && height === this.height) return;
     this.width = width;
     this.height = height;
+    this.renderer?.resize(width, height);
     this.refresh();
   }
 
@@ -254,7 +306,7 @@ export class MapEngine {
   setTheme(theme: "light" | "dark"): void {
     if (theme === this.theme) return;
     this.theme = theme;
-    this.buildStatic();
+    this.rebuild();
     this.render();
     this.emit();
   }
@@ -278,8 +330,12 @@ export class MapEngine {
     this.tour.count = this.order().length;
     this.tour.index = 0;
     this.focusIndex = null;
+    this.focusCounty = null;
+    this.label = null;
+    this.level = "national";
     this.cam = { ...NATIONAL_CAMERA };
     this.camTarget = { ...NATIONAL_CAMERA };
+    this.rebuild();
     this.refresh();
   }
 
@@ -359,11 +415,21 @@ export class MapEngine {
   }
 
   get countyMeshCount(): number {
-    return this.world ? this.world.counties.reduce((n, c) => n + c.polys.length, 0) : 0;
+    return this.buffers.countyMeshes || (this.world ? this.world.counties.reduce((n, c) => n + c.polys.length, 0) : 0);
   }
 
   get stateMeshCount(): number {
-    return this.world ? this.world.states.reduce((n, s) => n + s.polys.length, 0) : 0;
+    return this.buffers.stateMeshes || (this.world ? this.world.states.reduce((n, s) => n + s.polys.length, 0) : 0);
+  }
+
+  scene(): { mode: "3d" | "flat"; stateMeshes: number; countyMeshes: number; coloradoRaised: boolean } {
+    return {
+      mode: this.renderer ? "3d" : "flat",
+      stateMeshes: this.stateMeshCount,
+      countyMeshes: this.countyMeshCount,
+      // Only the extruded scene stands Colorado above its neighbours; the flat drawing does not.
+      coloradoRaised: !!this.renderer && this.buffers.coloradoRaised,
+    };
   }
 
   state() {
@@ -373,6 +439,11 @@ export class MapEngine {
       tour: { ...this.tour },
       theme: this.theme,
       focus: this.focusIndex,
+      level: this.level,
+      focusCounty: this.focusCounty,
+      label: this.label,
+      scene: this.scene(),
+      narrating: this.narrating,
     };
   }
 
@@ -387,8 +458,11 @@ export class MapEngine {
   view(): MapView {
     return {
       pins: this.pins,
+      labels: this.labels,
       tooltip: this.tooltipText,
       summary: this.summaryText,
+      level: this.level,
+      label: this.label,
       tour: { ...this.tour },
       narrating: this.narrating,
       basemapReady: !!this.basemapImage,
@@ -397,18 +471,117 @@ export class MapEngine {
 
   // ---------------------------------------------------------------- camera
 
-  focus(i: number): void {
+  /** The camera a jurisdiction view sits at. */
+  private cameraFor(level: Level): Camera {
+    if (level === "national") return { ...NATIONAL_CAMERA };
+    if (level === "state") {
+      const co = this.world?.states.find((s) => s.name === "Colorado");
+      const [x, y] = co ? this.centreOf(co.polys) : project([39.0, -105.5]);
+      return { x, y, zoom: LEVEL_ZOOM.state };
+    }
+    if (level === "county") {
+      const shape = this.countyShapes.find((c) => c.key === this.focusCounty);
+      const [x, y] = shape ? shape.c : [this.cam.x, this.cam.y];
+      return { x, y, zoom: LEVEL_ZOOM.county };
+    }
+    const index = this.focusIndex;
+    const point = index !== null && this.locs[index] ? project(this.locs[index].ll) : [this.cam.x, this.cam.y];
+    return { x: point[0], y: point[1], zoom: LEVEL_ZOOM.court };
+  }
+
+  private centreOf(polys: [number, number][][]): [number, number] {
+    let minX = Infinity;
+    let minY = Infinity;
+    let maxX = -Infinity;
+    let maxY = -Infinity;
+    for (const ring of polys)
+      for (const [x, y] of ring) {
+        if (x < minX) minX = x;
+        if (y < minY) minY = y;
+        if (x > maxX) maxX = x;
+        if (y > maxY) maxY = y;
+      }
+    if (!Number.isFinite(minX)) return [WORLD_WIDTH / 2, WORLD_HEIGHT / 2];
+    return [(minX + maxX) / 2, (minY + maxY) / 2];
+  }
+
+  /** Bring the camera to a county and name it. */
+  zoomToCounty(name: string): void {
+    const key = countyKey(name);
+    const shape = this.countyShapes.find((c) => c.key === key);
+    if (!shape) return;
+    this.focusCounty = shape.key;
+    this.focusIndex = null;
+    this.level = "county";
+    this.label = `${shape.name} County`;
+    this.moveCamera({ x: shape.c[0], y: shape.c[1], zoom: LEVEL_ZOOM.county });
+    this.emit();
+  }
+
+  /** Bring the camera to a court's pin and name it. */
+  zoomToCourt(i: number): void {
     if (!this.cites[i] || !this.locs[i]) return;
     this.focusIndex = i;
+    this.level = "court";
+    this.label = this.cites[i].title || this.locs[i].label;
     const [x, y] = project(this.locs[i].ll);
-    const cat = this.locs[i].cat;
-    const zoom = cat === "county" ? 3.4 : cat === "statute" ? 3 : cat === "state" ? 2.6 : 2.2;
-    this.moveCamera({ x, y, zoom });
+    const containing = this.countyKeyAt(x, y);
+    if (containing) this.focusCounty = containing;
+    this.moveCamera({ x, y, zoom: LEVEL_ZOOM.court });
     this.emit();
+  }
+
+  /** Step the camera back out: court → county → state → national. */
+  zoomOutLevel(): void {
+    if (this.level === "court") {
+      if (this.focusCounty) {
+        this.focusIndex = null;
+        this.level = "county";
+        this.label = `${titleCase(this.focusCounty)} County`;
+        this.moveCamera(this.cameraFor("county"));
+      } else {
+        this.setLevel("state");
+      }
+    } else if (this.level === "county") {
+      this.setLevel("state");
+    } else if (this.level === "state") {
+      this.setLevel("national");
+    } else {
+      this.zoomAround(1 / 1.6);
+      return;
+    }
+    this.emit();
+  }
+
+  private setLevel(level: Level): void {
+    this.level = level;
+    this.focusIndex = null;
+    if (level === "national") {
+      this.focusCounty = null;
+      this.label = null;
+    } else if (level === "state") {
+      this.label = "Colorado";
+    }
+    this.moveCamera(this.cameraFor(level));
+  }
+
+  focus(i: number): void {
+    const loc = this.locs[i];
+    if (!this.cites[i] || !loc) return;
+    if (loc.cat === "county") {
+      this.zoomToCounty(loc.key);
+      this.focusIndex = i;
+      this.emit();
+      return;
+    }
+    this.zoomToCourt(i);
   }
 
   resetCamera(): void {
     this.focusIndex = null;
+    this.focusCounty = null;
+    this.label = null;
+    this.level = "national";
     this.moveCamera({ ...NATIONAL_CAMERA });
     this.emit();
   }
@@ -423,8 +596,8 @@ export class MapEngine {
     if (zoom === this.cam.zoom) return;
     const cx = sx === undefined ? this.width / 2 : sx;
     const cy = sy === undefined ? this.height / 2 : sy;
+    const k = this.scale() * (zoom / this.cam.zoom);
     const [px, py] = this.toProjected(cx, cy);
-    const k = this.baseScale() * zoom;
     this.animating = false;
     this.cam = { x: px - (cx - this.width / 2) / k, y: py - (cy - this.height / 2) / k, zoom };
     this.camTarget = { ...this.cam };
@@ -563,10 +736,38 @@ export class MapEngine {
     if (next !== undefined) prefetchClip(this.spokenFor(next));
   }
 
-  // ---------------------------------------------------------------- narration of the memo
+  // ---------------------------------------------------------------- narration
+
+  /**
+   * What Listen speaks before the walk begins: the memo's short answer, not the whole memo. The
+   * Markdown that formats the memo on screen is not spoken.
+   */
+  private shortAnswer(): string {
+    const raw = (this.ctx.answer || "").trim();
+    if (!raw) return "";
+    const first = raw.split(/\n\s*\n/).find((part) => part.trim()) || raw;
+    return first
+      .replace(/\[(\d{1,3})\]/g, "")
+      .replace(/[*_`#>]/g, "")
+      .replace(/\s+([.,;:])/g, "$1")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 400);
+  }
+
+  /** Listen: speak the short answer, then walk the stops. A second press stops both. */
+  listen(): void {
+    if (this.narrating) {
+      this.stopListening();
+      return;
+    }
+    const text = this.shortAnswer();
+    if (!text) return;
+    this.narrateMemo(() => this.startTour(0));
+  }
 
   narrateMemo(onEnd?: () => void): void {
-    const text = (this.ctx.answer || "").trim();
+    const text = this.shortAnswer();
     if (!text) return;
     this.session?.stop();
     this.session = null;
@@ -621,14 +822,31 @@ export class MapEngine {
     this.emit();
   }
 
-  /** The county under a point on the canvas, for pointer hover. */
+  /** The county under a point on the canvas, for pointer hover and clicks. */
   countyAtScreen(sx: number, sy: number): string | null {
-    const [px, py] = this.toProjected(sx, sy);
+    const point = this.screenToPlane(sx, sy);
+    if (!point) return null;
+    const key = this.countyKeyAt(point[0], point[1]);
+    return key ? "c:" + key : null;
+  }
+
+  private countyKeyAt(px: number, py: number): string | null {
     for (const c of this.countyShapes) {
       if (px < c.minX || px > c.maxX || py < c.minY || py > c.maxY) continue;
-      for (const ring of c.polys) if (inRing(px, py, ring)) return "c:" + c.key;
+      for (const ring of c.polys) if (inRing(px, py, ring)) return c.key;
     }
     return null;
+  }
+
+  /** A canvas point → the projected plane, on the surface the counties are drawn on. */
+  private screenToPlane(sx: number, sy: number): [number, number] | null {
+    this.ensureCamera();
+    if (this.cam3) {
+      const ground = unprojectGround(this.cam3, sx, sy, SURFACE_Y);
+      if (!ground) return null;
+      return [ground[0] + WORLD_WIDTH / 2, ground[1] + WORLD_HEIGHT / 2];
+    }
+    return this.toProjected(sx, sy);
   }
 
   clearTooltip(): void {
@@ -641,7 +859,7 @@ export class MapEngine {
 
   setBasemap(on: boolean): void {
     this.basemapOn = on;
-    this.buildStatic();
+    this.rebuild();
     this.render();
     this.emit();
   }
@@ -714,7 +932,7 @@ export class MapEngine {
       }
       og.putImageData(pixels, 0, 0);
       this.basemapImage = out;
-      this.buildStatic();
+      this.rebuild();
       this.render();
       this.emit();
     } catch {
@@ -728,7 +946,43 @@ export class MapEngine {
     return PALETTE[this.theme];
   }
 
-  private buildStatic(): void {
+  private countyFill(county: CountyShape): string {
+    const p = this.palette();
+    const n = this.heat["c:" + county.name.toLowerCase()] || 0;
+    if (!n) return p.countyTop;
+    const max = Math.max(1, ...Object.values(this.heat));
+    const h = n / max;
+    const hue = 0.42 - 0.3 * h;
+    return `hsl(${Math.round(hue * 360)}, 72%, ${p.heatLightness}%)`;
+  }
+
+  /** Build (or rebuild) the scene: vertex buffers for the solid map, or the flat layer without WebGL. */
+  private rebuild(): void {
+    if (!this.world) return;
+    const p = this.palette();
+    if (this.renderer) {
+      this.renderer.setOcean(p.ocean);
+      this.buffers = buildScene({
+        states: this.world.states,
+        counties: this.world.counties.map((c) => ({ name: c.name, polys: c.polys, fill: this.countyFill(c) })),
+        arcs: this.arcs.map((a) => ({ from: a.from, to: a.to, colour: ARC_COLORS[a.type] })),
+        palette: {
+          stateTop: p.stateTop,
+          stateWall: p.stateWall,
+          coTop: p.coTop,
+          coWall: p.coWall,
+          countyTop: p.countyTop,
+          countyWall: p.countyWall,
+        },
+      });
+      this.renderer.setScene(this.buffers);
+      this.renderer.setBasemap(this.basemapOn ? this.basemapImage : null);
+      return;
+    }
+    this.buildFlatLayer();
+  }
+
+  private buildFlatLayer(): void {
     if (!this.world) return;
     const S = 2;
     const layer = document.createElement("canvas");
@@ -744,17 +998,33 @@ export class MapEngine {
     if (this.basemapOn && this.basemapImage) g.drawImage(this.basemapImage, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
     g.fillStyle = p.stateWall;
-    for (const state of this.world.states) for (const ring of state.polys) this.wall(g, ring, STATE_DEPTH);
-    for (const state of this.world.states) this.stateFace(g, state);
-
-    g.fillStyle = p.countyWall;
-    for (const county of this.world.counties) for (const ring of county.polys) this.wall(g, ring, COUNTY_DEPTH);
-    for (const county of this.world.counties) this.countyFace(g, county);
-
+    for (const state of this.world.states) for (const ring of state.polys) this.flatWall(g, ring, 3);
+    for (const state of this.world.states) {
+      const isColorado = state.name === "Colorado";
+      g.fillStyle = isColorado ? p.coTop : p.stateTop;
+      g.strokeStyle = isColorado ? p.coLine : p.stateLine;
+      g.lineWidth = isColorado ? 0.7 : 0.35;
+      for (const ring of state.polys) {
+        this.flatTrace(g, ring);
+        g.fill();
+        g.stroke();
+      }
+    }
+    for (const county of this.world.counties) {
+      const n = this.heat["c:" + county.name.toLowerCase()] || 0;
+      g.fillStyle = this.countyFill(county);
+      g.strokeStyle = n > 0 ? "#0f172a" : p.countyLine;
+      g.lineWidth = n > 0 ? 0.55 : 0.3;
+      for (const ring of county.polys) {
+        this.flatTrace(g, ring);
+        g.fill();
+        g.stroke();
+      }
+    }
     this.staticLayer = layer;
   }
 
-  private wall(g: CanvasRenderingContext2D, ring: [number, number][], depth: number): void {
+  private flatWall(g: CanvasRenderingContext2D, ring: [number, number][], depth: number): void {
     g.beginPath();
     for (let i = 0; i < ring.length; i++) {
       const a = ring[i];
@@ -768,58 +1038,29 @@ export class MapEngine {
     g.fill();
   }
 
-  private trace(g: CanvasRenderingContext2D, ring: [number, number][]): void {
+  private flatTrace(g: CanvasRenderingContext2D, ring: [number, number][]): void {
     g.beginPath();
     g.moveTo(ring[0][0], ring[0][1]);
     for (let i = 1; i < ring.length; i++) g.lineTo(ring[i][0], ring[i][1]);
     g.closePath();
   }
 
-  private stateFace(g: CanvasRenderingContext2D, state: StateShape): void {
-    const p = this.palette();
-    const isColorado = state.name === "Colorado";
-    g.fillStyle = isColorado ? p.coTop : p.stateTop;
-    g.strokeStyle = isColorado ? p.coLine : p.stateLine;
-    g.lineWidth = isColorado ? 0.7 : 0.35;
-    for (const ring of state.polys) {
-      this.trace(g, ring);
-      g.fill();
-      g.stroke();
-    }
-  }
-
-  private countyFace(g: CanvasRenderingContext2D, county: CountyShape): void {
-    const p = this.palette();
-    const key = county.name.toLowerCase();
-    const n = this.heat["c:" + key] || 0;
-    if (n > 0) {
-      const max = Math.max(1, ...Object.values(this.heat));
-      const h = n / max;
-      const hue = 0.42 - 0.3 * h;
-      g.fillStyle = `hsl(${Math.round(hue * 360)}, 72%, ${p.heatLightness}%)`;
-    } else {
-      g.fillStyle = p.countyTop;
-    }
-    g.strokeStyle = n > 0 ? "#0f172a" : p.countyLine;
-    g.lineWidth = n > 0 ? 0.55 : 0.3;
-    for (const ring of county.polys) {
-      this.trace(g, ring);
-      g.fill();
-      g.stroke();
-    }
-  }
-
-  /** The projected plane → screen scale at the national view, before the camera's own zoom. */
-  private baseScale(): number {
-    return Math.min(this.width / WORLD_WIDTH, this.height / WORLD_HEIGHT) * 0.92;
-  }
-
+  /** Screen pixels per projected unit at the camera's target. */
   private scale(): number {
     if (!this.width || !this.height) return 1;
-    return this.baseScale() * this.cam.zoom;
+    if (this.cam3) {
+      const aspect = this.width / this.height;
+      return (this.height * this.cam.zoom) / Math.max(WORLD_HEIGHT, WORLD_WIDTH / aspect);
+    }
+    return Math.min(this.width / WORLD_WIDTH, this.height / WORLD_HEIGHT) * 0.92 * this.cam.zoom;
   }
 
-  private toScreen(px: number, py: number): [number, number] {
+  /** Projected plane → canvas coordinates, at a height above the surface. */
+  private toScreen(px: number, py: number, height = 0): [number, number] | null {
+    if (this.cam3) {
+      const point = projectPoint(this.cam3, px - WORLD_WIDTH / 2, height, py - WORLD_HEIGHT / 2);
+      return point ? [point[0], point[1]] : null;
+    }
     const k = this.scale();
     return [(px - this.cam.x) * k + this.width / 2, (py - this.cam.y) * k + this.height / 2];
   }
@@ -829,9 +1070,34 @@ export class MapEngine {
     return [(sx - this.width / 2) / k + this.cam.x, (sy - this.height / 2) / k + this.cam.y];
   }
 
+  private ensureCamera(): void {
+    if (this.renderer && this.width > 0 && this.height > 0) {
+      this.cam3 = buildCamera(
+        this.cam.x - WORLD_WIDTH / 2,
+        this.cam.y - WORLD_HEIGHT / 2,
+        this.cam.zoom,
+        this.width,
+        this.height,
+      );
+    } else {
+      this.cam3 = null;
+    }
+  }
+
   render(): void {
+    if (!this.width || !this.height) return;
+    this.ensureCamera();
+    if (this.renderer) {
+      this.renderer.resize(this.width, this.height);
+      this.renderer.render(this.cam3 as Camera3, this.basemapOn && !!this.basemapImage);
+      return;
+    }
+    this.renderFlat();
+  }
+
+  private renderFlat(): void {
     const canvas = this.canvas;
-    if (!canvas || !this.width || !this.height) return;
+    if (!canvas) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
     const w = Math.round(this.width * dpr);
     const h = Math.round(this.height * dpr);
@@ -839,7 +1105,8 @@ export class MapEngine {
       canvas.width = w;
       canvas.height = h;
     }
-    const g = canvas.getContext("2d");
+    const g = this.flat || canvas.getContext("2d");
+    this.flat = g;
     if (!g) return;
     g.setTransform(dpr, 0, 0, dpr, 0, 0);
     g.clearRect(0, 0, this.width, this.height);
@@ -850,13 +1117,6 @@ export class MapEngine {
     g.scale(k, k);
     g.translate(-this.cam.x, -this.cam.y);
     if (this.staticLayer) g.drawImage(this.staticLayer, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    this.drawArcs(g, k);
-    g.restore();
-
-    this.drawLeaders(g);
-  }
-
-  private drawArcs(g: CanvasRenderingContext2D, k: number): void {
     g.lineWidth = 1.7 / k;
     for (const arc of this.arcs) {
       const [x1, y1] = arc.from;
@@ -873,25 +1133,34 @@ export class MapEngine {
       g.quadraticCurveTo(cx, cy, x2, y2);
       g.stroke();
     }
+    g.restore();
   }
 
-  private drawLeaders(g: CanvasRenderingContext2D): void {
-    g.strokeStyle = this.palette().leader;
-    g.lineWidth = 1;
-    for (const pin of this.pins) {
-      if (Math.hypot(pin.x - pin.ax, pin.y - pin.ay) < 2) continue;
-      g.beginPath();
-      g.moveTo(pin.ax, pin.ay);
-      g.lineTo(pin.x, pin.y);
-      g.stroke();
-    }
+  // ---------------------------------------------------------------- pins and labels
+
+  /** Where a citation's pin sits on the canvas, or null when it is not on screen. */
+  pinScreen(i: number): { x: number; y: number } | null {
+    const pin = this.pins.find((p) => p.items.includes(i));
+    if (!pin) return null;
+    return { x: round4(pin.x), y: round4(pin.y) };
+  }
+
+  /** Where a county's centre sits on the canvas, or null when it is not on screen. */
+  countyScreen(name: string): { x: number; y: number } | null {
+    const shape = this.countyShapes.find((c) => c.key === countyKey(name));
+    if (!shape) return null;
+    this.ensureCamera();
+    const point = this.toScreen(shape.c[0], shape.c[1], SURFACE_Y);
+    return point ? { x: round4(point[0]), y: round4(point[1]) } : null;
   }
 
   private layoutPins(): void {
+    this.ensureCamera();
     const W = this.width;
     const H = this.height;
     if (!W || !H || !this.cites.length) {
       this.pins = [];
+      this.labels = [];
       return;
     }
     const groups = [...this.groups.values()].filter((g) => g.items.length > 0);
@@ -900,17 +1169,22 @@ export class MapEngine {
     const out: PinView[] = [];
     for (const group of groups) {
       const [px, py] = project(group.ll);
-      const [ax, ay] = this.toScreen(px, py);
+      const anchor = this.toScreen(px, py, SURFACE_Y);
+      if (!anchor) continue;
+      const [ax, ay] = anchor;
+      // A pin stands above its anchor: the button sits on a stem so the place itself stays clickable.
+      const baseY = ay - PIN_LIFT;
       let spot: [number, number] | null = null;
-      for (let ring = 0; ring < 40 && !spot; ring++) {
+      for (let ring = 0; ring < 30 && !spot; ring++) {
         const tries = ring === 0 ? 1 : 8 * ring;
         for (let step = 0; step < tries; step++) {
           const angle = (step / tries) * Math.PI * 2 + ring * 0.45;
-          const radius = ring * 13;
+          const radius = ring * 14;
           const x = ax + Math.cos(angle) * radius;
-          const y = ay + Math.sin(angle) * radius;
+          const y = baseY + Math.sin(angle) * radius;
+          if (y > baseY + 4) continue;
           const rect = { x: x - PIN_SIZE / 2, y: y - PIN_SIZE / 2, w: PIN_SIZE, h: PIN_SIZE };
-          if (rect.x < 4 || rect.y < PIN_TOP_BAND || rect.x + PIN_SIZE > W - 4 || rect.y + PIN_SIZE > H - PIN_BOTTOM_BAND)
+          if (rect.x < PIN_MARGIN || rect.y < PIN_MARGIN || rect.x + PIN_SIZE > W - PIN_MARGIN || rect.y + PIN_SIZE > H - PIN_MARGIN)
             continue;
           if (this.avoid.some((q) => overlaps(rect, q))) continue;
           if (placed.some((q) => overlaps(rect, q))) continue;
@@ -918,7 +1192,7 @@ export class MapEngine {
           break;
         }
       }
-      const [x, y] = spot || [ax, ay];
+      const [x, y] = spot || [ax, baseY];
       placed.push({ x: x - PIN_SIZE / 2, y: y - PIN_SIZE / 2, w: PIN_SIZE, h: PIN_SIZE });
       out.push({
         key: group.key,
@@ -926,6 +1200,7 @@ export class MapEngine {
         label: group.label,
         count: group.items.length,
         titles: group.items.map((i) => this.cites[i].title || "").filter(Boolean),
+        items: group.items.slice(),
         index: group.items[0],
         x,
         y,
@@ -934,9 +1209,47 @@ export class MapEngine {
       });
     }
     this.pins = out;
+    this.layoutLabels();
+  }
+
+  /**
+   * The names that belong to a level: county names while a county is in view, court names while a court
+   * is. Nothing at the national view, so the drawing stays quiet.
+   */
+  private layoutLabels(): void {
+    const out: LabelView[] = [];
+    if (this.level === "county") {
+      const shapes = this.countyShapes
+        .map((shape) => ({ shape, n: this.heat["c:" + shape.key] || 0 }))
+        .filter((entry) => entry.n > 0 || entry.shape.key === this.focusCounty)
+        .sort((a, b) => b.n - a.n)
+        .slice(0, 12);
+      for (const { shape } of shapes) {
+        const point = this.toScreen(shape.c[0], shape.c[1], SURFACE_Y);
+        if (!point) continue;
+        out.push({
+          key: "county:" + shape.key,
+          text: `${shape.name} County`,
+          x: point[0],
+          y: point[1],
+          strong: shape.key === this.focusCounty,
+        });
+      }
+    } else if (this.level === "court") {
+      for (const pin of this.pins) {
+        out.push({ key: "court:" + pin.key, text: pin.titles[0] || pin.label, x: pin.ax, y: pin.ay, strong: true });
+      }
+    } else if (this.level === "state") {
+      const co = this.world?.states.find((s) => s.name === "Colorado");
+      const [x, y] = co ? this.centreOf(co.polys) : [WORLD_WIDTH / 2, WORLD_HEIGHT / 2];
+      const point = this.toScreen(x, y, SURFACE_Y);
+      if (point) out.push({ key: "state:co", text: "Colorado", x: point[0], y: point[1], strong: true });
+    }
+    this.labels = out;
   }
 
   private refresh(): void {
+    this.ensureCamera();
     this.layoutPins();
     this.render();
     this.emit();

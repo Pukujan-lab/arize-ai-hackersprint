@@ -18,6 +18,11 @@ export function installDebug(engine: MapEngine): void {
     tour: (n?: number) => engine.startTour(n),
     stopTour: () => engine.stopTour(),
     resetCamera: () => engine.resetCamera(),
+    zoomToCounty: (name: string) => engine.zoomToCounty(name),
+    zoomToCourt: (i: number) => engine.zoomToCourt(i),
+    zoomOutLevel: () => engine.zoomOutLevel(),
+    countyScreen: (name: string) => engine.countyScreen(name),
+    pinScreen: (i: number) => engine.pinScreen(i),
     hoverCounty: (key: string | null) => engine.hoverCounty(key),
     tooltip: () => engine.tooltip(),
     get pinCount() {

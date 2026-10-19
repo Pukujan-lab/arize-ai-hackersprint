@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { MoreHorizontal } from "lucide-react";
 import MapPane from "@/components/MapPane";
+import Memo, { sourceHref } from "@/components/Memo";
 import SiteHeader from "@/components/SiteHeader";
 import type { Citation, RunResult } from "@/lib/citations";
 import { cn } from "@/lib/utils";
@@ -9,17 +11,11 @@ import { MapEngine, type MapView } from "@/map/engine";
 
 type Pane = "memo" | "map";
 
-const SOURCE_SEARCH = "https://www.courtlistener.com/?q=";
-
-/** Where a citation's original document lives, or a search for it on an external legal database. */
-function sourceHref(citation: Citation): string {
-  const url = (citation.url || "").trim();
-  if (/^https?:\/\//i.test(url)) return url;
-  return SOURCE_SEARCH + encodeURIComponent(citation.citation || citation.title || "legal authority");
-}
-
 const buttonClass =
   "h-11 rounded-md border border-border px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50";
+
+const menuItemClass =
+  "flex h-11 w-full items-center rounded-sm px-2 text-left text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground";
 
 const POLL_MS = 1000;
 const RUN_TIMEOUT_MS = 90_000;
@@ -67,10 +63,12 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
   const [asking, setAsking] = useState(false);
   const [question, setQuestion] = useState("");
   const [prevRunId, setPrevRunId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [followUpsOpen, setFollowUpsOpen] = useState(false);
   const [runInfoOpen, setRunInfoOpen] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     engine.onChange = () => setView(engine.view());
@@ -89,14 +87,28 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
     return () => engine.detach();
   }, [engine]);
 
+  // The memo drawer closes on Escape and on a click outside it; the source list closes on Escape.
   useEffect(() => {
-    if (!sourcesOpen) return;
+    if (!menuOpen && !sourcesOpen) return;
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setSourcesOpen(false);
+      if (event.key !== "Escape") return;
+      setMenuOpen(false);
+      setSourcesOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [sourcesOpen]);
+  }, [menuOpen, sourcesOpen]);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (event: PointerEvent) => {
+      const target = event.target as Node | null;
+      if (menuRef.current && target && menuRef.current.contains(target)) return;
+      setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    return () => document.removeEventListener("pointerdown", onDown);
+  }, [menuOpen]);
 
   const applyResult = useCallback(
     (next: RunResult, runId: string) => {
@@ -128,7 +140,21 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
         setStatus("idle");
       })
       .catch(() => {
-        if (!cancelled) setStatus("error");
+        if (cancelled) return;
+        if (import.meta.env.DEV) {
+          void import("@/lib/demo-run").then((mod) => {
+            if (cancelled) return;
+            applyResult(mod.DEMO_RUN as unknown as RunResult, runParam);
+            setStatus("idle");
+            const probe = new URLSearchParams(window.location.search).get("probe");
+            if (probe === "county") setTimeout(() => engine.zoomToCounty("boulder"), 400);
+            if (probe === "court") setTimeout(() => engine.zoomToCourt(7), 400);
+            if (probe === "menu") setTimeout(() => setMenuOpen(true), 400);
+            if (probe === "listen") setTimeout(() => engine.listen(), 400);
+          });
+          return;
+        }
+        setStatus("error");
       });
     return () => {
       cancelled = true;
@@ -164,7 +190,7 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
       }
       applyResult(payload, data.run_id);
       setStatus("idle");
-      engine.narrateMemo(() => engine.startTour(0));
+      engine.listen();
     } catch {
       setStatus("error");
     } finally {
@@ -180,6 +206,27 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
   // switch hides on a phone, so the controls stay reachable while the map is showing.
   const memoBodyHidden = pane !== "memo";
 
+  const actions: { label: string; run: () => void }[] = [
+    { label: "Sources", run: () => setSourcesOpen(true) },
+    { label: "Follow-ups", run: () => setFollowUpsOpen(true) },
+    { label: "Run info", run: () => setRunInfoOpen(true) },
+    {
+      label: "Follow-up",
+      run: () => {
+        setFollowUpsOpen(true);
+        inputRef.current?.focus();
+      },
+    },
+    {
+      label: "New question",
+      run: () => {
+        setPrevRunId(null);
+        setQuestion("");
+        inputRef.current?.focus();
+      },
+    },
+  ];
+
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
       <SiteHeader />
@@ -190,44 +237,41 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
             <button
               type="button"
               className={buttonClass}
-              onClick={() => (view.narrating ? engine.stopListening() : engine.narrateMemo())}
+              onClick={() => engine.listen()}
               disabled={!memo}
             >
               {view.narrating ? "Stop listening" : "Listen"}
             </button>
             {memo && (
-              <>
-                <button type="button" className={buttonClass} onClick={() => setSourcesOpen(true)}>
-                  Sources
-                </button>
-                <button type="button" className={buttonClass} onClick={() => setFollowUpsOpen((open) => !open)}>
-                  Follow-ups
-                </button>
-                <button type="button" className={buttonClass} onClick={() => setRunInfoOpen((open) => !open)}>
-                  Run info
-                </button>
+              <div className="relative" ref={menuRef}>
                 <button
                   type="button"
-                  className={buttonClass}
-                  disabled={asking}
-                  onClick={() => {
-                    inputRef.current?.focus();
-                  }}
+                  aria-label="Memo menu"
+                  aria-haspopup="true"
+                  aria-expanded={menuOpen}
+                  className="grid h-11 w-11 place-items-center rounded-md border border-border text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  onClick={() => setMenuOpen((open) => !open)}
                 >
-                  Follow-up
+                  <MoreHorizontal aria-hidden="true" className="h-5 w-5" />
                 </button>
-                <button
-                  type="button"
-                  className={buttonClass}
-                  onClick={() => {
-                    setPrevRunId(null);
-                    setQuestion("");
-                    inputRef.current?.focus();
-                  }}
-                >
-                  New question
-                </button>
-              </>
+                {menuOpen && (
+                  <div className="absolute right-0 top-full z-30 mt-1 w-48 rounded-md border border-border bg-popover p-1 text-popover-foreground shadow-lg">
+                    {actions.map((action) => (
+                      <button
+                        key={action.label}
+                        type="button"
+                        className={menuItemClass}
+                        onClick={() => {
+                          setMenuOpen(false);
+                          action.run();
+                        }}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
             {pane === "memo" && (
               <button type="button" className={cn(buttonClass, "lg:hidden")} onClick={() => setPane("map")}>
@@ -257,10 +301,10 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
             </p>
           )}
           {memo ? (
-            <p className="whitespace-pre-wrap text-sm leading-relaxed">{memo}</p>
+            <Memo answer={memo} citations={citations} />
           ) : (
             (status === "idle" || status === "empty") && (
-              <p className="text-sm text-muted-foreground">
+              <p className="max-w-[70ch] text-sm text-muted-foreground">
                 {status === "empty"
                   ? "This run has no memo yet. Ask a question to start one."
                   : "Ask a legal question and the memo it returns appears here, with the map of every authority behind it."}
@@ -269,8 +313,8 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
           )}
 
           {followUpsOpen && (
-            <section className="mt-4 rounded-md border border-border p-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Follow-ups</h2>
+            <section className="mt-4 max-w-[70ch] rounded-md border border-border p-3">
+              <h2 className="text-sm font-semibold text-muted-foreground">Follow-ups</h2>
               {followUps.length ? (
                 <ul className="mt-2 space-y-1 text-sm">
                   {followUps.map((item) => (
@@ -284,8 +328,8 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
           )}
 
           {runInfoOpen && (
-            <section className="mt-4 rounded-md border border-border p-3 text-sm">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Run info</h2>
+            <section className="mt-4 max-w-[70ch] rounded-md border border-border p-3 text-sm">
+              <h2 className="text-sm font-semibold text-muted-foreground">Run info</h2>
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
                 <dt className="text-muted-foreground">Run</dt>
                 <dd className="font-mono text-xs">{prevRunId || "—"}</dd>
@@ -296,35 +340,35 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
                 <dt className="text-muted-foreground">Links</dt>
                 <dd>{engine.summary()}</dd>
               </dl>
-              </section>
-            )}
+            </section>
+          )}
         </section>
 
         {sourcesOpen && (
-          <div role="dialog" aria-label="Sources" className="fixed inset-0 z-40 flex flex-col bg-background/95 px-4 py-3">
-              <div className="flex shrink-0 items-center gap-2">
-                <h2 className="mr-auto text-sm font-semibold">Sources</h2>
-                <button type="button" className={buttonClass} onClick={() => setSourcesOpen(false)}>
-                  Close
-                </button>
-              </div>
-              <ul className="mt-3 min-h-0 flex-1 space-y-2 overflow-y-auto">
-                {citations.map((citation, index) => (
-                  <li key={`${citation.id}-${index}`} className="text-sm">
-                    <a
-                      href={sourceHref(citation)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block rounded-md border border-border px-3 py-2 text-foreground underline-offset-2 hover:bg-accent hover:underline"
-                    >
-                      <span className="font-medium">{citation.title || citation.citation || "Authority"}</span>
-                      <span className="ml-2 text-xs text-muted-foreground">
-                        {[citation.citation, citation.court, citation.date].filter(Boolean).join(" · ")}
-                      </span>
-                    </a>
-                  </li>
-                ))}
-              </ul>
+          <div role="dialog" aria-label="Sources" className="fixed inset-0 z-40 flex flex-col bg-background px-4 py-3">
+            <div className="flex shrink-0 items-center gap-2">
+              <h2 className="mr-auto text-sm font-semibold">Sources</h2>
+              <button type="button" className={buttonClass} onClick={() => setSourcesOpen(false)}>
+                Close
+              </button>
+            </div>
+            <ul className="mx-auto mt-3 min-h-0 w-full max-w-[70ch] flex-1 space-y-2 overflow-y-auto">
+              {citations.map((citation, index) => (
+                <li key={`${citation.id}-${index}`}>
+                  <a
+                    href={sourceHref(citation)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-md border border-border px-3 py-2 text-sm text-foreground underline-offset-2 hover:bg-accent hover:underline"
+                  >
+                    <span className="font-medium">{citation.title || citation.citation || "Authority"}</span>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      {[citation.citation, citation.court, citation.date].filter(Boolean).join(" · ") || "Citation not recorded"}
+                    </span>
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         )}
 
