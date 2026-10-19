@@ -20,6 +20,10 @@ WEB_DIST = ROOT / "web" / "dist"
 WEB_INDEX = WEB_DIST / "index.html"
 SITE_BASE = "https://arize.design-bakery.com"
 
+# The judge scores the retired dashboard read from Arize, exported on 2026-10-16. It is a file, not a
+# call: nothing on the request path talks to Arize, and the live export status is `tracing.status()`.
+ARIZE_SNAPSHOT = ROOT / "arize" / "observability-snapshot.json"
+
 _V3_PAGES = {
     "/": {
         "title": "Precedent · Ask, read the memo, tour the map",
@@ -695,6 +699,15 @@ def runs_list(request: Request, n: int = 15):
         if len(out) >= n:
             break
     return out
+
+
+@app.get("/api/arize", response_model=contracts.AnyObject)
+def arize():
+    """The Arize snapshot the retired dashboard read. A missing or unreadable file is reported, not hidden."""
+    try:
+        return json.loads(ARIZE_SNAPSHOT.read_text())
+    except (OSError, ValueError):
+        return JSONResponse({"error": "the Arize snapshot is unavailable", "available": False}, 503)
 
 
 @app.get("/guide", status_code=308, include_in_schema=False)

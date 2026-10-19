@@ -5,41 +5,41 @@
     "planner": {
       "role": "orchestrator",
       "status": "done",
-      "run_id": "000710-eb710b",
-      "claimed_at": "2026-10-17T04:07:10Z",
-      "released_at": "2026-10-17T04:07:10Z",
+      "run_id": "170227-6b3b09",
+      "claimed_at": "2026-10-19T21:02:27Z",
+      "released_at": "2026-10-19T21:02:27Z",
       "handoff_to": "retriever",
       "summary": "dispatched retriever"
     },
     "retriever": {
-      "role": "graph retrieval",
+      "role": "engine retrieval",
       "status": "done",
-      "run_id": "170543-170972",
-      "claimed_at": "2026-10-16T17:05:43Z",
-      "released_at": "2026-10-16T17:05:45Z",
+      "run_id": "170227-6b3b09",
+      "claimed_at": "2026-10-19T21:02:27Z",
+      "released_at": "2026-10-19T21:02:28Z",
       "handoff_to": "answer",
-      "summary": "ranked top 8 authorities by citation-weighted PageRank"
+      "summary": "retrieved 0 authorities in the order the index returned them"
     },
     "answer": {
-      "role": "cited answer",
+      "role": "scope answer",
       "status": "done",
-      "run_id": "170543-170972",
-      "claimed_at": "2026-10-16T17:05:45Z",
-      "released_at": "2026-10-16T17:05:48Z",
+      "run_id": "170227-6b3b09",
+      "claimed_at": "2026-10-19T21:02:28Z",
+      "released_at": "2026-10-19T21:02:28Z",
       "handoff_to": "safeguard",
-      "summary": "answer drafted (169 words)"
+      "summary": "no authority on point"
     },
     "safeguard": {
       "role": "eval + citation guard",
-      "status": "pass",
-      "run_id": "170543-170972",
-      "claimed_at": "2026-10-16T17:05:48Z",
-      "released_at": "2026-10-16T17:05:48Z",
+      "status": "fail",
+      "run_id": "170227-6b3b09",
+      "claimed_at": "2026-10-19T21:02:28Z",
+      "released_at": "2026-10-19T21:02:28Z",
       "handoff_to": null,
-      "summary": "PASS"
+      "summary": "FAIL"
     }
   },
-  "updated_at": "2026-10-17T04:07:10Z",
+  "updated_at": "2026-10-19T21:02:28Z",
   "pins": {
     "cgm": {
       "repo": "https://github.com/Pukujan/content-generation-modules",

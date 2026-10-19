@@ -981,6 +981,25 @@
         "summary": " Acs Reload"
       }
     },
+    "/api/arize": {
+      "get": {
+        "description": "The Arize snapshot the retired dashboard read. A missing or unreadable file is reported, not hidden.",
+        "operationId": "arize_api_arize_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnyObject"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Arize"
+      }
+    },
     "/api/ask": {
       "post": {
         "operationId": "ask_api_ask_post",

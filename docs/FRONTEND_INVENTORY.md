@@ -91,8 +91,15 @@ Saved runs, their steps and their timings. File: `web/src/pages/Observability.ts
 | A saved run, named by its question | the run's question | `Observability.tsx` | `GET /api/runs` |
 | Raw details of a step | `Raw details` | `Observability.tsx` | `GET /api/run/{id}` |
 | Retry after the source fails | `Try again` | `Observability.tsx` | `GET /api/runs` |
+| Arize judge scores, one row per snapshot trace | `Arize evals` | `Observability.tsx` | `GET /api/arize` |
+| A trace's judge explanations | `Judge explanations` | `Observability.tsx` | `GET /api/arize` |
+| The live run a snapshot trace belongs to | `Open run` | `Observability.tsx` | none |
+| One trace's span waterfall | `Trace waterfall` | `Observability.tsx` | `GET /api/arize` |
+| The trace whose spans are drawn | `Trace` | `Observability.tsx` | `GET /api/arize` |
 
 The page lists only the runs this device asked for: the server scopes `/api/runs` by the `X-Session-Id` header. The selected run shows its question, how long it took, the provider, and its pipeline steps in order with the time of each and the gap before it. When the source is unavailable the page says so and offers a retry rather than showing an empty or broken view.
+
+`Arize evals` merges the snapshot exported from Arize with the live runs: a trace whose run is also on disk is listed once and marked live, any other trace is listed as snapshot-only, and the page states in words when the snapshot was taken. The judge scores are that snapshot, never live values and never recomputed; a judge the snapshot did not carry is absent, not `0`. When the snapshot cannot be read the region says so and the live runs stay on the page. `Trace waterfall` draws one chosen trace's spans, one line per span, indented by its parent, and says so when a trace has no spans.
 
 ## `/slides`
 

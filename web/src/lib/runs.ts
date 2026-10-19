@@ -53,6 +53,51 @@ export type RetentionInfo = {
   spansDropped: number | null;
 };
 
+/** One judge's verdict on a trace: its label, its score, and what the judge said when it said anything. */
+export type Judge = { score: number | null; label: string; explanation: string };
+
+/** The four judges the retired dashboard read from Arize. A judge the snapshot did not carry stays null. */
+export type Judges = {
+  groundedness: Judge | null;
+  hallucination: Judge | null;
+  citationRelevance: Judge | null;
+  legalSafety: Judge | null;
+};
+
+export type TraceSpan = {
+  id: string;
+  parent: string;
+  name: string;
+  kind: string;
+  startMs: number | null;
+  durMs: number | null;
+  model: string;
+  tokens: number | null;
+};
+
+export type Trace = {
+  traceId: string;
+  runId: string;
+  question: string;
+  startTime: string;
+  latencyMs: number | null;
+  model: string;
+  tokens: number | null;
+  safeguard: boolean | null;
+  judges: Judges;
+  spans: TraceSpan[];
+};
+
+/** The snapshot exported from Arize: a file the server reads, never a call to Arize on the request path. */
+export type ArizeSnapshot = {
+  generatedAt: string;
+  project: string;
+  evaluator: string;
+  traces: Trace[];
+  dataset: { name: string; rows: number | null; columns: string[] } | null;
+  experiment: { name: string; examples: number | null; metric: string; bySetting: { name: string; value: number }[] } | null;
+};
+
 export type RunDetail = {
   runId: string;
   question: string;
@@ -249,6 +294,106 @@ function toRetention(raw: unknown): RetentionInfo | null {
     runsOnDisk: num(raw.runs_on_disk),
     traceQueueMax: num(raw.trace_queue_max),
     spansDropped: num(raw.spans_dropped),
+  };
+}
+
+function toJudge(raw: unknown): Judge | null {
+  if (!isRecord(raw)) return null;
+  const label = text(raw.label);
+  const score = num(raw.score);
+  if (!label && score === null) return null; // a judge the snapshot did not carry is absent, never 0
+  return { score, label, explanation: text(raw.explanation) };
+}
+
+function toJudges(raw: unknown): Judges {
+  const root = isRecord(raw) ? raw : {};
+  return {
+    groundedness: toJudge(root.groundedness),
+    hallucination: toJudge(root.hallucination),
+    citationRelevance: toJudge(root.citation_relevance),
+    legalSafety: toJudge(root.legal_safety),
+  };
+}
+
+function toSpan(raw: unknown): TraceSpan | null {
+  if (!isRecord(raw)) return null;
+  const name = text(raw.name);
+  if (!name) return null;
+  return {
+    id: text(raw.id),
+    parent: text(raw.parent),
+    name,
+    kind: text(raw.kind),
+    startMs: num(raw.start_ms),
+    durMs: num(raw.dur_ms),
+    model: text(raw.model),
+    tokens: num(raw.tokens),
+  };
+}
+
+/**
+ * The Arize snapshot the retired dashboard read. Nothing here is recomputed: a judge the snapshot did
+ * not carry is null and a field it did not record stays empty rather than becoming 0 or "".
+ */
+export function toArize(raw: unknown): ArizeSnapshot | null {
+  if (!isRecord(raw)) return null;
+
+  const traces: Trace[] = [];
+  if (Array.isArray(raw.traces)) {
+    for (const item of raw.traces) {
+      if (!isRecord(item)) continue;
+      traces.push({
+        traceId: text(item.trace_id),
+        runId: text(item.run_id),
+        question: text(item.question) || "question not recorded",
+        startTime: text(item.start_time),
+        latencyMs: num(item.latency_ms),
+        model: text(item.model),
+        tokens: num(item.tokens),
+        safeguard: typeof item.safeguard === "boolean" ? item.safeguard : null,
+        judges: toJudges(item.evals),
+        spans: Array.isArray(item.spans)
+          ? item.spans.map(toSpan).filter((span): span is TraceSpan => span !== null)
+          : [],
+      });
+    }
+  }
+
+  const datasetRaw = isRecord(raw.dataset) ? raw.dataset : null;
+  const datasetName = datasetRaw ? text(datasetRaw.name) : "";
+  const datasetRows = datasetRaw ? num(datasetRaw.rows) : null;
+  const dataset =
+    datasetRaw && (datasetName || datasetRows !== null)
+      ? {
+          name: datasetName,
+          rows: datasetRows,
+          columns: Array.isArray(datasetRaw.columns) ? datasetRaw.columns.map(text).filter(Boolean) : [],
+        }
+      : null;
+
+  const experimentRaw = isRecord(raw.experiment) ? raw.experiment : null;
+  const experimentName = experimentRaw ? text(experimentRaw.name) : "";
+  const experiment =
+    experimentRaw && (experimentName || text(experimentRaw.metric))
+      ? {
+          name: experimentName,
+          examples: num(experimentRaw.examples),
+          metric: text(experimentRaw.metric),
+          bySetting: isRecord(experimentRaw.by_setting)
+            ? Object.entries(experimentRaw.by_setting)
+                .map(([name, value]) => ({ name, value: num(value) }))
+                .filter((row): row is { name: string; value: number } => row.value !== null)
+            : [],
+        }
+      : null;
+
+  return {
+    generatedAt: text(raw.generated_at),
+    project: text(raw.project),
+    evaluator: text(raw.evaluator),
+    traces,
+    dataset,
+    experiment,
   };
 }
 
