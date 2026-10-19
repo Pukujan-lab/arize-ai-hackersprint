@@ -122,8 +122,9 @@ def test_O94_a_paraphrase_reaches_the_governing_authority(live, question, expect
 
 
 @needs_live
-def test_O95_a_question_with_no_authority_says_so(live):
-    result = _ask(live, "hello how are you")
+@pytest.mark.parametrize("question", ["hello how are you", "hello"])
+def test_O95_a_question_with_no_authority_says_so(live, question):
+    result = _ask(live, question)
     coverage = str(result.get("coverage") or "")
     answer = str(result.get("answer") or "").lower()
     assert coverage and coverage != "on_point", f"an off-corpus question is reported as on point: {coverage!r}"
