@@ -21,6 +21,7 @@ from ui_server import (
     serve_run,
     small_tap_targets,
     tiny_text,
+    visible_words,
 )
 
 sync_api = pytest.importorskip("playwright.sync_api")
@@ -28,7 +29,7 @@ pytestmark = [needs_chromium, needs_v3]
 
 RUN = load_fixture("run-spread.json")
 RUN_ID = RUN["run_id"]
-MEMO_WORDS = " ".join((RUN["answer"] or "").split()[:6])
+MEMO_WORDS = visible_words(RUN["answer"])
 TOUR_BUTTONS = ("Previous stop", "Pause", "Next stop", "Stop tour")
 
 

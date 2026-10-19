@@ -6,6 +6,7 @@ import contextlib
 import json
 import os
 import pathlib
+import re
 import socket
 import subprocess
 import sys
@@ -86,6 +87,12 @@ def open_page(browser, base, path, width, height=900, storage=None, setup=None, 
 
 def load_fixture(name):
     return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+def visible_words(text, count=6):
+    """The first words of a memo as the page shows them: formatting markers are not on screen."""
+    plain = re.sub(r"[*_`#>]", "", str(text or ""))
+    return " ".join(plain.split()[:count])
 
 
 def result_payload(run, run_id="v3-run"):

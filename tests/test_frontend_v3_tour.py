@@ -21,6 +21,7 @@ from ui_server import (
     needs_v3,
     open_page,
     serve_run,
+    visible_words,
 )
 
 sync_api = pytest.importorskip("playwright.sync_api")
@@ -184,7 +185,7 @@ def test_O35_the_tour_can_be_stopped_replayed_and_resumed_after_a_skip(base, bro
 
 def test_O36_the_memo_is_narrated_before_the_first_stop(base, browser):
     log = []
-    memo = " ".join((RUN["answer"] or "").split())[:30]
+    memo = visible_words(RUN["answer"], 8)[:30]
 
     def install(page):
         serve_run(page, RUN, "v3-ask")

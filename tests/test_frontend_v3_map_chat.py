@@ -17,6 +17,7 @@ from ui_server import (
     needs_v3,
     open_page,
     serve_run,
+    visible_words,
 )
 
 sync_api = pytest.importorskip("playwright.sync_api")
@@ -24,7 +25,7 @@ pytestmark = [needs_chromium, needs_v3]
 
 RUN = load_fixture("run-spread.json")
 RUN_ID = RUN["run_id"]
-MEMO_WORDS = " ".join((RUN["answer"] or "").split()[:6])
+MEMO_WORDS = visible_words(RUN["answer"])
 
 
 @pytest.fixture(scope="module")
