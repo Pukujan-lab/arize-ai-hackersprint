@@ -8,6 +8,96 @@ export type SavedRun = { run_id: string; question: string; n: number | null; ts:
 
 export type Step = { record: Record<string, unknown>; t: number | null; agent: string; kind: string };
 
+/** One retrieval stage: what ran, how long it took, and why it did not run when it did not. */
+export type RetrievalStage = { name: string; durationMs: number | null; skipped: boolean; reason: string };
+
+/** The path a run's retrieval actually took, as the run recorded it. */
+export type Retrieval = {
+  source: string;
+  stages: RetrievalStage[];
+  graphSource: string;
+  graphRevision: string;
+  engineOk: boolean | null;
+  engineReason: string;
+};
+
+export type EngineInfo = {
+  configured: boolean | null;
+  ok: boolean | null;
+  status: string;
+  chunkCount: number | null;
+  caseCount: number | null;
+  corpusRevision: string;
+  graphRevision: string;
+  lexical: string;
+  denseModel: string;
+  rerankModel: string;
+  jevModel: string;
+  scorer: string;
+  lastError: string;
+};
+
+export type TracingInfo = {
+  ok: boolean | null;
+  reason: string;
+  project: string;
+  sent: number | null;
+  dropped: number | null;
+  queued: number | null;
+};
+
+export type RetentionInfo = {
+  runsKept: number | null;
+  runsOnDisk: number | null;
+  traceQueueMax: number | null;
+  spansDropped: number | null;
+};
+
+/** One judge's verdict on a trace: its label, its score, and what the judge said when it said anything. */
+export type Judge = { score: number | null; label: string; explanation: string };
+
+/** The four judges the retired dashboard read from Arize. A judge the snapshot did not carry stays null. */
+export type Judges = {
+  groundedness: Judge | null;
+  hallucination: Judge | null;
+  citationRelevance: Judge | null;
+  legalSafety: Judge | null;
+};
+
+export type TraceSpan = {
+  id: string;
+  parent: string;
+  name: string;
+  kind: string;
+  startMs: number | null;
+  durMs: number | null;
+  model: string;
+  tokens: number | null;
+};
+
+export type Trace = {
+  traceId: string;
+  runId: string;
+  question: string;
+  startTime: string;
+  latencyMs: number | null;
+  model: string;
+  tokens: number | null;
+  safeguard: boolean | null;
+  judges: Judges;
+  spans: TraceSpan[];
+};
+
+/** The snapshot exported from Arize: a file the server reads, never a call to Arize on the request path. */
+export type ArizeSnapshot = {
+  generatedAt: string;
+  project: string;
+  evaluator: string;
+  traces: Trace[];
+  dataset: { name: string; rows: number | null; columns: string[] } | null;
+  experiment: { name: string; examples: number | null; metric: string; bySetting: { name: string; value: number }[] } | null;
+};
+
 export type RunDetail = {
   runId: string;
   question: string;
@@ -19,6 +109,7 @@ export type RunDetail = {
   prevRunId: string | null;
   followUps: string[];
   steps: Step[];
+  retrieval: Retrieval | null;
 };
 
 export type StackInfo = {
@@ -28,6 +119,9 @@ export type StackInfo = {
   edges: number | null;
   how: Record<string, string>;
   runs: { run_id: string; elapsed: number | null; provider: string; pass: boolean | null }[];
+  engine: EngineInfo | null;
+  tracing: TracingInfo | null;
+  retention: RetentionInfo | null;
 };
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -135,6 +229,174 @@ export function toSteps(events: Record<string, unknown>[]): Step[] {
   });
 }
 
+/** The stages a run recorded, in the order the engine emitted them. A missing duration stays null. */
+export function toStages(raw: unknown): RetrievalStage[] {
+  if (!Array.isArray(raw)) return [];
+  const out: RetrievalStage[] = [];
+  for (const item of raw) {
+    if (!isRecord(item)) continue;
+    const name = text(item.name) || text(item.stage);
+    if (!name) continue;
+    out.push({ name, durationMs: num(item.duration_ms), skipped: item.skipped === true, reason: text(item.reason) });
+  }
+  return out;
+}
+
+export function toRetrieval(raw: unknown): Retrieval | null {
+  if (!isRecord(raw)) return null;
+  const graph = isRecord(raw.graph) ? raw.graph : {};
+  const engineBlock = isRecord(raw.engine) ? raw.engine : {};
+  return {
+    source: text(raw.source),
+    stages: toStages(raw.stages),
+    graphSource: text(graph.source),
+    graphRevision: text(graph.revision),
+    engineOk: typeof engineBlock.ok === "boolean" ? engineBlock.ok : null,
+    engineReason: text(engineBlock.reason),
+  };
+}
+
+function toEngine(raw: unknown): EngineInfo | null {
+  if (!isRecord(raw)) return null;
+  return {
+    configured: typeof raw.configured === "boolean" ? raw.configured : null,
+    ok: typeof raw.ok === "boolean" ? raw.ok : null,
+    status: text(raw.status),
+    chunkCount: num(raw.chunk_count),
+    caseCount: num(raw.case_count),
+    corpusRevision: text(raw.corpus_revision),
+    graphRevision: text(raw.graph_revision),
+    lexical: text(raw.lexical),
+    denseModel: text(raw.dense_model),
+    rerankModel: text(raw.rerank_model),
+    jevModel: text(raw.jev_model),
+    scorer: text(raw.scorer),
+    lastError: text(raw.last_error),
+  };
+}
+
+function toTracing(raw: unknown): TracingInfo | null {
+  if (!isRecord(raw)) return null;
+  return {
+    ok: typeof raw.ok === "boolean" ? raw.ok : null,
+    reason: text(raw.reason),
+    project: text(raw.project),
+    sent: num(raw.sent),
+    dropped: num(raw.dropped),
+    queued: num(raw.queued),
+  };
+}
+
+function toRetention(raw: unknown): RetentionInfo | null {
+  if (!isRecord(raw)) return null;
+  return {
+    runsKept: num(raw.runs_kept),
+    runsOnDisk: num(raw.runs_on_disk),
+    traceQueueMax: num(raw.trace_queue_max),
+    spansDropped: num(raw.spans_dropped),
+  };
+}
+
+function toJudge(raw: unknown): Judge | null {
+  if (!isRecord(raw)) return null;
+  const label = text(raw.label);
+  const score = num(raw.score);
+  if (!label && score === null) return null; // a judge the snapshot did not carry is absent, never 0
+  return { score, label, explanation: text(raw.explanation) };
+}
+
+function toJudges(raw: unknown): Judges {
+  const root = isRecord(raw) ? raw : {};
+  return {
+    groundedness: toJudge(root.groundedness),
+    hallucination: toJudge(root.hallucination),
+    citationRelevance: toJudge(root.citation_relevance),
+    legalSafety: toJudge(root.legal_safety),
+  };
+}
+
+function toSpan(raw: unknown): TraceSpan | null {
+  if (!isRecord(raw)) return null;
+  const name = text(raw.name);
+  if (!name) return null;
+  return {
+    id: text(raw.id),
+    parent: text(raw.parent),
+    name,
+    kind: text(raw.kind),
+    startMs: num(raw.start_ms),
+    durMs: num(raw.dur_ms),
+    model: text(raw.model),
+    tokens: num(raw.tokens),
+  };
+}
+
+/**
+ * The Arize snapshot the retired dashboard read. Nothing here is recomputed: a judge the snapshot did
+ * not carry is null and a field it did not record stays empty rather than becoming 0 or "".
+ */
+export function toArize(raw: unknown): ArizeSnapshot | null {
+  if (!isRecord(raw)) return null;
+
+  const traces: Trace[] = [];
+  if (Array.isArray(raw.traces)) {
+    for (const item of raw.traces) {
+      if (!isRecord(item)) continue;
+      traces.push({
+        traceId: text(item.trace_id),
+        runId: text(item.run_id),
+        question: text(item.question) || "question not recorded",
+        startTime: text(item.start_time),
+        latencyMs: num(item.latency_ms),
+        model: text(item.model),
+        tokens: num(item.tokens),
+        safeguard: typeof item.safeguard === "boolean" ? item.safeguard : null,
+        judges: toJudges(item.evals),
+        spans: Array.isArray(item.spans)
+          ? item.spans.map(toSpan).filter((span): span is TraceSpan => span !== null)
+          : [],
+      });
+    }
+  }
+
+  const datasetRaw = isRecord(raw.dataset) ? raw.dataset : null;
+  const datasetName = datasetRaw ? text(datasetRaw.name) : "";
+  const datasetRows = datasetRaw ? num(datasetRaw.rows) : null;
+  const dataset =
+    datasetRaw && (datasetName || datasetRows !== null)
+      ? {
+          name: datasetName,
+          rows: datasetRows,
+          columns: Array.isArray(datasetRaw.columns) ? datasetRaw.columns.map(text).filter(Boolean) : [],
+        }
+      : null;
+
+  const experimentRaw = isRecord(raw.experiment) ? raw.experiment : null;
+  const experimentName = experimentRaw ? text(experimentRaw.name) : "";
+  const experiment =
+    experimentRaw && (experimentName || text(experimentRaw.metric))
+      ? {
+          name: experimentName,
+          examples: num(experimentRaw.examples),
+          metric: text(experimentRaw.metric),
+          bySetting: isRecord(experimentRaw.by_setting)
+            ? Object.entries(experimentRaw.by_setting)
+                .map(([name, value]) => ({ name, value: num(value) }))
+                .filter((row): row is { name: string; value: number } => row.value !== null)
+            : [],
+        }
+      : null;
+
+  return {
+    generatedAt: text(raw.generated_at),
+    project: text(raw.project),
+    evaluator: text(raw.evaluator),
+    traces,
+    dataset,
+    experiment,
+  };
+}
+
 export function toDetail(runId: string, raw: unknown): RunDetail {
   const root = isRecord(raw) ? raw : {};
   const result = isRecord(root.result) ? root.result : {};
@@ -152,6 +414,7 @@ export function toDetail(runId: string, raw: unknown): RunDetail {
     prevRunId: text(result.prev_run_id) || null,
     followUps,
     steps: toSteps(events),
+    retrieval: toRetrieval(result.retrieval),
   };
 }
 
@@ -181,6 +444,9 @@ export function toStack(raw: unknown): StackInfo {
     edges: num(surreal.edges),
     how,
     runs: runs.filter((run) => run.run_id),
+    engine: toEngine(root.engine),
+    tracing: toTracing(root.tracing),
+    retention: toRetention(root.retention),
   };
 }
 

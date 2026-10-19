@@ -2,7 +2,7 @@
 // the court, the date and the citation — and the passage that was retrieved, when one was. An
 // authority with no passage says so rather than leaving the entry blank.
 
-import { citeType, type Citation } from "@/lib/citations";
+import { citeType, courtName, type Citation } from "@/lib/citations";
 import { sourceHref } from "@/components/Memo";
 
 const EXCERPT_CHARS = 240;
@@ -52,7 +52,7 @@ export default function SourcesPanel({ citations, onClose }: { citations: Citati
               </a>
               <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-foreground">
                 <Fact label="Kind" value={citeType(citation)} />
-                <Fact label="Court" value={(citation.court || "").trim() || "not recorded"} />
+                <Fact label="Court" value={courtName(citation) || "not recorded"} />
                 <Fact label="Date" value={(citation.date || "").trim() || "not recorded"} />
                 <Fact label="Citation" value={(citation.citation || "").trim() || "not recorded"} />
               </div>

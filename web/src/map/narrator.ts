@@ -54,6 +54,10 @@ export type NarrationHooks = {
   muted?: boolean;
   /** Told when this line's clip is being fetched, so the page can say so while it waits. */
   loading?: (loading: boolean) => void;
+  /** The clip is playing: the page can show a live indicator. */
+  playing?: () => void;
+  /** No clip could be played, so the line continues in silence and the page says so. */
+  unavailable?: () => void;
 };
 
 /** The clip's length in milliseconds as it reports it, else as its timings imply, else null. */
@@ -133,6 +137,8 @@ export function narrate(text: string, onEnd: () => void, hooks: NarrationHooks =
 
   const silently = () => {
     if (finished || timer !== null) return;
+    // No clip can be played: the page says the voice is unavailable and the transcript carries on.
+    hooks.unavailable?.();
     timer = window.setTimeout(finish, SILENT_ADVANCE_MS);
   };
 
@@ -204,7 +210,10 @@ export function narrate(text: string, onEnd: () => void, hooks: NarrationHooks =
       else armBound(el, length);
       measured = Number.isFinite(el.duration) && el.duration > 0;
 
-      void el.play().catch(silently);
+      void el
+        .play()
+        .then(() => hooks.playing?.())
+        .catch(silently);
     } catch {
       silently();
     }

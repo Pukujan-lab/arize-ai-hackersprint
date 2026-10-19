@@ -12,6 +12,8 @@ export type Citation = {
   passage?: string;
   origin_text?: string;
   url?: string;
+  /** The metadata fields the record does not carry, named so the page can say which is missing. */
+  missing?: string[];
 };
 
 export type Edge = { src: string; dst: string };
@@ -45,6 +47,8 @@ export type Location = {
   ll: [number, number];
   label: string;
   cat: Category;
+  /** The deciding court, as the record names it, so a pin and its label agree with the source list. */
+  court: string;
   up?: boolean;
 };
 
@@ -230,6 +234,38 @@ const given = (v: unknown) => {
   return t && !BLANKISH.test(t) ? t : "";
 };
 
+/** Courts whose stored name is a flattened placeholder rather than the court that decided the case. */
+const FLATTENED = /^(colorado(\s+state)?\s+courts?|state court|courts?|colorado)$/i;
+
+/** The court a passage's own header names: "Case | Court | Year". */
+function courtFromPassage(passage?: string): string {
+  const head = String(passage || "").split("\n")[0] || "";
+  const parts = head.split("|").map((part) => part.trim());
+  const court = parts.length > 1 ? parts[1] : "";
+  if (!court) return "";
+  if (/supreme court of colorado/i.test(court)) return "Colorado Supreme Court";
+  if (/colorado court of appeals/i.test(court)) return "Colorado Court of Appeals";
+  if (/supreme court of the united states/i.test(court)) return "Supreme Court of the United States";
+  const circuit = court.match(/court of appeals for the ([a-z]+) circuit/i);
+  if (circuit) return `United States Court of Appeals for the ${titleCase(circuit[1])} Circuit`;
+  if (/district court for the district of colorado/i.test(court)) return "U.S. District Court, D. Colo.";
+  return "";
+}
+
+/**
+ * The deciding court, as the record names it. A flattened "Colorado state court" is replaced by the
+ * court the passage header carries, so the source list, the map label and the tour all state one name.
+ */
+export function courtName(c: Citation): string {
+  const raw = given(c.court);
+  const fromPassage = courtFromPassage(c.passage);
+  if (!raw) return fromPassage;
+  if (FLATTENED.test(raw)) return fromPassage || "Colorado courts";
+  if (/^supreme court of colorado$/i.test(raw)) return "Colorado Supreme Court";
+  if (/^colorado court of appeals$/i.test(raw)) return "Colorado Court of Appeals";
+  return raw;
+}
+
 /** The readable kind of an authority ("Statute", "Case", "Federal regulation", …). */
 export function citeType(c: Citation): string {
   const t = given(c.type);
@@ -275,23 +311,23 @@ function findCounty(text: string): string | null {
 export function locate(c: Citation): Location {
   const kind = citeType(c).toLowerCase();
   const t = kind + " " + txt(c.type).toLowerCase();
-  const court = txt(c.court);
+  const court = courtName(c);
   const lc = court.toLowerCase();
   const fed =
     /federal/.test(kind) || /u\.s\.c|cfr/i.test([c.id, c.title, c.citation].filter(Boolean).join(" "));
 
   if (t.includes("statute") || t.includes("regulation") || t.includes("cfr") || /c\.r\.s\./i.test(txt(c.id))) {
     return fed
-      ? { key: "dc-stat", ll: DC, label: "U.S. Code / CFR (Washington, DC)", cat: "federal" }
-      : { key: "capitol", ll: CAPITOL, label: "Colorado State Capitol (C.R.S.)", cat: "statute" };
+      ? { key: "dc-stat", ll: DC, label: "U.S. Code / CFR (Washington, DC)", cat: "federal", court }
+      : { key: "capitol", ll: CAPITOL, label: "Colorado State Capitol (C.R.S.)", cat: "statute", court };
   }
-  if (/supreme court of the united states/.test(lc) || (!court && / U\.S\. \d/.test(txt(c.id)))) {
-    return { key: "scotus", ll: DC, label: "U.S. Supreme Court (Washington, DC)", cat: "federal" };
+  if (/supreme court of the united states/.test(lc) || (!txt(c.court) && / U\.S\. \d/.test(txt(c.id)))) {
+    return { key: "scotus", ll: DC, label: "U.S. Supreme Court (Washington, DC)", cat: "federal", court };
   }
   const m = lc.match(/court of appeals for the (\w+) circuit/);
   if (m) {
     if (m[1] === "federal" || m[1] === "district") {
-      return { key: "dccir", ll: DC, label: "D.C./Federal Circuit", cat: "federal" };
+      return { key: "dccir", ll: DC, label: "D.C./Federal Circuit", cat: "federal", court };
     }
     const C = CIRC[m[1]];
     if (C) {
@@ -300,10 +336,11 @@ export function locate(c: Citation): Location {
         ll: [C[0], C[1]],
         label: "U.S. Court of Appeals, " + C[2],
         cat: m[1] === "tenth" ? "state" : "federal",
+        court,
       };
     }
   }
-  const coState = /colorado/.test(lc) || (!court && /P\.[23]d|COA|CO \d/.test(txt(c.id)));
+  const coState = /colorado/.test(lc) || (!txt(c.court) && /P\.[23]d|COA|CO \d/.test(txt(c.id)));
   if (coState) {
     const courtLabel = /appeals/i.test(court)
       ? "Colorado Court of Appeals (Denver)"
@@ -320,14 +357,17 @@ export function locate(c: Citation): Location {
         ll: [seat[0], seat[1]],
         label: `${titleCase(k)} County (${seat[2]}) → ${courtLabel}`,
         cat: "county",
+        court,
         up: true,
       };
     }
-    return { key: "denver", ll: DENVER, label: courtLabel, cat: "state" };
+    // The record names no county: the authority sits at the seat of its deciding court.
+    return { key: "denver", ll: DENVER, label: courtLabel, cat: "state", court };
   }
   const st = STATES.find((n) => lc.includes(n));
-  if (st) return { key: "st:" + st, ll: CAP[st], label: `${court.slice(0, 48)} (${titleCase(st)})`, cat: "federal" };
-  return { key: "denver", ll: DENVER, label: "Colorado courts (Denver)", cat: "state" };
+  if (st)
+    return { key: "st:" + st, ll: CAP[st], label: `${court.slice(0, 48)} (${titleCase(st)})`, cat: "federal", court };
+  return { key: "denver", ll: DENVER, label: "Colorado courts (Denver)", cat: "state", court };
 }
 
 export type ArcType = "cc" | "cs" | "st" | "fed" | "other";

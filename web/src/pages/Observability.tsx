@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import BarChart, { type Bar } from "@/components/BarChart";
 import SiteHeader from "@/components/SiteHeader";
 import {
@@ -12,13 +12,17 @@ import {
   seconds,
   show,
   startOfDay,
+  toArize,
   toRuns,
   toStack,
   whenLabel,
   withinDays,
+  type ArizeSnapshot,
+  type Judge,
   type RunDetail,
   type SavedRun,
   type StackInfo,
+  type TraceSpan,
 } from "@/lib/runs";
 import { cn } from "@/lib/utils";
 
@@ -50,6 +54,88 @@ function Figure({ label, value, note, small }: { label: string; value: string; n
       {note && <p className="mt-1 text-xs text-muted-foreground">{note}</p>}
     </div>
   );
+}
+
+/** A region the spec names in its accessible-name table, so the page can be read by that name. */
+function Panel({ name, children }: { name: string; children: ReactNode }) {
+  return (
+    <section role="region" aria-label={name} className="mt-6 rounded-lg border border-border p-4">
+      <h2 className="text-sm font-semibold">{name}</h2>
+      <div className="mt-2 space-y-2 text-sm">{children}</div>
+    </section>
+  );
+}
+
+function Facts({ rows }: { rows: { label: string; value: string }[] }) {
+  return (
+    <dl className="grid grid-cols-1 gap-y-1 text-sm sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-4">
+      {rows.map((row) => (
+        <div key={row.label} className="contents">
+          <dt className="text-muted-foreground">{row.label}</dt>
+          <dd className="break-words tabular-nums">{row.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** A stage duration as a reader reads it: 2.1s, 840 ms, 7.5 ms — never a bare millisecond count. */
+function duration(value: number | null): string {
+  if (value === null) return "duration not reported";
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}s`;
+  if (value >= 10) return `${Math.round(value)} ms`;
+  return `${Math.round(value * 10) / 10} ms`;
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+/** A snapshot timestamp in words: "Oct 16, 2026 at 18:42 UTC". Read from the string, so no locale drifts in. */
+function whenUTC(value: string): string {
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  if (!parts) return value || "time not recorded";
+  return `${MONTHS[Number(parts[2]) - 1]} ${Number(parts[3])}, ${parts[1]} at ${parts[4]}:${parts[5]} UTC`;
+}
+
+/** A trace's own start time, short enough for a table cell: "Oct 16 · 18:19". */
+function traceWhen(value: string): string {
+  const parts = value.match(/^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/);
+  if (!parts) return value || "time not recorded";
+  return `${MONTHS[Number(parts[2]) - 1]} ${Number(parts[3])} · ${parts[4]}:${parts[5]}`;
+}
+
+type JudgeKey = "groundedness" | "hallucination" | "citationRelevance" | "legalSafety";
+
+const JUDGES: { key: JudgeKey; label: string }[] = [
+  { key: "groundedness", label: "Groundedness" },
+  { key: "hallucination", label: "Hallucination" },
+  { key: "citationRelevance", label: "Citation relevance" },
+  { key: "legalSafety", label: "Legal safety" },
+];
+
+/** A judge as the snapshot recorded it — its label and its score, never a score it did not give. */
+function judgeText(judge: Judge | null): string {
+  if (!judge) return "not scored";
+  const line = [judge.label, judge.score === null ? "" : judge.score.toFixed(2)].filter(Boolean).join(" ");
+  return line || "score not reported";
+}
+
+/** The spans of one trace, each with how deep it sits under its parents. */
+function spanLines(spans: TraceSpan[]): { span: TraceSpan; depth: number }[] {
+  const at = new Map<string, number>();
+  spans.forEach((span, index) => {
+    if (span.id) at.set(span.id, index);
+  });
+  return spans.map((span) => {
+    let depth = 0;
+    let parent = span.parent;
+    const seen = new Set<string>();
+    while (parent && at.has(parent) && !seen.has(parent) && depth < 8) {
+      seen.add(parent);
+      depth += 1;
+      parent = spans[at.get(parent)!].parent;
+    }
+    return { span, depth };
+  });
 }
 
 function Filter({
@@ -93,14 +179,27 @@ export default function Observability() {
   const [question, setQuestion] = useState("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [openStep, setOpenStep] = useState<number | null>(null);
+  const [snapshot, setSnapshot] = useState<ArizeSnapshot | null>(null);
+  const [snapshotState, setSnapshotState] = useState<"loading" | "ready" | "unavailable">("loading");
+  const [openTrace, setOpenTrace] = useState<string | null>(null);
+  const [traceChoice, setTraceChoice] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     setPhase("loading");
 
     (async () => {
-      const [runsResult, stackResult] = await Promise.allSettled([readJson("/api/runs"), readJson("/api/stack")]);
+      const [runsResult, stackResult, arizeResult] = await Promise.allSettled([
+        readJson("/api/runs"),
+        readJson("/api/stack"),
+        readJson("/api/arize"),
+      ]);
       const stackInfo = stackResult.status === "fulfilled" ? toStack(stackResult.value) : null;
+      const snapshotInfo = arizeResult.status === "fulfilled" ? toArize(arizeResult.value) : null;
+
+      if (cancelled) return;
+      setSnapshot(snapshotInfo);
+      setSnapshotState(snapshotInfo ? "ready" : "unavailable");
 
       if (runsResult.status === "rejected") {
         if (cancelled) return;
@@ -243,6 +342,54 @@ export default function Observability() {
   }, [filtered, details]);
 
   const questionLabel = detail?.question || selected?.question || "Question not recorded";
+  const retrieval = detail?.retrieval ?? null;
+  const stages = retrieval?.stages ?? [];
+  const engineInfo = stack?.engine ?? null;
+  const tracingInfo = stack?.tracing ?? null;
+  const retentionInfo = stack?.retention ?? null;
+
+  // The snapshot traces: a trace whose run is also on disk is merged into that live run, so it is
+  // listed once and marked live; every other trace is listed as snapshot-only.
+  const traces = snapshot?.traces ?? [];
+  const liveRunIds = new Set(runs.map((run) => run.run_id));
+  const defaultTrace = Math.max(0, traces.findIndex((trace) => trace.runId !== "" && liveRunIds.has(trace.runId)));
+  const chosenIndex =
+    traceChoice !== "" && Number(traceChoice) >= 0 && Number(traceChoice) < traces.length ? Number(traceChoice) : defaultTrace;
+  const chosenTrace = traces[chosenIndex] ?? null;
+  const chosenSpans = chosenTrace ? spanLines(chosenTrace.spans) : [];
+
+  const snapshotFacts = useMemo(() => {
+    const rows: { label: string; value: string }[] = [];
+    const dataset = snapshot?.dataset ?? null;
+    const experiment = snapshot?.experiment ?? null;
+    if (dataset) {
+      rows.push({
+        label: "Dataset",
+        value: [
+          dataset.name || "name not recorded",
+          dataset.rows === null ? "rows not recorded" : `${count(dataset.rows)} rows`,
+        ].join(" · "),
+      });
+      if (dataset.columns.length) rows.push({ label: "Dataset columns", value: dataset.columns.join(", ") });
+    }
+    if (experiment) {
+      rows.push({
+        label: "Experiment",
+        value: [
+          experiment.name || "name not recorded",
+          experiment.metric || "metric not recorded",
+          experiment.examples === null ? "examples not recorded" : `${count(experiment.examples)} examples`,
+        ].join(" · "),
+      });
+      if (experiment.bySetting.length) {
+        rows.push({
+          label: "By setting",
+          value: experiment.bySetting.map((row) => `${row.name} ${row.value.toFixed(3)}`).join(" · "),
+        });
+      }
+    }
+    return rows;
+  }, [snapshot]);
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
@@ -496,6 +643,331 @@ export default function Observability() {
             )}
           </section>
         )}
+
+        <Panel name="Retrieval stages">
+          {!stages.length ? (
+            <p className="text-muted-foreground">
+              {selected
+                ? "This run recorded no retrieval stages."
+                : "Pick a run to see the retrieval stages it took."}
+            </p>
+          ) : (
+            <ol className="space-y-2">
+              {stages.map((stage, index) => (
+                <li key={`${stage.name}-${index}`} className="rounded-md border border-border px-3 py-2">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="text-xs tabular-nums text-muted-foreground">{index + 1}</span>
+                    <span className="break-words text-sm font-medium">{stage.name}</span>
+                    <span className="ml-auto text-xs tabular-nums text-muted-foreground">{duration(stage.durationMs)}</span>
+                  </div>
+                  {stage.skipped && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Did not run: {stage.reason || "the engine did not say why"}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+          {retrieval?.source && <p className="text-xs text-muted-foreground">Path: {retrieval.source}</p>}
+          {retrieval?.graphSource && (
+            <p className="text-xs text-muted-foreground">
+              Citation graph: {retrieval.graphSource}
+              {retrieval.graphRevision ? ` · revision ${retrieval.graphRevision}` : ""}
+            </p>
+          )}
+          {retrieval?.engineOk === false && (
+            <p className="text-xs text-muted-foreground">
+              The retrieval engine did not answer{retrieval.engineReason ? `: ${retrieval.engineReason}` : "."}
+            </p>
+          )}
+        </Panel>
+
+        <Panel name="Tracing">
+          {!tracingInfo ? (
+            <p className="text-muted-foreground">The server did not report tracing.</p>
+          ) : (
+            <>
+              <p>
+                {tracingInfo.ok === true
+                  ? "Spans reached Arize."
+                  : "Not connected — spans did not reach Arize, so no trace of this run is there."}
+              </p>
+              {tracingInfo.ok !== true && tracingInfo.reason && (
+                <p className="break-words text-xs text-muted-foreground">Exporter reason: {tracingInfo.reason}</p>
+              )}
+              <Facts
+                rows={[
+                  { label: "Project", value: tracingInfo.project || "not reported" },
+                  { label: "Spans sent", value: count(tracingInfo.sent) },
+                  { label: "Spans dropped", value: count(tracingInfo.dropped) },
+                  { label: "Spans queued", value: count(tracingInfo.queued) },
+                ]}
+              />
+            </>
+          )}
+        </Panel>
+
+        <Panel name="Retention">
+          {!retentionInfo ? (
+            <p className="text-muted-foreground">The server did not report the retention caps.</p>
+          ) : (
+            <>
+              <Facts
+                rows={[
+                  { label: "Saved runs kept", value: count(retentionInfo.runsKept) },
+                  { label: "Saved runs on disk now", value: count(retentionInfo.runsOnDisk) },
+                  { label: "Trace queue cap", value: `${count(retentionInfo.traceQueueMax)} spans` },
+                  { label: "Spans dropped", value: count(retentionInfo.spansDropped) },
+                ]}
+              />
+              <p className="text-xs text-muted-foreground">
+                Both stores are first in, first out: when a cap is reached the oldest entry is dropped first.
+              </p>
+            </>
+          )}
+        </Panel>
+
+        <Panel name="Retrieval engine">
+          {!engineInfo ? (
+            <p className="text-muted-foreground">The server did not report the retrieval engine.</p>
+          ) : (
+            <>
+              <p>
+                {engineInfo.ok === true
+                  ? `Engine ${engineInfo.status || "ready"}`
+                  : engineInfo.configured === false
+                    ? "The engine address is not configured"
+                    : `Engine ${engineInfo.status || "not answering"}`}
+              </p>
+              <Facts
+                rows={[
+                  { label: "Corpus", value: `${count(engineInfo.chunkCount)} passages · ${count(engineInfo.caseCount)} cases` },
+                  { label: "Corpus revision", value: engineInfo.corpusRevision || "not reported" },
+                  { label: "Graph revision", value: engineInfo.graphRevision || "not reported" },
+                  { label: "Lexical", value: engineInfo.lexical || "not reported" },
+                  { label: "Dense model", value: engineInfo.denseModel || "not loaded" },
+                  { label: "Rerank model", value: engineInfo.rerankModel || "not loaded" },
+                  { label: "JEV model", value: engineInfo.jevModel || "not loaded" },
+                  { label: "Scorer", value: engineInfo.scorer || "not reported" },
+                ]}
+              />
+              {engineInfo.lastError && (
+                <p className="break-words text-xs text-muted-foreground">Last error: {engineInfo.lastError}</p>
+              )}
+            </>
+          )}
+        </Panel>
+
+        <Panel name="Arize evals">
+          {snapshotState === "loading" && <p className="text-muted-foreground">Reading the Arize snapshot…</p>}
+
+          {snapshotState === "unavailable" && (
+            <p className="text-muted-foreground">
+              The Arize snapshot is unavailable right now, so no judge scores are shown here. These scores are a
+              snapshot, never live values, and nothing is invented to fill the gap; the live runs above are unaffected.
+            </p>
+          )}
+
+          {snapshotState === "ready" && snapshot && !traces.length && (
+            <p className="text-muted-foreground">
+              The Arize snapshot carries no traces, so there are no judge scores to show.
+            </p>
+          )}
+
+          {snapshotState === "ready" && snapshot && traces.length > 0 && (
+            <>
+              <p>
+                Judge scores exported from Arize on <span className="font-medium">{whenUTC(snapshot.generatedAt)}</span> —
+                a snapshot of that day, not live values.
+                {snapshot.evaluator ? ` Scored by ${snapshot.evaluator}.` : ""}
+                {snapshot.project ? ` Project ${snapshot.project}.` : ""}
+              </p>
+
+              <div className="overflow-x-auto rounded-lg border border-border">
+                <table aria-label="Arize evals table" className="w-full min-w-[64rem] border-collapse text-left">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/60">
+                      {[
+                        "When",
+                        "Question",
+                        "Latency",
+                        "Safeguard",
+                        "Groundedness",
+                        "Hallucination",
+                        "Citation relevance",
+                        "Legal safety",
+                        "Source",
+                      ].map((heading) => (
+                        <th key={heading} scope="col" className="whitespace-nowrap px-3 py-2 text-xs font-semibold">
+                          {heading}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {traces.map((trace, index) => {
+                      const live = trace.runId !== "" && liveRunIds.has(trace.runId);
+                      const key = `${trace.traceId || "trace"}-${index}`;
+                      const isOpen = openTrace === key;
+                      return (
+                        <Fragment key={key}>
+                          <tr className="border-b border-border align-top last:border-0">
+                            <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums text-muted-foreground">
+                              {traceWhen(trace.startTime)}
+                            </td>
+                            <td className="px-3 py-2">
+                              <p className="max-w-[24rem] break-words text-sm">{trace.question}</p>
+                              {(trace.model || trace.tokens !== null) && (
+                                <p className="mt-1 break-words text-xs text-muted-foreground">
+                                  {[trace.model, trace.tokens === null ? "" : `${count(trace.tokens)} tokens`]
+                                    .filter(Boolean)
+                                    .join(" · ")}
+                                </p>
+                              )}
+                              <button
+                                type="button"
+                                aria-expanded={isOpen}
+                                className={cn(buttonClass, "mt-2")}
+                                onClick={() => setOpenTrace(isOpen ? null : key)}
+                              >
+                                Judge explanations
+                              </button>
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 text-xs tabular-nums text-muted-foreground">
+                              {duration(trace.latencyMs)}
+                            </td>
+                            <td className="whitespace-nowrap px-3 py-2 text-xs text-muted-foreground">
+                              {trace.safeguard === true ? "Passed" : trace.safeguard === false ? "Failed" : "not recorded"}
+                            </td>
+                            {JUDGES.map((judge) => (
+                              <td key={judge.key} className="px-3 py-2 text-xs text-muted-foreground">
+                                {judgeText(trace.judges[judge.key])}
+                              </td>
+                            ))}
+                            <td className="px-3 py-2 text-xs text-muted-foreground">
+                              {live ? (
+                                <>
+                                  <p>live run</p>
+                                  <button
+                                    type="button"
+                                    className={cn(buttonClass, "mt-2")}
+                                    onClick={() => setSelectedId(trace.runId)}
+                                  >
+                                    Open run
+                                  </button>
+                                </>
+                              ) : (
+                                <p>snapshot only</p>
+                              )}
+                            </td>
+                          </tr>
+                          {isOpen && (
+                            <tr className="border-b border-border bg-muted/40 last:border-0">
+                              <td colSpan={9} className="px-3 py-3">
+                                <dl className="grid grid-cols-1 gap-y-2 text-xs sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-4">
+                                  {JUDGES.map((judge) => {
+                                    const value = trace.judges[judge.key];
+                                    return (
+                                      <div key={judge.key} className="contents">
+                                        <dt className="font-medium text-muted-foreground">{judge.label}</dt>
+                                        <dd className="break-words">
+                                          {value ? (
+                                            <>
+                                              <span className="tabular-nums">{judgeText(value)}</span>
+                                              {value.explanation
+                                                ? ` — ${value.explanation}`
+                                                : " — the judge wrote no explanation."}
+                                            </>
+                                          ) : (
+                                            "not scored in this snapshot"
+                                          )}
+                                        </dd>
+                                      </div>
+                                    );
+                                  })}
+                                </dl>
+                              </td>
+                            </tr>
+                          )}
+                        </Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {!!snapshotFacts.length && <Facts rows={snapshotFacts} />}
+            </>
+          )}
+        </Panel>
+
+        <Panel name="Trace waterfall">
+          {snapshotState === "unavailable" ? (
+            <p className="text-muted-foreground">
+              The Arize snapshot is unavailable, so there is no span waterfall to draw.
+            </p>
+          ) : !traces.length ? (
+            <p className="text-muted-foreground">
+              The Arize snapshot carries no traces, so there is no span waterfall to draw.
+            </p>
+          ) : (
+            <>
+              <Filter id="trace-filter" label="Trace" value={String(chosenIndex)} onChange={setTraceChoice}>
+                {traces.map((trace, index) => (
+                  <option key={`${trace.traceId || "trace"}-${index}`} value={String(index)}>
+                    {index + 1}. {trace.question}
+                    {trace.runId !== "" && liveRunIds.has(trace.runId) ? " (live run)" : ""}
+                  </option>
+                ))}
+              </Filter>
+
+              {!chosenTrace ? (
+                <p className="text-muted-foreground">No trace is chosen.</p>
+              ) : (
+                <>
+                  <p className="text-xs text-muted-foreground">
+                    {chosenTrace.spans.length === 1 ? "1 span" : `${chosenTrace.spans.length} spans`} ·{" "}
+                    {traceWhen(chosenTrace.startTime)}
+                    {chosenTrace.traceId ? ` · trace ${chosenTrace.traceId.slice(0, 12)}` : ""}
+                  </p>
+                  {!chosenSpans.length ? (
+                    <p className="text-muted-foreground">This trace recorded no spans.</p>
+                  ) : (
+                    <ol className="space-y-1">
+                      {chosenSpans.map(({ span, depth }, index) => (
+                        <li
+                          key={`${span.id || "span"}-${index}`}
+                          className="rounded-md border border-border px-2 py-2"
+                          style={{ marginLeft: `${Math.min(depth, 6) * 12}px` }}
+                        >
+                          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                            <span className="break-words text-sm font-medium">{span.name}</span>
+                            {span.kind && (
+                              <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
+                                {span.kind}
+                              </span>
+                            )}
+                            <span className="ml-auto whitespace-nowrap text-xs tabular-nums text-muted-foreground">
+                              {duration(span.durMs)}
+                            </span>
+                          </div>
+                          {(span.model || span.tokens !== null) && (
+                            <p className="mt-1 break-words text-xs text-muted-foreground">
+                              {[span.model, span.tokens === null ? "" : `${count(span.tokens)} tokens`]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </p>
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </Panel>
       </main>
     </div>
   );

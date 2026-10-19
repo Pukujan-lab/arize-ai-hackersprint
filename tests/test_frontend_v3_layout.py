@@ -17,6 +17,7 @@ from ui_server import (
     map_ready,
     needs_chromium,
     needs_v3,
+    memo_text,
     open_page,
     serve_run,
     small_tap_targets,
@@ -64,7 +65,7 @@ def _open(browser, base, path="/", width=DESKTOP, theme=None, motion=None):
 
 
 def _memo_visible(page):
-    return page.get_by_text(MEMO_WORDS, exact=False).first.is_visible()
+    return memo_text(page, MEMO_WORDS).is_visible()
 
 
 def _canvas_visible(page):
@@ -103,7 +104,7 @@ def test_O15_a_wide_screen_shows_both_panes_without_scrolling(base, browser):
     assert _memo_visible(page), "the memo is not visible on a wide screen"
     assert _canvas_visible(page), "the map is not visible on a wide screen"
     height = page.evaluate("window.innerHeight")
-    for name, box in (("memo", _rect(page.get_by_text(MEMO_WORDS, exact=False).first)), ("map", _rect(page.locator("canvas").first))):
+    for name, box in (("memo", _rect(memo_text(page, MEMO_WORDS))), ("map", _rect(page.locator("canvas").first))):
         assert box["y"] >= 0 and box["y"] + min(box["height"], 200) <= height, f"the {name} is below the fold on a wide screen"
     ctx.close()
 
@@ -141,7 +142,7 @@ def test_O38_tour_controls_never_cover_the_memo(base, browser, width, pane):
     if width == MOBILE and pane == "memo":
         assert not any(_tour_control(page, n) for n in TOUR_BUTTONS), "tour controls are visible over the memo pane on a phone"
     else:
-        memo = _rect(page.get_by_text(MEMO_WORDS, exact=False).first)
+        memo = _rect(memo_text(page, MEMO_WORDS))
         for name in TOUR_BUTTONS:
             control = _tour_control(page, name)
             if control is not None:

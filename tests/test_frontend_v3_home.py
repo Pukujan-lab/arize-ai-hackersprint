@@ -2,6 +2,7 @@
 run by address, has exactly one Listen control, and keeps sources, follow-ups and run info reachable."""
 
 import json
+import re
 
 import pytest
 
@@ -12,6 +13,7 @@ from ui_server import (
     load_fixture,
     needs_chromium,
     needs_v3,
+    memo_text,
     open_page,
     open_run,
     serve_run,
@@ -56,7 +58,7 @@ def _ask(page):
 
 
 def _memo(page):
-    page.get_by_text(MEMO_WORDS, exact=False).wait_for(timeout=30000)
+    memo_text(page, MEMO_WORDS).wait_for(timeout=30000)
 
 
 def _menu(page):
@@ -93,7 +95,7 @@ def test_O10_there_is_exactly_one_listen_control(base, browser, width):
     ctx, page = _page(browser, base, width=width)
     _ask(page)
     _memo(page)
-    listen = page.get_by_role("button", name="Listen")
+    listen = page.get_by_role("button", name=re.compile(r"^(Listen|Stop listening)$"))
     assert listen.count() == 1, f"@{width}: {listen.count()} Listen controls"
     # O78 adds Mute/Unmute beside Listen; nothing else may offer a second way to start the voice.
     others = page.evaluate(

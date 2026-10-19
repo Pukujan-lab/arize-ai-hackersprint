@@ -3,7 +3,7 @@ import os, time, uuid, threading, pathlib, httpx, subprocess
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, Response, JSONResponse, RedirectResponse
 from app import contracts
-from app import agents, tracing, limits, ttschain, octocache
+from app import agents, engine, retention, tracing, limits, ttschain, octocache
 from acs import board as acs_board
 from app.coord import Run, CLAIM
 
@@ -19,6 +19,10 @@ threading.Thread(target=agents.graph, daemon=True).start()
 WEB_DIST = ROOT / "web" / "dist"
 WEB_INDEX = WEB_DIST / "index.html"
 SITE_BASE = "https://arize.design-bakery.com"
+
+# The judge scores the retired dashboard read from Arize, exported on 2026-10-16. It is a file, not a
+# call: nothing on the request path talks to Arize, and the live export status is `tracing.status()`.
+ARIZE_SNAPSHOT = ROOT / "arize" / "observability-snapshot.json"
 
 _V3_PAGES = {
     "/": {
@@ -133,6 +137,7 @@ def index():
 @app.get("/api/health", response_model=contracts.HealthResponse, response_model_exclude_unset=True)
 def health():
     g = agents._G
+    trace = tracing.status()
     return {
         "ok": True,
         "backend": g.backend if g else "loading",
@@ -140,7 +145,10 @@ def health():
         "anthropic": bool(os.environ.get("ANTHROPIC_API_KEY")),
         "elevenlabs": bool(os.environ.get("ELEVENLABS_API_KEY")),
         **ttschain.health(),
-        "arize": tracing.enabled(),
+        # `arize` stays for older readers, but it is the same honest answer as `tracing.ok`, never a guess.
+        "arize": trace["ok"],
+        "tracing": trace,
+        "engine": engine.status(),
         "sandbox": os.environ.get("DAYTONA_SANDBOX_ID", ""),
     }
 
@@ -417,12 +425,25 @@ def _host_uptime_h():
     return round(max(0.0, time.time() - int(m.group(1))) / 3600.0, 2) if m else None
 
 
+def _last_run_stages(runs):
+    """The stages of the most recent saved run that recorded them, in the order the engine emitted them."""
+    for path in reversed(runs):  # `runs` is oldest first
+        try:
+            stages = (json.loads(path.read_text()).get("retrieval") or {}).get("stages")
+        except Exception:
+            continue
+        if isinstance(stages, list) and stages:
+            return stages
+    return engine.last_stages()
+
+
 @app.get("/api/stack", response_model=contracts.AnyObject)
 def stack():
     from app import stats
 
     S = dict(stats.S)
     g = agents._G
+    runs_on_disk = retention.prune_runs()  # saved runs are first-in-first-out; report the count after pruning
     runs = sorted((ROOT / "runs").glob("*/result.json"), key=lambda p: p.stat().st_mtime)
     recent = [json.loads(p.read_text()) for p in runs[-12:]]
     provs = [r.get("provider", "") for r in (json.loads(p.read_text()) for p in runs)]
@@ -433,7 +454,7 @@ def stack():
     tasks = board["tasks"].values()
     issue_logs = len(list(acs_board.OIO_DIR.glob("*.json"))) if acs_board.OIO_DIR.exists() else 0
     ev = acs_board.EVENTS.read_text().splitlines() if acs_board.EVENTS.exists() else []
-    arize_on = bool(os.environ.get("ARIZE_API_KEY") and os.environ.get("ARIZE_SPACE_ID"))
+    trace = tracing.status()
     return {
         "daytona": {
             "sandbox": os.environ.get("DAYTONA_SANDBOX_ID", "")[:8],
@@ -490,10 +511,18 @@ def stack():
             "how": "Agents claim seats, hand off and log every run as schema-valid OIO issue records.",
         },
         "arize": {
-            "connected": arize_on and tracing.enabled(),
-            "status": "Connected - tracing every agent span" if arize_on and tracing.enabled() else "Not connected - key pending",
-            "spans_sent": S.get("arize_spans", 0),
-            "how": "OpenTelemetry spans per agent via arize-otel; auto-on when keys appear.",
+            "connected": trace["ok"],
+            "status": "Connected - the exporter accepted spans" if trace["ok"] else f"Not connected - {trace.get('reason') or 'no span has been exported'}",
+            "spans_sent": trace["sent"],
+            "how": "OpenTelemetry spans per agent via arize-otel; delivery is reported from the exporter, not from the key.",
+        },
+        "tracing": trace,
+        "engine": engine.status(stages=_last_run_stages(runs)),
+        "retention": {
+            "runs_kept": retention.RUNS_KEPT,
+            "runs_on_disk": runs_on_disk,
+            "trace_queue_max": tracing.queue_max(),
+            "spans_dropped": trace["dropped"],
         },
         "limits": limits.snapshot(),
         "stt_calls": S.get("stt_calls", 0),
@@ -619,7 +648,7 @@ def sponsor():
             "events": [json.loads(l) for l in ev],
         },
         "arize": {
-            "connected": bool(os.environ.get("ARIZE_API_KEY") and os.environ.get("ARIZE_SPACE_ID")) and tracing.enabled(),
+            "connected": tracing.status()["ok"],
             "space_id": os.environ.get("ARIZE_SPACE_ID", ""),
             "spans": spans,
         },
@@ -670,6 +699,15 @@ def runs_list(request: Request, n: int = 15):
         if len(out) >= n:
             break
     return out
+
+
+@app.get("/api/arize", response_model=contracts.AnyObject)
+def arize():
+    """The Arize snapshot the retired dashboard read. A missing or unreadable file is reported, not hidden."""
+    try:
+        return json.loads(ARIZE_SNAPSHOT.read_text())
+    except (OSError, ValueError):
+        return JSONResponse({"error": "the Arize snapshot is unavailable", "available": False}, 503)
 
 
 @app.get("/guide", status_code=308, include_in_schema=False)

@@ -1,9 +1,14 @@
-"""Octo passage retriever (primary). Live: Octo workspace SQL full-text search (Postgres tsvector, ts_rank) over
-legal_graph.chunk (804,646 passages). Fallback: local SQLite FTS5 snapshot of Octo passages exported via a relay
-(the sandbox network cannot reach octodb.design-bakery.com). Responses cached by query hash: local cache/octo/<key>.json first, shared Octo `retrieval` table second (synced back)."""
+"""Passage retrieval. Primary: the retrieval engine on this host (lexical + dense + citation graph +
+reranker, over 804,646 passages), through `app.engine`. Fallback, only when the engine is not configured
+or does not answer: Octo workspace SQL full-text search, then the local SQLite FTS5 snapshot. Responses
+are cached by query hash: local cache/octo/<key>.json first, shared Octo `retrieval` table second.
 
-import os, json, re, time, hashlib, sqlite3, pathlib, urllib.request
-from app import octocache
+`search()` returns (passages, source) as it always has. The stage record behind that call is available
+from `last_retrieval()` for the run that asked, so a saved run can report the stages it actually took.
+"""
+
+import os, json, re, time, hashlib, sqlite3, pathlib, threading, urllib.request
+from app import octocache, engine
 from schema.store import loads
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
@@ -21,6 +26,9 @@ LIVE_SQL = (
 STOP = set(
     "a an the of to in on for and or is are was be by with what when how does do can could would should under law legal court who which my i if it that this from as at without".split()
 )
+
+# The record of the call that just happened, per thread: the pipeline runs one question per thread.
+_local = threading.local()
 
 
 def _terms(q):
@@ -101,8 +109,8 @@ def _cache_get(h):
     return None
 
 
-def _cache_put(h, question, source, passages):
-    (CACHE / f"{h}.json").write_text(json.dumps({"passages": passages, "source": source}))
+def _cache_put(h, question, source, passages, retrieval=None):
+    (CACHE / f"{h}.json").write_text(json.dumps({"passages": passages, "source": source, "retrieval": retrieval}))
     octocache.write(
         "INSERT INTO retrieval(key, query, source, passages, n, run_id, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7) ON CONFLICT (key) DO NOTHING",
         [h, question[:500], source, json.dumps(passages), len(passages), octocache.RUN.get() or None, octocache.now()],
@@ -110,17 +118,146 @@ def _cache_put(h, question, source, passages):
     octocache.link("retrieval", h, False)
 
 
+# --- the engine's answer, as passages -------------------------------------------------------------------
+
+
+def passage_header(text):
+    """The line a passage begins with: `Case Name | Court of X | YYYY`. Empty when it carries none."""
+    head = str(text or "").split("\n")[0]
+    parts = [part.strip() for part in head.split("|")]
+    if len(parts) < 2:
+        return {}
+    out = {"name": parts[0]}
+    if parts[1]:
+        out["court"] = parts[1]
+    if len(parts) > 2:
+        year = re.search(r"\d{4}", parts[2])
+        if year:
+            out["year"] = year.group(0)
+    return out
+
+
+def _passage(p):
+    return {
+        "chunk_id": p.get("chunk_id") or "",
+        "ord": p.get("ord"),
+        "text": p.get("text") or "",
+        "bm25": p.get("bm25"),
+        "spans": [s for s in (p.get("spans") or []) if isinstance(s, dict)],
+    }
+
+
+def _from_engine(doc):
+    """The engine's results, in its order, as passages the rest of the app already understands."""
+    result = doc.get("result") or {}
+    stages = [engine.stage_record(raw) for raw in doc.get("stages") or [] if isinstance(raw, dict)]
+    passages = []
+    for r in result.get("results") or []:
+        if not isinstance(r, dict):
+            continue
+        case = r.get("case") if isinstance(r.get("case"), dict) else {}
+        nid = str(case.get("id") or "").strip()
+        name = str(case.get("name") or "").strip()
+        # The rest of the app keys an authority by its own name (the graph nodes, the citation list); an
+        # opaque row id is kept as `cap_id` instead of replacing the name a reader can check.
+        if name and (not nid or re.fullmatch(r"[0-9:._-]+", nid)):
+            nid = name
+        if not nid:
+            continue
+        found = [p for p in (r.get("passages") or []) if isinstance(p, dict)]
+        first = found[0] if found else {}
+        head = passage_header(first.get("text"))
+        year = case.get("year")
+        passages.append(
+            {
+                "chunk_id": first.get("chunk_id") or "",
+                "work_id": nid,
+                "case_name": case.get("name") or head.get("name") or nid,
+                "court": case.get("court") or head.get("court") or "",
+                "date": str(year) if year else (head.get("year") or ""),
+                "url": case.get("link") or "",
+                "score": r.get("score"),
+                "text": first.get("text") or "",
+                "rank": r.get("rank"),
+                "score_kind": r.get("score_kind"),
+                "rrf": r.get("rrf"),
+                "bm25": r.get("bm25"),
+                "dense": r.get("dense"),
+                "cap_id": case.get("cap_id"),
+                "provenance": [p.get("source") for p in (r.get("provenance") or []) if isinstance(p, dict) and p.get("source")],
+                "passages": [_passage(p) for p in found],
+            }
+        )
+    graph_stage = next((stage for stage in stages if stage.get("name") == "graph"), None)
+    if graph_stage is not None and not graph_stage.get("skipped"):
+        graph_source = "engine:graph"
+    elif graph_stage is not None:
+        graph_source = "engine:graph (skipped)"
+    else:
+        graph_source = "not reported by the engine"
+    record = {
+        "source": engine.stage_source(stages),
+        "stages": stages,
+        "graph": {"source": graph_source, "revision": result.get("graph_revision")},
+        "engine": {
+            "configured": True,
+            "ok": True,
+            "reason": None,
+            "corpus_revision": result.get("corpus_revision"),
+            "elapsed_ms": result.get("elapsed_ms"),
+        },
+    }
+    return passages, record
+
+
+def _fallback_record(source, reason):
+    """What a run reports when the engine did not supply the passages."""
+    return {
+        "source": source,
+        "stages": [],
+        "graph": {"source": "local-citation-edges", "revision": None},
+        "engine": {"configured": engine.configured(), "ok": False, "reason": reason or "not configured"},
+    }
+
+
+def last_retrieval():
+    """The stage record behind the `search()` call this thread just made, or None."""
+    return getattr(_local, "record", None)
+
+
 def search(question, k=12):
-    """Returns (passages, source). Source: 'octo-live' | 'octo-snapshot' | None."""
-    h = hashlib.sha256(question.strip().lower().encode()).hexdigest()[:24]
+    """Returns (passages, source). Source: `engine:<stages>` | 'octo-live' | 'octo-snapshot' | None."""
     from app import stats
 
+    _local.record = None
+    h = hashlib.sha256(question.strip().lower().encode()).hexdigest()[:24]
     stats.bump("octo_searches")
     d = _cache_get(h)
     if d:
         stats.bump("octo_cache_hits")
-        stats.put("octo_last_source", d["source"] + " (cached)")
-        return d["passages"][:k], d["source"] + " (cached)"
+        source = d["source"] + " (cached)"
+        stats.put("octo_last_source", source)
+        record = d.get("retrieval") or _fallback_record(d["source"], "the stage record for this cached retrieval was not saved")
+        record = dict(record)
+        record["cached"] = True
+        _local.record = record
+        return d["passages"][:k], source
+    engine_error = None
+    if engine.configured():
+        try:
+            doc = engine.retrieve(question, k=k)
+        except engine.EngineError as failure:
+            engine_error = failure.reason
+            stats.put("octo_last_source", "engine unreachable")
+        else:
+            passages, record = _from_engine(doc)
+            if passages:
+                _cache_put(h, question, record["source"], passages, record)
+                stats.bump("octo_engine")
+                stats.put("octo_last_source", record["source"])
+                _local.record = record
+                return passages[:k], record["source"]
+            engine_error = "the engine returned no authority"
     for name, fn in (("octo-live", _live), ("octo-snapshot", _snapshot)):
         res = fn(question)
         if res:
@@ -129,10 +266,13 @@ def search(question, k=12):
                 if p["work_id"] not in seen:
                     seen.add(p["work_id"])
                     uniq.append(p)
-            _cache_put(h, question, name, uniq)
+            record = _fallback_record(name, engine_error)
+            _cache_put(h, question, name, uniq, record)
             stats.bump("octo_live" if name == "octo-live" else "octo_snapshot")
             stats.put("octo_last_source", name)
+            _local.record = record
             return uniq[:k], name
+    _local.record = _fallback_record(None, engine_error or "no retrieval path answered")
     return [], None
 
 

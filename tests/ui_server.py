@@ -66,7 +66,12 @@ def app_server():
         yield url
     finally:
         proc.terminate()
-        proc.wait(timeout=10)
+        try:
+            proc.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            # A server still winding down after SIGTERM must not turn a test into an error.
+            proc.kill()
+            proc.wait(timeout=10)
 
 
 def open_page(browser, base, path, width, height=900, storage=None, setup=None, color_scheme=None, motion=None):
@@ -93,6 +98,17 @@ def visible_words(text, count=6):
     """The first words of a memo as the page shows them: formatting markers are not on screen."""
     plain = re.sub(r"[*_`#>]", "", str(text or ""))
     return " ".join(plain.split()[:count])
+
+
+def memo_pane(page):
+    """The memo body's own section. The map header echoes the short answer, so the memo is identified
+    by its answer-status note rather than by the answer text."""
+    return page.locator('section:has([aria-label="Answer status"])').first
+
+
+def memo_text(page, words):
+    """The memo's rendering of the answer, never the map header that repeats the same words."""
+    return memo_pane(page).get_by_text(words, exact=False).first
 
 
 def result_payload(run, run_id="v3-run"):

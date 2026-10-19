@@ -1,7 +1,7 @@
 // Stop text: what a tour stop says, built from the citation, its resolved location and the memo.
 // The wording matches the recorded golden capture, including its quirks.
 
-import type { Citation, Edge, Location } from "./citations";
+import { courtName, type Citation, type Edge, type Location } from "./citations";
 
 export type StopParts = {
   title: string;
@@ -107,7 +107,7 @@ export function explainParts(c: Citation, loc: Location, ctx: { question?: strin
   const fallback = holdingText ? "" : citedByLine(c, cites, edges);
   return {
     title: c.title || "Authority",
-    court: String(c.court || "").trim(),
+    court: courtName(c),
     year: String(c.date || ""),
     holding: holdingText,
     citedBy: fallback,
