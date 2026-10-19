@@ -159,9 +159,10 @@ def test_code_only_anchors_declared_top_level_paths():
 
 def _snapshot():
     out = {}
+    skip = (".git/", ".venv/", ".cgm/", "web/node_modules/", "web/dist/", "web/releases/")
     for p in ROOT.rglob("*"):
         rel = p.relative_to(ROOT).as_posix()
-        if rel.startswith((".git/", ".venv/", ".cgm/")) or "__pycache__" in rel or not p.is_file():
+        if rel.startswith(skip) or "__pycache__" in rel or not p.is_file():
             continue
         st = p.stat()
         out[rel] = (st.st_mtime_ns, st.st_size)

@@ -37,7 +37,7 @@ Resume point for any agent. Read AGENTS.md, contracts/openapi.json and docs/FRON
 - #92: v2 is now the root page. `GET /` serves `static/v2.html`, `GET /v2` stays as an alias, and `GET /v1` serves the old `static/index.html`. `contracts/openapi.json` and `docs/FRONTEND_INVENTORY.md` list `/v1`.
 
 ## Hard rules for builders
-- Frontend changes via ABA only. ABA's remit is app code only: backend, frontend, Octo schema/migrations. It never files issues or writes docs, contracts or CI. Plain HTML/JS, no React/TS/shadcn, no new deps or CDNs.
+- Frontend changes via ABA only. ABA's remit is app code only: backend, frontend, Octo schema/migrations. It never files issues or writes docs, contracts or CI. It chooses its own implementation; no note in this repository prescribes its technology. See `docs/specs/2026-10-18-frontend-v3.md`.
 - Reuse existing buttons and navigation from docs/FRONTEND_INVENTORY.md; don't invent new ones without reason.
 - Tests first (Playwright at 4 widths). One issue per feature, PR says Closes #N, auto-merge, deploy, verify live.
 - No secrets in issues, commits or docs.
