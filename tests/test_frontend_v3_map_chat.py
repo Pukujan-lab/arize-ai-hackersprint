@@ -3,6 +3,7 @@ phone at /map), the map zooms from its own controls and from the wheel, and a dr
 focusing a pin."""
 
 import json
+import re
 
 import pytest
 
@@ -15,6 +16,7 @@ from ui_server import (
     map_ready,
     needs_chromium,
     needs_v3,
+    memo_text,
     open_page,
     serve_run,
     visible_words,
@@ -75,11 +77,12 @@ def test_O53_the_composer_sits_at_the_bottom_of_the_page(base, browser, path, wi
     height = page.evaluate("window.innerHeight")
     assert composer["y"] + composer["height"] > height * 0.7, f"{path} @{width}: the composer is not at the bottom"
 
-    controls = page.get_by_role("button", name="Listen", exact=True)
+    # A saved run opened on the map is read aloud, so the control may already say "Stop listening".
+    controls = page.get_by_role("button", name=re.compile(r"^(Listen|Stop listening)$"))
     assert controls.count() == 1
     assert _box(controls)["y"] < composer["y"], f"{path} @{width}: the memo controls moved below the composer"
 
-    memo = page.get_by_text(MEMO_WORDS, exact=False).first
+    memo = memo_text(page, MEMO_WORDS)
     if memo.is_visible():
         assert composer["y"] >= _box(memo)["y"], f"{path} @{width}: the composer is above the memo"
     ctx.close()
@@ -95,8 +98,8 @@ def test_O54_the_map_pane_offers_the_composer_on_a_phone(base, browser):
     textbox.fill(RUN["question"])
     ask.click()
     page.get_by_role("button", name="Show memo").click()
-    page.get_by_text(MEMO_WORDS, exact=False).first.wait_for(timeout=30000)
-    assert page.get_by_text(MEMO_WORDS, exact=False).first.is_visible(), "the question asked from the map left no memo"
+    memo_text(page, MEMO_WORDS).wait_for(timeout=30000)
+    assert memo_text(page, MEMO_WORDS).is_visible(), "the question asked from the map left no memo"
     ctx.close()
 
 
