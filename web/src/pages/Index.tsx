@@ -19,7 +19,37 @@ function sourceHref(citation: Citation): string {
 }
 
 const buttonClass =
-  "h-11 rounded-md border border-border px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground";
+  "h-11 rounded-md border border-border px-3 text-xs font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground disabled:pointer-events-none disabled:opacity-50";
+
+const POLL_MS = 1000;
+const RUN_TIMEOUT_MS = 90_000;
+
+type RunResponse = { events?: unknown[]; result?: RunResult | null; partial?: string | null };
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Read a run until the server has written its result.
+ *
+ * `/api/ask` only starts the four agents and answers with a run id at once; the result lands several
+ * seconds later. Reading the run once would always miss it, so keep asking until it is there.
+ */
+async function waitForRun(runId: string): Promise<RunResult | null> {
+  const deadline = Date.now() + RUN_TIMEOUT_MS;
+  for (;;) {
+    try {
+      const response = await fetch(`/api/run/${encodeURIComponent(runId)}`, { cache: "no-store" });
+      if (response.ok) {
+        const data: RunResponse | null = await response.json();
+        if (data && data.result) return data.result;
+      }
+    } catch {
+      // A blip mid-run must not lose an answer the agents are still writing: fall through and retry.
+    }
+    if (Date.now() >= deadline) return null;
+    await sleep(POLL_MS);
+  }
+}
 
 export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) {
   const [searchParams] = useSearchParams();
@@ -33,6 +63,8 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
   const [pane, setPane] = useState<Pane>(initialPane);
   const [result, setResult] = useState<RunResult | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "empty" | "error">("idle");
+  const [notice, setNotice] = useState<string | null>(null);
+  const [asking, setAsking] = useState(false);
   const [question, setQuestion] = useState("");
   const [prevRunId, setPrevRunId] = useState<string | null>(null);
   const [sourcesOpen, setSourcesOpen] = useState(false);
@@ -82,6 +114,7 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
     if (!runParam) return;
     let cancelled = false;
     setStatus("loading");
+    setNotice(null);
     fetch(`/api/run/${encodeURIComponent(runParam)}`)
       .then((response) => response.json())
       .then((data) => {
@@ -105,22 +138,27 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
   const ask = async (event: React.FormEvent) => {
     event.preventDefault();
     const text = question.trim();
-    if (!text) return;
+    if (!text || asking) return;
+    setAsking(true);
     setStatus("loading");
+    setNotice(null);
     try {
       const response = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(prevRunId ? { question: text, prev_run_id: prevRunId } : { question: text }),
       });
-      const data = response.ok ? await response.json() : null;
-      if (!data || !data.run_id) {
+      const data = await response.json().catch(() => null);
+      if (!response.ok || !data || !data.run_id) {
+        // A refused question keeps the server's own reason: a rate limit says when to try again.
+        const reason = typeof data?.error === "string" ? data.error.trim() : "";
+        setNotice(reason || null);
         setStatus("error");
         return;
       }
-      const runData = await fetch(`/api/run/${encodeURIComponent(data.run_id)}`).then((r) => r.json());
-      const payload: RunResult | null = runData && runData.result ? runData.result : null;
+      const payload = await waitForRun(data.run_id);
       if (!payload) {
+        setNotice("That run is taking longer than expected. Please try again.");
         setStatus("error");
         return;
       }
@@ -129,6 +167,8 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
       engine.narrateMemo(() => engine.startTour(0));
     } catch {
       setStatus("error");
+    } finally {
+      setAsking(false);
     }
   };
 
@@ -171,6 +211,7 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
                   <button
                     type="button"
                     className={buttonClass}
+                    disabled={asking}
                     onClick={() => {
                       inputRef.current?.focus();
                     }}
@@ -207,25 +248,40 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
                 placeholder="Ask a legal question"
                 className="h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground"
               />
-              <button type="submit" className="h-11 shrink-0 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
+              <button
+                type="submit"
+                disabled={asking}
+                className="h-11 shrink-0 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:pointer-events-none disabled:opacity-50"
+              >
                 Ask
               </button>
             </form>
           </div>
 
           <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+            {(notice || status === "error") && (
+              <p
+                role="status"
+                className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-foreground"
+              >
+                {notice || "That question didn't come back. Please try again."}
+              </p>
+            )}
+            {status === "loading" && (
+              <p role="status" className="mb-3 text-sm text-muted-foreground">
+                The four agents are working on this. The memo appears here as soon as they finish.
+              </p>
+            )}
             {memo ? (
               <p className="whitespace-pre-wrap text-sm leading-relaxed">{memo}</p>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                {status === "loading"
-                  ? "Reading the memo…"
-                  : status === "error"
-                    ? "That question didn't come back. Please try again."
-                    : status === "empty"
-                      ? "This run has no memo yet. Ask a question to start one."
-                      : "Ask a legal question and the memo it returns appears here, with the map of every authority behind it."}
-              </p>
+              (status === "idle" || status === "empty") && (
+                <p className="text-sm text-muted-foreground">
+                  {status === "empty"
+                    ? "This run has no memo yet. Ask a question to start one."
+                    : "Ask a legal question and the memo it returns appears here, with the map of every authority behind it."}
+                </p>
+              )
             )}
 
             {followUpsOpen && (
