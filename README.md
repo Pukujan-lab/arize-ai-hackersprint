@@ -73,7 +73,7 @@ Set these in your shell or a local `.env` file, and never commit them:
 | `contracts/` | `openapi.json` for the API, one contract per agent role in `agents/`, and `storage.json`, which says where each kind of data lives |
 | `tests/`, `ci/` | The test suite and offline triage helpers |
 | `deploy/` | The deploy script, the launchd wrapper and plists for the host |
-| `tools/` | `run_all.sh`, `ci_local.sh`, screenshot, video and Arize helpers |
+| `tools/` | `run_all.sh`, `ci_local.sh`, the CGM and OIO checks, the Kokoro installer and Arize helpers |
 | `arize/` | Arize experiments and judge setup |
 | `docs/` | Project notes and hackathon records, indexed in `docs/README.md`. The voice chain, the caches and the data model are explained in `docs/voice-and-data-model.md` |
 

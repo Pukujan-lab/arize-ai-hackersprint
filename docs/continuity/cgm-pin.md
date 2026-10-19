@@ -11,7 +11,7 @@ The pin is recorded in two places, and they have to agree: `.content-system/syst
 - `system-version.json`: the pin and the module list
 - `project-brief.json`: audience, problem and the evidence for each product claim, each tied to a file at a fixed commit
 - `brand-language.json`, `visual-style.json`, `review-rubric.json`: tone, visual rules and the questions a reviewer should ask
-- `asset-manifest.json` plus `prompts/`: image provenance. The only entry today is `.content-system/assets/adapter-placeholder.txt`, because Precedent has no README art yet. `static/og.png` and the slide screenshots exist, but nobody recorded how they were made, so they are left out instead of being given made-up provenance.
+- `asset-manifest.json` plus `prompts/`: image provenance. The only entry today is `.content-system/assets/adapter-placeholder.txt`, because Precedent has no README art yet. `web/public/og.png` exists, but nobody recorded how it was made, so it is left out instead of being given made-up provenance.
 - `agent-system-block.txt`: the always-on writing block, also pasted between the `cgm:always-on` markers in `AGENTS.md`
 
 ## What CI checks

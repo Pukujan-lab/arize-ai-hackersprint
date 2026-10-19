@@ -157,7 +157,7 @@
       "path": "tools/",
       "kind": "dir",
       "owner": "app",
-      "purpose": "Developer scripts: run_all.sh, ci_local.sh, validate_cgm_adoption.py, kokoro/ (local TTS service installer), screenshots, video, Arize helpers; pr_policy.py and dep_policy.py (CI glue for the reuse-first and dependency rules).",
+      "purpose": "Developer scripts: run_all.sh, ci_local.sh, the CGM and OIO adoption checks, kokoro/ (local TTS service installer), Arize helpers; pr_policy.py and dep_policy.py (CI glue for the reuse-first and dependency rules).",
       "agents_may_edit": true,
       "runtime_data": "run_all.sh writes logs/ (gitignored)"
     },

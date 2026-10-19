@@ -4,7 +4,6 @@ data/
 logs/
 *.mp4
 *.mp3
-!static/voiceover.mp3
 .env
 .env*
 *.env
@@ -17,7 +16,6 @@ __pycache__/
 *.bak*
 bin/
 *.tgz
-!static/slides/hero_loop.mp4
 
 node_modules/
 web/node_modules/

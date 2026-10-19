@@ -3,7 +3,7 @@
   "dimensions": [
     {
       "id": "code_accuracy",
-      "question": "Does every feature named in the text exist in app/, static/ or deploy/ today?"
+      "question": "Does every feature named in the text exist in app/, web/ or deploy/ today?"
     },
     {
       "id": "citation_honesty",

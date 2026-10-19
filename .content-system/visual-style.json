@@ -30,5 +30,5 @@
     "an image that shows a feature the app does not have",
     "SVG used where a narrative raster is required"
   ],
-  "status_note": "The live site already ships static/og.png and slide screenshots; their generation was not recorded, so they are not listed as narrative assets."
+  "status_note": "The site ships web/public/og.png; its generation was not recorded, so it is not listed as a narrative asset."
 }

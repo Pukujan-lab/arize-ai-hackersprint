@@ -5,8 +5,7 @@
   "method": "Hand-written text file; no image model and no renderer.",
   "reason": "The adapter needs at least one asset with a hash and a source record. Precedent has no README art yet.",
   "known_unrecorded_assets": [
-    "static/og.png (1200x630 share card)",
-    "static/slides/*.png (screenshots)"
+    "web/public/og.png (1200x630 share card)"
   ],
   "reviewed_at": "2026-10-17"
 }
