@@ -1,0 +1,506 @@
+{
+  "question": "Which Colorado counties apply the homestead exemption to mineral rights?",
+  "answer": "Short answer: the exemption follows the claimant's residence, not the minerals [1][2].\n- Boulder County courts read the exemption narrowly [3].\n- Weld County and Pueblo County treat severed minerals separately [4][5].\n- The Tenth Circuit applies the federal rule to bankruptcy estates [6].\n- The Ninth Circuit reaches the same result [7].\n- The Colorado Supreme Court and Court of Appeals agree on the residence test [8][9].\n- The state statute and the federal statute differ in scope [10][11].\n- The U.S. Supreme Court has not decided the mineral question [12].",
+  "order": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11
+  ],
+  "stops": [
+    {
+      "index": 0,
+      "text": "C.R.S. 38-41-201 (2024): The homestead exemption protects a dwelling and its appurtenances from execution and attachment. In the memo: the exemption follows the claimant's residence, not the minerals.",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ],
+      "title": "C.R.S. 38-41-201",
+      "ref": "[1]",
+      "court": null,
+      "date": "2024"
+    },
+    {
+      "index": 1,
+      "text": "11 U.S.C. 522 (2023): The debtor may exempt property listed under the applicable state or federal exemption scheme. In the memo: the exemption follows the claimant's residence, not the minerals.",
+      "key": "dc-stat",
+      "cat": "federal",
+      "label": "U.S. Code / CFR (Washington, DC)",
+      "ll": [
+        38.8906,
+        -77.0044
+      ],
+      "title": "11 U.S.C. 522",
+      "ref": "[2]",
+      "court": null,
+      "date": "2023"
+    },
+    {
+      "index": 2,
+      "text": "In re Estate of Hartman (Colorado Court of Appeals, Boulder County (Boulder), 2022): The trial court held that the exemption does not extend to mineral interests severed from the surface estate. In the memo: Boulder County courts read the exemption narrowly.",
+      "key": "c:boulder",
+      "cat": "county",
+      "label": "Boulder County (Boulder) → Colorado Court of Appeals (Denver)",
+      "ll": [
+        40.015,
+        -105.2705
+      ],
+      "title": "In re Estate of Hartman",
+      "ref": "[3]",
+      "court": "Colorado Court of Appeals",
+      "date": "2022-03-04"
+    },
+    {
+      "index": 3,
+      "text": "Sanderson v. Weld Holdings (Colorado Court of Appeals, Weld County (Greeley), 2021): Severed minerals are personal property and the claimant must record the exemption separately. In the memo: Weld County and Pueblo County treat severed minerals separately.",
+      "key": "c:weld",
+      "cat": "county",
+      "label": "Weld County (Greeley) → Colorado Court of Appeals (Denver)",
+      "ll": [
+        40.4233,
+        -104.7091
+      ],
+      "title": "Sanderson v. Weld Holdings",
+      "ref": "[4]",
+      "court": "Colorado Court of Appeals",
+      "date": "2021-07-15"
+    },
+    {
+      "index": 4,
+      "text": "Vasquez v. Pueblo Minerals (Colorado Court of Appeals, Pueblo County (Pueblo), 2020): The county court must value the mineral estate before applying the exemption. In the memo: Weld County and Pueblo County treat severed minerals separately.",
+      "key": "c:pueblo",
+      "cat": "county",
+      "label": "Pueblo County (Pueblo) → Colorado Court of Appeals (Denver)",
+      "ll": [
+        38.2544,
+        -104.6091
+      ],
+      "title": "Vasquez v. Pueblo Minerals",
+      "ref": "[5]",
+      "court": "Colorado Court of Appeals",
+      "date": "2020-11-05"
+    },
+    {
+      "index": 5,
+      "text": "In re Mineral Estate (United States Court of Appeals for the Tenth Circuit, 2019): The bankruptcy estate includes the mineral interests, and the exemption applies to the residence only. In the memo: The Tenth Circuit applies the federal rule to bankruptcy estates.",
+      "key": "cir:tenth",
+      "cat": "state",
+      "label": "U.S. Court of Appeals, 10th Cir. (Denver)",
+      "ll": [
+        39.745,
+        -104.992
+      ],
+      "title": "In re Mineral Estate",
+      "ref": "[6]",
+      "court": "United States Court of Appeals for the Tenth Circuit",
+      "date": "2019-05-20"
+    },
+    {
+      "index": 6,
+      "text": "Ochoa v. Mineral Trust (United States Court of Appeals for the Ninth Circuit, 2018): The panel held that the exemption follows the debtor's residence and does not reach severed minerals. In the memo: The Ninth Circuit reaches the same result.",
+      "key": "cir:ninth",
+      "cat": "federal",
+      "label": "U.S. Court of Appeals, 9th Cir. (San Francisco)",
+      "ll": [
+        37.78,
+        -122.416
+      ],
+      "title": "Ochoa v. Mineral Trust",
+      "ref": "[7]",
+      "court": "United States Court of Appeals for the Ninth Circuit",
+      "date": "2018-09-12"
+    },
+    {
+      "index": 7,
+      "text": "Holland v. Mineral Bank (Supreme Court of the United States, 2017): The Court declined to decide whether mineral interests fall inside the exemption. In the memo: The Colorado Supreme Court and Court of Appeals agree on the residence test.",
+      "key": "scotus",
+      "cat": "federal",
+      "label": "U.S. Supreme Court (Washington, DC)",
+      "ll": [
+        38.8906,
+        -77.0044
+      ],
+      "title": "Holland v. Mineral Bank",
+      "ref": "[8]",
+      "court": "Supreme Court of the United States",
+      "date": "2017-06-01"
+    },
+    {
+      "index": 8,
+      "text": "Reed v. El Paso Royalties (Colorado Supreme Court, El Paso County (Colorado Springs), 2023): The residence test controls and the claimant need not list the minerals separately. In the memo: The Colorado Supreme Court and Court of Appeals agree on the residence test.",
+      "key": "c:el paso",
+      "cat": "county",
+      "label": "El Paso County (Colorado Springs) → Colorado Supreme Court (Denver)",
+      "ll": [
+        38.8339,
+        -104.8214
+      ],
+      "title": "Reed v. El Paso Royalties",
+      "ref": "[9]",
+      "court": "Colorado Supreme Court",
+      "date": "2023-01-10"
+    },
+    {
+      "index": 9,
+      "text": "C.R.S. 38-41-202 (2024): The exemption amount is adjusted annually and applies to the dwelling and its appurtenances. In the memo: The state statute and the federal statute differ in scope.",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ],
+      "title": "C.R.S. 38-41-202",
+      "ref": "[10]",
+      "court": null,
+      "date": "2024"
+    },
+    {
+      "index": 10,
+      "text": "11 C.F.R. 522.1 (2024): The federal exemption schedule applies where the state has opted out of the state scheme. In the memo: The state statute and the federal statute differ in scope.",
+      "key": "dc-stat",
+      "cat": "federal",
+      "label": "U.S. Code / CFR (Washington, DC)",
+      "ll": [
+        38.8906,
+        -77.0044
+      ],
+      "title": "11 C.F.R. 522.1",
+      "ref": "[11]",
+      "court": null,
+      "date": "2024"
+    },
+    {
+      "index": 11,
+      "text": "City of Denver v. Claimant (Colorado Court of Appeals, 2021): The city and county of Denver must release the exemption on the recorded deed. In the memo: The U.S.",
+      "key": "denver",
+      "cat": "state",
+      "label": "Colorado Court of Appeals (Denver)",
+      "ll": [
+        39.7393,
+        -104.9897
+      ],
+      "title": "City of Denver v. Claimant",
+      "ref": "[12]",
+      "court": "Colorado Court of Appeals",
+      "date": "2021-02-02"
+    }
+  ],
+  "citations": [
+    {
+      "index": 0,
+      "id": "co-38-41-201",
+      "title": "C.R.S. 38-41-201",
+      "ref": "[1]",
+      "court": null,
+      "date": "2024",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ]
+    },
+    {
+      "index": 1,
+      "id": "11-522",
+      "title": "11 U.S.C. 522",
+      "ref": "[2]",
+      "court": null,
+      "date": "2023",
+      "key": "dc-stat",
+      "cat": "federal",
+      "label": "U.S. Code / CFR (Washington, DC)",
+      "ll": [
+        38.8906,
+        -77.0044
+      ]
+    },
+    {
+      "index": 2,
+      "id": "boulder-1",
+      "title": "In re Estate of Hartman",
+      "ref": "[3]",
+      "court": "Colorado Court of Appeals",
+      "date": "2022-03-04",
+      "key": "c:boulder",
+      "cat": "county",
+      "label": "Boulder County (Boulder) → Colorado Court of Appeals (Denver)",
+      "ll": [
+        40.015,
+        -105.2705
+      ]
+    },
+    {
+      "index": 3,
+      "id": "weld-1",
+      "title": "Sanderson v. Weld Holdings",
+      "ref": "[4]",
+      "court": "Colorado Court of Appeals",
+      "date": "2021-07-15",
+      "key": "c:weld",
+      "cat": "county",
+      "label": "Weld County (Greeley) → Colorado Court of Appeals (Denver)",
+      "ll": [
+        40.4233,
+        -104.7091
+      ]
+    },
+    {
+      "index": 4,
+      "id": "pueblo-1",
+      "title": "Vasquez v. Pueblo Minerals",
+      "ref": "[5]",
+      "court": "Colorado Court of Appeals",
+      "date": "2020-11-05",
+      "key": "c:pueblo",
+      "cat": "county",
+      "label": "Pueblo County (Pueblo) → Colorado Court of Appeals (Denver)",
+      "ll": [
+        38.2544,
+        -104.6091
+      ]
+    },
+    {
+      "index": 5,
+      "id": "tenth-1",
+      "title": "In re Mineral Estate",
+      "ref": "[6]",
+      "court": "United States Court of Appeals for the Tenth Circuit",
+      "date": "2019-05-20",
+      "key": "cir:tenth",
+      "cat": "state",
+      "label": "U.S. Court of Appeals, 10th Cir. (Denver)",
+      "ll": [
+        39.745,
+        -104.992
+      ]
+    },
+    {
+      "index": 6,
+      "id": "ninth-1",
+      "title": "Ochoa v. Mineral Trust",
+      "ref": "[7]",
+      "court": "United States Court of Appeals for the Ninth Circuit",
+      "date": "2018-09-12",
+      "key": "cir:ninth",
+      "cat": "federal",
+      "label": "U.S. Court of Appeals, 9th Cir. (San Francisco)",
+      "ll": [
+        37.78,
+        -122.416
+      ]
+    },
+    {
+      "index": 7,
+      "id": "scotus-1",
+      "title": "Holland v. Mineral Bank",
+      "ref": "[8]",
+      "court": "Supreme Court of the United States",
+      "date": "2017-06-01",
+      "key": "scotus",
+      "cat": "federal",
+      "label": "U.S. Supreme Court (Washington, DC)",
+      "ll": [
+        38.8906,
+        -77.0044
+      ]
+    },
+    {
+      "index": 8,
+      "id": "elp-1",
+      "title": "Reed v. El Paso Royalties",
+      "ref": "[9]",
+      "court": "Colorado Supreme Court",
+      "date": "2023-01-10",
+      "key": "c:el paso",
+      "cat": "county",
+      "label": "El Paso County (Colorado Springs) → Colorado Supreme Court (Denver)",
+      "ll": [
+        38.8339,
+        -104.8214
+      ]
+    },
+    {
+      "index": 9,
+      "id": "co-38-41-202",
+      "title": "C.R.S. 38-41-202",
+      "ref": "[10]",
+      "court": null,
+      "date": "2024",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ]
+    },
+    {
+      "index": 10,
+      "id": "cfr-1",
+      "title": "11 C.F.R. 522.1",
+      "ref": "[11]",
+      "court": null,
+      "date": "2024",
+      "key": "dc-stat",
+      "cat": "federal",
+      "label": "U.S. Code / CFR (Washington, DC)",
+      "ll": [
+        38.8906,
+        -77.0044
+      ]
+    },
+    {
+      "index": 11,
+      "id": "denver-1",
+      "title": "City of Denver v. Claimant",
+      "ref": "[12]",
+      "court": "Colorado Court of Appeals",
+      "date": "2021-02-02",
+      "key": "denver",
+      "cat": "state",
+      "label": "Colorado Court of Appeals (Denver)",
+      "ll": [
+        39.7393,
+        -104.9897
+      ]
+    }
+  ],
+  "edges": 11,
+  "arcCounts": {
+    "cc": 3,
+    "cs": 2,
+    "st": 3,
+    "fed": 3,
+    "other": 0
+  },
+  "pins": [
+    {
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ],
+      "count": 2
+    },
+    {
+      "key": "dc-stat",
+      "cat": "federal",
+      "label": "U.S. Code / CFR (Washington, DC)",
+      "ll": [
+        38.8906,
+        -77.0044
+      ],
+      "count": 2
+    },
+    {
+      "key": "c:boulder",
+      "cat": "county",
+      "label": "Boulder County (Boulder) → Colorado Court of Appeals (Denver)",
+      "ll": [
+        40.015,
+        -105.2705
+      ],
+      "count": 1
+    },
+    {
+      "key": "c:weld",
+      "cat": "county",
+      "label": "Weld County (Greeley) → Colorado Court of Appeals (Denver)",
+      "ll": [
+        40.4233,
+        -104.7091
+      ],
+      "count": 1
+    },
+    {
+      "key": "c:pueblo",
+      "cat": "county",
+      "label": "Pueblo County (Pueblo) → Colorado Court of Appeals (Denver)",
+      "ll": [
+        38.2544,
+        -104.6091
+      ],
+      "count": 1
+    },
+    {
+      "key": "cir:tenth",
+      "cat": "state",
+      "label": "U.S. Court of Appeals, 10th Cir. (Denver)",
+      "ll": [
+        39.745,
+        -104.992
+      ],
+      "count": 1
+    },
+    {
+      "key": "cir:ninth",
+      "cat": "federal",
+      "label": "U.S. Court of Appeals, 9th Cir. (San Francisco)",
+      "ll": [
+        37.78,
+        -122.416
+      ],
+      "count": 1
+    },
+    {
+      "key": "scotus",
+      "cat": "federal",
+      "label": "U.S. Supreme Court (Washington, DC)",
+      "ll": [
+        38.8906,
+        -77.0044
+      ],
+      "count": 1
+    },
+    {
+      "key": "c:el paso",
+      "cat": "county",
+      "label": "El Paso County (Colorado Springs) → Colorado Supreme Court (Denver)",
+      "ll": [
+        38.8339,
+        -104.8214
+      ],
+      "count": 1
+    },
+    {
+      "key": "denver",
+      "cat": "state",
+      "label": "Colorado Court of Appeals (Denver)",
+      "ll": [
+        39.7393,
+        -104.9897
+      ],
+      "count": 1
+    }
+  ],
+  "countyHeat": {
+    "c:boulder": 1,
+    "c:weld": 1,
+    "c:pueblo": 1,
+    "c:el paso": 1
+  },
+  "countyCount": 4,
+  "stateCount": 3,
+  "summary": "4 counties linked · 3 jurisdictions · 15 links",
+  "source": {
+    "base": "https://arize.design-bakery.com",
+    "run": "spread-fixture",
+    "viewport": "1440x900"
+  }
+}
