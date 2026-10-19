@@ -83,9 +83,7 @@ def test_O73_progress_is_named_and_the_draft_appears_before_the_memo(base, brows
     progress = page.get_by_label("Run progress")
     progress.wait_for(timeout=10000)
     assert progress.is_visible(), "the page does not say what the run is doing"
-    assert re.search("search|retriev|plann", progress.inner_text(), re.I), (
-        f"the progress region does not name the stage: {progress.inner_text()!r}"
-    )
+    assert re.search("search|retriev|plann", progress.inner_text(), re.I), f"the progress region does not name the stage: {progress.inner_text()!r}"
 
     page.get_by_text("the exemption follows residence", exact=False).first.wait_for(timeout=10000)
     page.get_by_role("heading", name="Key authorities").wait_for(timeout=20000)
@@ -233,7 +231,10 @@ def test_O78_speech_can_always_be_silenced_and_stopped(base, browser):
     ctx = browser.new_context(viewport={"width": DESKTOP, "height": 900})
     page = ctx.new_page()
     serve_run(page, RUN, RUN_ID)
-    page.route("**/api/tts_ts", lambda r: (page.wait_for_timeout(1500), r.fulfill(status=200, content_type="application/json", body=json.dumps({"audio_b64": "", "starts": []}))))
+    page.route(
+        "**/api/tts_ts",
+        lambda r: (page.wait_for_timeout(1500), r.fulfill(status=200, content_type="application/json", body=json.dumps({"audio_b64": "", "starts": []}))),
+    )
     page.goto(base + f"/?run={RUN_ID}", wait_until="domcontentloaded")
     page.get_by_role("button", name="Listen", exact=True).click()
     loading = page.get_by_label("Audio loading")
