@@ -79,7 +79,8 @@ def test_O92_a_cached_run_is_marked_as_a_replay(base, browser):
 
 
 def test_O93_stage_messages_name_the_path_actually_taken():
-    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+    root = pathlib.Path(__file__).resolve().parent.parent
+    sys.path.insert(0, str(root))
     from app import agents, coord, octo_retriever
 
     class FakeGraph:
@@ -114,6 +115,8 @@ def test_O93_stage_messages_name_the_path_actually_taken():
     octo_retriever.search = lambda question, k=12: (passages, "octo-live")
     import shutil
 
+    assignment = root / ".coord" / "assignment.json"
+    before = assignment.read_bytes() if assignment.exists() else None
     run = coord.Run("test-o93")
     try:
         agents.retriever(run, "a question about a thing")
@@ -121,6 +124,8 @@ def test_O93_stage_messages_name_the_path_actually_taken():
     finally:
         agents.graph, octo_retriever.search = original_graph, original_search
         shutil.rmtree(run.dir, ignore_errors=True)
+        if before is not None:
+            assignment.write_bytes(before)
     messages = " ".join(event.get("msg", "") for event in events)
     for claim in ("SurrealDB", "hybrid", "PageRank"):
         assert claim.lower() not in messages.lower(), f"the run claims {claim!r} without using it: {messages!r}"

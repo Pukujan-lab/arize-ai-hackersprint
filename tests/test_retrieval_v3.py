@@ -71,6 +71,20 @@ def _ids(result):
     return [str(citation.get("id") or "") for citation in result.get("citations", [])]
 
 
+@contextlib.contextmanager
+def assignment_restored():
+    """The retriever writes .coord/assignment.json; a test must leave it exactly as it found it."""
+    path = ROOT / ".coord" / "assignment.json"
+    before = path.read_bytes() if path.exists() else None
+    try:
+        yield
+    finally:
+        if before is not None:
+            path.write_bytes(before)
+        elif path.exists():
+            path.unlink()
+
+
 @pytest.fixture(scope="module")
 def live():
     if not LIVE:
@@ -163,7 +177,8 @@ def test_O97_a_retrieved_authority_survives_a_missing_graph_node():
 
     run = coord.Run("test-o97")
     try:
-        out = agents.retriever(run, "a question")
+        with assignment_restored():
+            out = agents.retriever(run, "a question")
     finally:
         agents.graph, octo_retriever.search = original_graph, original_search
         shutil.rmtree(run.dir, ignore_errors=True)
