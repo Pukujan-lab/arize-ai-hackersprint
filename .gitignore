@@ -38,3 +38,4 @@ tests/redteam/shots/*
 .aba-gate-tests/
 
 RUN_META.json
+package-lock.json

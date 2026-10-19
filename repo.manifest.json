@@ -106,6 +106,14 @@
       "runtime_data": "nothing (code only)"
     },
     {
+      "path": "package.json",
+      "kind": "file",
+      "owner": "app",
+      "purpose": "The builder's entry point for this workspace: its only script runs the frontend build in web/, which is the source tree. CI and the deploy host build web/ directly.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
       "path": "pyproject.toml",
       "kind": "file",
       "owner": "ci",
