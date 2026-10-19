@@ -6,6 +6,7 @@ and stops when the reader drags or scrolls the map."""
 import base64
 import io
 import json
+import re
 import time
 import wave
 
@@ -20,6 +21,7 @@ from ui_server import (
     needs_chromium,
     needs_v3,
     open_page,
+    open_run,
     serve_run,
     visible_words,
 )
@@ -246,4 +248,35 @@ def test_O11_one_listen_control_drives_the_memo_and_the_tour(base, browser):
     page.get_by_role("button", name="Stop listening").click()
     page.wait_for_timeout(400)
     assert not _tour(page)["playing"], "Listen did not stop tour narration"
+    ctx.close()
+
+
+NO_AUTHORITY = load_fixture("run-no-authority.json")
+
+
+def _stop_controls(page):
+    """Each tour control and whether it is usable, so a hidden bar and a disabled bar both pass."""
+    states = {}
+    for name in ("Previous stop", "Next stop", "Play", "Stop tour"):
+        controls = page.get_by_role("button", name=name, exact=True)
+        states[name] = [controls.nth(i).is_disabled() for i in range(controls.count())]
+    return states
+
+
+def _assert_no_stop_is_claimed(page, where):
+    assert not re.search(r"Stop\s+\d+\s+of\s+0\b", page.inner_text("body")), f"{where}: the page claims a stop when there are none"
+    for name, disabled in _stop_controls(page).items():
+        assert not any(state is False for state in disabled), f"{where}: {name} is usable with no stops"
+
+
+def test_O108_a_page_with_no_authorities_claims_no_stop(base, browser):
+    ctx, page = open_page(browser, base, "/", DESKTOP)
+    map_ready(page)
+    _assert_no_stop_is_claimed(page, "a page with no run")
+    ctx.close()
+
+    ctx, page = open_run(browser, base, NO_AUTHORITY, path="/map", run_id="no-authority-run")
+    map_ready(page)
+    assert map_call(page, "state().tour.count") == 0, "the refusal run was given stops"
+    _assert_no_stop_is_claimed(page, "a run with no authorities")
     ctx.close()

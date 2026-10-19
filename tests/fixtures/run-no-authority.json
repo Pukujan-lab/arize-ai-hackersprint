@@ -1,0 +1,34 @@
+{
+  "run_id": "no-authority-run",
+  "question": "hello",
+  "answer": "**Short answer:** I found no authority on point, so there is nothing to cite. Precedent searches the Colorado and federal opinions and statutes it indexes; ask a legal question about that corpus and it will return the authorities it finds.\n\n### Key authorities\nNone: the index returned nothing that addresses this question.\n\n### Caveat\nNo authority was retrieved, so nothing here is legal advice.",
+  "citations": [],
+  "edges": [],
+  "provider": "scope:no-authority",
+  "elapsed_s": 0.23,
+  "documents": [],
+  "safeguard": {
+    "pass": false,
+    "regex_pass": false,
+    "used": [],
+    "invalid": [],
+    "unknown_authorities": [],
+    "unsupported_claims": [
+      "**Short answer:** I found no authority on point, so there is nothing to cite.",
+      "Precedent searches the Colorado and federal opinions and statutes it indexes; ask a legal question about that corpus and it will return the authorities it finds.",
+      "### Key authorities\nNone: the index returned nothing that addresses this question.",
+      "### Caveat\nNo authority was retrieved, so nothing here is legal advice."
+    ],
+    "support": {
+      "ran": false,
+      "claims": 0,
+      "unchecked": [],
+      "scorer": "minicheck",
+      "threshold": 0.5,
+      "reason": "no cited passage to check"
+    },
+    "abstain": null,
+    "answer_confidence": null,
+    "disclaimer": "This is an AI-generated research summary, not legal advice. Verify all authorities and consult a licensed attorney."
+  }
+}

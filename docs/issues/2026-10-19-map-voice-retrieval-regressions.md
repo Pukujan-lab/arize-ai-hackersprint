@@ -390,3 +390,27 @@ grouped as:
 
 Each outcome gets one failing acceptance test before the builder is asked to implement it. The spec and the
 tests land first; no application code changes until they do.
+
+---
+
+## Post-cutover defect (2026-10-19)
+
+### 24. A page with no authorities claims a first stop
+
+**Observed.** The map's tour bar reads `Stop 1 of 0`, and its `Previous stop`, `Next stop`, `Play` and
+`Stop tour` controls are all usable. This appears on a page with no run at all and on a run that refused
+because the corpus had nothing on point.
+
+**Evidence.** Live, on `https://arize.design-bakery.com/` with no run:
+`tour = {active: false, index: 0, count: 0}` while the page text contains `Stop 1 of 0` and every tour
+control reports `disabled: false`. Live, on run `190842-a5aeac` (the greeting `hello`, provider
+`scope:no-authority`, 0 citations), the same figures: `count: 0`, `Stop 1 of 0`, all four controls
+enabled. The position is computed as `Math.min(tour.index + 1, tour.count) || 1` and the bar renders
+whether or not the tour has stops.
+
+**Must instead.** A page or run with no authorities never claims a stop: no `N of 0` position and no
+usable previous, next, play or stop-tour control. Hiding the bar and disabling its controls are both
+acceptable; claiming a first stop is not.
+
+**Gate.** `test_frontend_v3_tour.py::test_O108_a_page_with_no_authorities_claims_no_stop` fails on the
+current build for both cases.
