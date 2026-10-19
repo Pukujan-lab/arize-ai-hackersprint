@@ -1,0 +1,47 @@
+{
+  "engine": {
+    "configured": true,
+    "ok": true,
+    "status": "ready",
+    "chunk_count": 804646,
+    "case_count": 45048,
+    "corpus_revision": "octo-chunk:804646",
+    "graph_revision": "5f469d7d-18b6-5bb5-95e6-72b348e59799",
+    "lexical": "bm25s",
+    "dense_model": "BAAI/bge-small-en-v1.5",
+    "rerank_model": "cross-encoder/ms-marco-MiniLM-L-6-v2",
+    "jev_model": null,
+    "scorer": "minicheck",
+    "stages": [
+      {"name": "parse", "duration_ms": 7.5, "skipped": false},
+      {"name": "bm25", "duration_ms": 120.4, "skipped": false},
+      {"name": "dense", "duration_ms": 840.0, "skipped": false},
+      {"name": "hybrid", "duration_ms": 1.4, "skipped": false},
+      {"name": "graph", "duration_ms": 444.7, "skipped": false},
+      {"name": "rerank", "duration_ms": 2100.0, "skipped": false},
+      {"name": "jev", "duration_ms": 0.0, "skipped": true, "reason": "OPENROUTER_API_KEY not configured"}
+    ],
+    "last_error": null
+  },
+  "tracing": {
+    "ok": false,
+    "reason": "StatusCode.PERMISSION_DENIED",
+    "project": "precedent-legal-graphrag",
+    "sent": 0,
+    "dropped": 4,
+    "queued": 2
+  },
+  "retention": {
+    "runs_kept": 200,
+    "runs_on_disk": 202,
+    "trace_queue_max": 2000,
+    "spans_dropped": 4
+  },
+  "octo": {"searches": 0, "live": 0, "snapshot": 0, "cache_hits": 0, "last_source": null},
+  "model": {"runs": 0, "real_total": 0, "cached_answers": 0, "template": 0},
+  "elevenlabs": {"enabled": false, "chain": []},
+  "arize": {"connected": false, "status": "Not connected"},
+  "runs": [
+    {"run_id": "obs-run", "q": "Does a mineral reservation survive when the land is sold?", "elapsed_s": 4.2, "pass": true, "provider": "inferhub", "passages": "engine:parse+bm25+dense+hybrid+graph+rerank", "latency": {}}
+  ]
+}

@@ -5,7 +5,7 @@ import json
 
 import pytest
 
-from ui_server import DESKTOP, app_server, load_fixture, needs_chromium, needs_v3, open_run
+from ui_server import app_server, load_fixture, needs_chromium, needs_v3, open_run
 
 sync_api = pytest.importorskip("playwright.sync_api")
 pytestmark = [needs_chromium, needs_v3]
