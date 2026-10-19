@@ -1,0 +1,34 @@
+{
+  "run_id": "obs-run",
+  "question": "Does a mineral reservation survive when the land is sold?",
+  "answer": "**Short answer:** A severed mineral estate survives a sale of the surface unless the deed says otherwise [1].",
+  "provider": "inferhub",
+  "elapsed_s": 4.2,
+  "safeguard": {"pass": true, "used": ["[1]"], "invalid": [], "unknown_authorities": [], "unsupported_claims": []},
+  "citations": [
+    {
+      "id": "C.R.S. § 34-60-102",
+      "ref": "[1]",
+      "title": "Oil and Gas Conservation Act",
+      "type": "statute",
+      "court": "Colorado",
+      "date": "2024-01-01",
+      "url": "https://leg.colorado.gov/sites/default/files/images/olls/crs2024-title-34.pdf",
+      "passage": "A mineral estate may be severed from the surface estate."
+    }
+  ],
+  "edges": [],
+  "retrieval": {
+    "source": "engine:parse+bm25+dense+hybrid+graph+rerank",
+    "stages": [
+      {"name": "parse", "duration_ms": 7.5, "skipped": false},
+      {"name": "bm25", "duration_ms": 120.4, "skipped": false},
+      {"name": "dense", "duration_ms": 840.0, "skipped": false},
+      {"name": "hybrid", "duration_ms": 1.4, "skipped": false},
+      {"name": "graph", "duration_ms": 444.7, "skipped": false},
+      {"name": "rerank", "duration_ms": 2100.0, "skipped": false},
+      {"name": "jev", "duration_ms": 0.0, "skipped": true, "reason": "OPENROUTER_API_KEY not configured"}
+    ],
+    "graph": {"source": "octo-citation-edges", "revision": "5f469d7d-18b6-5bb5-95e6-72b348e59799"}
+  }
+}
