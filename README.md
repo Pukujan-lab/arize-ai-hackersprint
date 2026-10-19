@@ -43,6 +43,14 @@ uvicorn app.server:app --port 3000
 
 Then open http://localhost:3000. The older `uvicorn server:app` still works.
 
+The app serves the built frontend, so build it once before starting the server:
+
+```bash
+cd web && pnpm install --frozen-lockfile && pnpm build
+```
+
+Without that build the pages return an error rather than an older frontend; there is only one frontend.
+
 Set these in your shell or a local `.env` file, and never commit them:
 
 - `INFERHUB_API_KEY`, `ANTHROPIC_API_KEY`
@@ -61,11 +69,11 @@ Set these in your shell or a local `.env` file, and never commit them:
 | `app/` | The backend package: `server.py` (FastAPI app and routes), `agents.py` (the four agents), `llm.py` (model chain), `graph_store.py` (SurrealDB with a NetworkX fallback), `octo_retriever.py`, `ttschain.py` (voice chain, queue and clip cache), `octocache.py` (shared Octo cache layer), `coord.py`, `contracts.py` |
 | `schema/`, `migrations/` | The versioned data model for the tables the app keeps in Octo, and numbered SQL migrations that the deploy applies |
 | `acs/` | Agent coordination: the task board, the `claim.py` CLI and the hot-loader, plus the vendored ACS runtime |
-| `static/` | The frontend, plain HTML and JS with no build step: demo, map, dashboard, slides, guide, observability |
+| `web/` | The frontend: source in `web/src/`, build root in `web/package.json`. Built on the serving machine from the deployed commit; the output is not committed |
 | `contracts/` | `openapi.json` for the API, one contract per agent role in `agents/`, and `storage.json`, which says where each kind of data lives |
 | `tests/`, `ci/` | The test suite and offline triage helpers |
 | `deploy/` | The deploy script, the launchd wrapper and plists for the host |
-| `tools/` | `run_all.sh`, `ci_local.sh`, screenshot, video and Arize helpers |
+| `tools/` | `run_all.sh`, `ci_local.sh`, the adoption and dependency checks, the Kokoro installer and Arize helpers |
 | `arize/` | Arize experiments and judge setup |
 | `docs/` | Project notes and hackathon records, indexed in `docs/README.md`. The voice chain, the caches and the data model are explained in `docs/voice-and-data-model.md` |
 

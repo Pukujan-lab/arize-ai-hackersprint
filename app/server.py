@@ -1,23 +1,133 @@
 import re, json
 import os, time, uuid, threading, pathlib, httpx, subprocess
-from fastapi import FastAPI, Depends
-from fastapi.responses import HTMLResponse, Response, JSONResponse
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse, Response, JSONResponse, RedirectResponse
 from app import contracts
 from app import agents, tracing, limits, ttschain, octocache
 from acs import board as acs_board
 from app.coord import Run, CLAIM
 
-ROOT = pathlib.Path(__file__).resolve().parent.parent  # repo root: static/, runs/, cache/ live here
+ROOT = pathlib.Path(__file__).resolve().parent.parent  # repo root: runs/, cache/ live here
 app = FastAPI(title="Legal GraphRAG Agents")
-from fastapi.staticfiles import StaticFiles
 
-app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")
 threading.Thread(target=agents.graph, daemon=True).start()
+
+# --- Frontend v3 -------------------------------------------------------------------------------
+# web/dist is the built frontend and the only one. The four surviving addresses serve it, each with
+# its own head; the retired addresses forward permanently and never return a page. Nothing under
+# /api changes. There is no fallback page: a missing build fails loudly.
+WEB_DIST = ROOT / "web" / "dist"
+WEB_INDEX = WEB_DIST / "index.html"
+SITE_BASE = "https://arize.design-bakery.com"
+
+_V3_PAGES = {
+    "/": {
+        "title": "Precedent · Ask, read the memo, tour the map",
+        "description": "Ask a legal question and read the memo it returns, then tour the citation map behind every authority the answer relies on.",
+    },
+    "/map": {
+        "title": "Precedent · The citation map behind the memo",
+        "description": "The citation map opened on its own pane: every authority in the memo pinned at the court that decided it, over the extruded United States.",
+    },
+    "/observability": {
+        "title": "Precedent · How a run was made",
+        "description": "How a run was made: the agents that planned, retrieved, wrote and verified the memo, the steps each one took and the authorities it cited.",
+    },
+    "/slides": {
+        "title": "Precedent · The run, slide by slide",
+        "description": "The deck that walks through a run, from the question to the memo to the citation map and its guided tour of every authority the answer cites.",
+    },
+}
+
+
+def _build_id():
+    """The commit this build came from: written by the build, else the environment, else git."""
+    try:
+        written = (WEB_DIST / "build-id").read_text().strip()
+        if written:
+            return written
+    except Exception:
+        pass
+    for key in ("BUILD_ID", "GITHUB_SHA"):
+        value = (os.environ.get(key) or "").strip()
+        if value:
+            return value
+    try:
+        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(ROOT), capture_output=True, text=True, timeout=5).stdout.strip()
+    except Exception:
+        return ""
+
+
+def _v3_head(path, meta):
+    url = SITE_BASE + path
+    title, desc = meta["title"], meta["description"]
+    parts = [
+        f'<meta name="description" content="{desc}">',
+        f'<link rel="canonical" href="{url}">',
+        f'<meta property="og:title" content="{title}">',
+        f'<meta property="og:description" content="{desc}">',
+        f'<meta property="og:image" content="{SITE_BASE}/og.png">',
+        f'<meta property="og:url" content="{url}">',
+        '<meta property="og:type" content="website">',
+        '<meta name="twitter:card" content="summary_large_image">',
+        '<meta name="theme-color" content="#0b1020">',
+        '<link rel="icon" href="/logo.svg">',
+        f'<meta name="build-id" content="{_build_id()}">',
+    ]
+    if path == "/":
+        parts.append(
+            '<script type="application/ld+json">'
+            '{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "Precedent", '
+            f'"applicationCategory": "LegalService", "url": "{SITE_BASE}/"}}</script>'
+        )
+    return "\n    ".join(parts)
+
+
+def _v3_page(path):
+    """The built page with this route's title, description, canonical and build id in its head.
+
+    There is no fallback: a missing build fails loudly instead of quietly serving an older page."""
+    if not WEB_INDEX.is_file():
+        raise HTTPException(
+            status_code=503,
+            detail="The built frontend is missing (web/dist). Run `pnpm --dir web build` before serving.",
+        )
+    html = WEB_INDEX.read_text()
+    meta = _V3_PAGES[path]
+    html = re.sub(r"<title>.*?</title>", lambda _m: f"<title>{meta['title']}</title>", html, count=1, flags=re.S)
+    block = _v3_head(path, meta)
+    if "<!--seo-->" in html:
+        return html.replace("<!--seo-->", block)
+    return html.replace("</head>", block + "\n  </head>", 1)
+
+
+def _dist_file(base, rel):
+    """A file from the built frontend, or 404 — never anything outside it."""
+    root = base.resolve()
+    target = (root / rel).resolve()
+    if root not in target.parents or not target.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(target)
+
+
+@app.get("/assets/{rel:path}", include_in_schema=False)
+def web_asset(rel: str):
+    return _dist_file(WEB_DIST / "assets", rel)
+
+
+@app.get("/vendor/{rel:path}", include_in_schema=False)
+def web_vendor(rel: str):
+    return _dist_file(WEB_DIST / "vendor", rel)
+
+
+@app.get("/logo.svg", include_in_schema=False)
+def web_logo():
+    return _dist_file(WEB_DIST, "logo.svg")
 
 
 @app.get("/", response_class=HTMLResponse)
 def index():
-    return (ROOT / "static" / "v2.html").read_text()
+    return _v3_page("/")
 
 
 @app.get("/api/health", response_model=contracts.HealthResponse, response_model_exclude_unset=True)
@@ -237,14 +347,16 @@ def api_acs_events(n: int = 50):
     return [json.loads(l) for l in acs_board.EVENTS.read_text().splitlines()[-n:]] if acs_board.EVENTS.exists() else []
 
 
-@app.get("/dashboard", response_class=HTMLResponse)
+# The four retired addresses forward permanently and never return a page. They are not part of the
+# API contract: the surviving pages are, and these only point at them.
+@app.get("/dashboard", status_code=308, include_in_schema=False)
 def dashboard():
-    return (ROOT / "static" / "dashboard.html").read_text()
+    return RedirectResponse("/observability", status_code=308)
 
 
 @app.get("/slides", response_class=HTMLResponse)
 def slides():
-    return (ROOT / "static" / "slides.html").read_text()
+    return _v3_page("/slides")
 
 
 def _agent_latency(rid):
@@ -521,30 +633,14 @@ def sponsor():
     }
 
 
-_V2_APP_TITLE = "Precedent v2 · Ask, read the memo, tour the map"
-_V2_APP_DESC = "Ask a legal question. Four agents plan, retrieve, write and verify, then the 3D citation map tours every source in the memo."
-# /map is the v2 experience opened on the map pane (#102). One file serves both routes, so /map
-# swaps in its own search tags and keeps the app title that static/v2.js puts in the tab.
-_MAP_TITLE = "Precedent v2 · The citation map behind every answer"
-_MAP_DESC = "Ask a legal question, read the memo it returns and tour the 3D map of every authority behind it. This copy opens straight on the map pane."
-
-
 @app.get("/map", response_class=HTMLResponse)
 def map_page():
-    html = (ROOT / "static" / "v2.html").read_text()
-    html = html.replace('data-mobile-pane="answer"', 'data-mobile-pane="map"')
-    html = html.replace(f"<title>{_V2_APP_TITLE}</title>", f"<title>{_MAP_TITLE}</title>")
-    html = html.replace(_V2_APP_DESC, _MAP_DESC)
-    html = html.replace('href="https://arize.design-bakery.com/"', 'href="https://arize.design-bakery.com/map"')
-    html = html.replace('content="https://arize.design-bakery.com/"', 'content="https://arize.design-bakery.com/map"')
-    html = html.replace('href="/" title="Demo" aria-label="Demo page" aria-current="page"', 'href="/" title="Demo" aria-label="Demo page"')
-    html = html.replace('href="/map" title="Map" aria-label="Map page"', 'href="/map" title="Map" aria-label="Map page" aria-current="page"')
-    return html
+    return _v3_page("/map")
 
 
 @app.get("/observability", response_class=HTMLResponse)
 def observability_page():
-    return (ROOT / "static" / "observability.html").read_text()
+    return _v3_page("/observability")
 
 
 @app.get("/api/runs", response_model=contracts.RUNS, response_model_exclude_unset=True)
@@ -576,19 +672,19 @@ def runs_list(request: Request, n: int = 15):
     return out
 
 
-@app.get("/guide", response_class=HTMLResponse)
+@app.get("/guide", status_code=308, include_in_schema=False)
 def guide_page():
-    return (ROOT / "static" / "guide.html").read_text()
+    return RedirectResponse("/slides", status_code=308)
 
 
-@app.get("/v1", response_class=HTMLResponse)
+@app.get("/v1", status_code=308, include_in_schema=False)
 def v1_page():
-    return (ROOT / "static" / "index.html").read_text()
+    return RedirectResponse("/", status_code=308)
 
 
-@app.get("/v2", response_class=HTMLResponse)
+@app.get("/v2", status_code=308, include_in_schema=False)
 def v2_page():
-    return (ROOT / "static" / "v2.html").read_text()
+    return RedirectResponse("/", status_code=308)
 
 
 from app import seo

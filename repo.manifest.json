@@ -66,14 +66,6 @@
       "runtime_data": "applied to the Octo workspace, not stored locally"
     },
     {
-      "path": "static/",
-      "kind": "dir",
-      "owner": "app",
-      "purpose": "Current frontend pages (demo, map, dashboard, slides, guide, observability). Deleted at the v3 cutover; the builder owns web/ and chooses its implementation.",
-      "agents_may_edit": true,
-      "runtime_data": "nothing (code only)"
-    },
-    {
       "path": "web/",
       "kind": "dir",
       "owner": "app",
@@ -102,6 +94,14 @@
       "kind": "dir",
       "owner": "ci",
       "purpose": "Workflows: ci.yml (gates), automerge.yml (squash auto-merge), deploy.yml (self-hosted Pro deploy); pull_request_template.md and PULL_REQUEST_TEMPLATE/aba.md (PR bodies with the OSS-considered section); dependabot.yml (weekly pip and Actions updates).",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "package.json",
+      "kind": "file",
+      "owner": "app",
+      "purpose": "The builder's entry point for this workspace: its only script runs the frontend build in web/, which is the source tree. CI and the deploy host build web/ directly.",
       "agents_may_edit": true,
       "runtime_data": "nothing (code only)"
     },
@@ -149,7 +149,7 @@
       "path": "tools/",
       "kind": "dir",
       "owner": "app",
-      "purpose": "Developer scripts: run_all.sh, ci_local.sh, validate_cgm_adoption.py, kokoro/ (local TTS service installer), screenshots, video, Arize helpers; pr_policy.py and dep_policy.py (CI glue for the reuse-first and dependency rules).",
+      "purpose": "Developer scripts: run_all.sh, ci_local.sh, the CGM and OIO adoption checks, kokoro/ (local TTS service installer), Arize helpers; pr_policy.py and dep_policy.py (CI glue for the reuse-first and dependency rules).",
       "agents_may_edit": true,
       "runtime_data": "run_all.sh writes logs/ (gitignored)"
     },

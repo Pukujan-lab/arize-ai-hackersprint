@@ -1,0 +1,8 @@
+{
+  "name": "precedent",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --dir web dev",
+    "build": "CI=true pnpm --dir web install --config.confirm-modules-purge=false && pnpm --dir web build"
+  }
+}

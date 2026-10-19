@@ -5,8 +5,8 @@
     "severity": "high",
     "affected": "/dashboard (fetches /api/stack); operators on the Pro",
     "expected": "Stack payload returns 200 with os-neutral memory/uptime fallbacks",
-    "actual": "Unhandled FileNotFoundError on open('/proc/meminfo') \u2192 HTTP 500; dashboard JSON parse error",
-    "repro": "1. On the Pro: `curl -s -o /dev/null -w '%{http_code}\\n' http://127.0.0.1:3000/api/stack` \u2192 500\n2. Open /dashboard and note console: Unexpected token 'I' / Internal Server Error",
+    "actual": "Unhandled FileNotFoundError on open('/proc/meminfo') → HTTP 500; dashboard JSON parse error",
+    "repro": "1. On the Pro: `curl -s -o /dev/null -w '%{http_code}\\n' http://127.0.0.1:3000/api/stack` → 500\n2. Open /dashboard and note console: Unexpected token 'I' / Internal Server Error",
     "acceptance": "Guard /proc reads; ship psutil or macOS fallbacks; user-visible degraded banner if metrics missing. Labels: fallback, robustness.",
     "extra_labels": [
       "fallback",
@@ -29,14 +29,14 @@
     ]
   },
   "test_theme_css_exists": {
-    "title": "Missing static/theme/precedent-theme.css (404)",
+    "title": "The built app's theme stylesheet is missing",
     "area": "ux",
     "severity": "low",
-    "affected": "Every HTML page referencing the theme stylesheet",
-    "expected": "200 for /static/theme/precedent-theme.css",
-    "actual": "404 on production",
-    "repro": "1. Open any page, Network panel\n2. Or `curl -s -o /dev/null -w '%{http_code}\\n' https://arize.design-bakery.com/static/theme/precedent-theme.css`",
-    "acceptance": "Add the file or remove the link; no console 404.",
+    "affected": "Every page of the built frontend",
+    "expected": "web/src/globals.css exists and defines light and dark surface tokens",
+    "actual": "the old theme file lived in static/, which the cutover deletes",
+    "repro": "1. Read web/src/globals.css\n2. Look for --background, --foreground and a prefers-color-scheme: dark block",
+    "acceptance": "The built app ships its own theme tokens; no page depends on a stylesheet under static/.",
     "extra_labels": [
       "ux",
       "broken-button"
@@ -49,7 +49,7 @@
     "affected": "/map geography UX; out-of-state / federal authorities",
     "expected": "Unknown courts use an explicit unknown/out-of-state pin or omit coords with a user message",
     "actual": "Default locate() returns Colorado courts (Denver) without signaling uncertainty",
-    "repro": "1. Read locate() default return in static/map3d.js\n2. Load a run with non-CO courts and watch pins cluster in Denver",
+    "repro": "1. Read the final return of locate() in web/src/lib/citations.ts\n2. Load a run with non-CO courts and watch pins cluster in Denver",
     "acceptance": "Add unknown/out-of-state category + caption when falling back; labels fallback, robustness.",
     "extra_labels": [
       "fallback",
@@ -62,7 +62,7 @@
     "severity": "moderate",
     "affected": "Legal answer integrity; safeguard chip on the demo",
     "expected": "Material sentences without a retrieved [n] fail the safeguard",
-    "actual": "passed = not bad and not unknown and bool(used) \u2014 unsupported_claims do not fail",
+    "actual": "passed = not bad and not unknown and bool(used) — unsupported_claims do not fail",
     "repro": "1. Unit: tests/redteam/test_integrity.py\n2. Or craft an answer with [1] plus an uncited statute claim",
     "acceptance": "Include unsupported_claims in the pass predicate (or withhold the answer); test green.",
     "extra_labels": []
@@ -72,7 +72,7 @@
     "area": "fallback",
     "severity": "informational",
     "affected": "Asks when data/nodes.jsonl is missing",
-    "expected": "Clear template:graph-unavailable answer (control \u2014 should pass)",
+    "expected": "Clear template:graph-unavailable answer (control — should pass)",
     "actual": "n/a when green",
     "repro": "REDTEAM=1 pytest -q tests/redteam/test_fallbacks.py::test_graph_unavailable_tells_the_user",
     "acceptance": "Keep the honest message; labels fallback, robustness.",
@@ -86,7 +86,7 @@
     "area": "fallback",
     "severity": "informational",
     "affected": "Audio UX when Fish/Kokoro unavailable",
-    "expected": "429/503 with fallback:browser (control \u2014 should pass)",
+    "expected": "429/503 with fallback:browser (control — should pass)",
     "actual": "n/a when green",
     "repro": "REDTEAM=1 pytest -q tests/redteam/test_fallbacks.py::test_tts_all_down_returns_browser_fallback",
     "acceptance": "Keep browser fallback + tried[]; labels fallback, robustness.",
@@ -102,7 +102,7 @@
     "affected": "Legal-answer integrity UX on /",
     "expected": "On FAIL, withhold or quarantine the memo",
     "actual": "Pipeline always returns answer; UI renders it with a FAIL chip",
-    "repro": "Read app/agents.py _run_pipeline and static/index.html render()",
+    "repro": "Read app/agents.py _run_pipeline and the memo rendering in web/src/pages/Index.tsx",
     "acceptance": "Withhold or clearly quarantine; test green.",
     "extra_labels": []
   },
@@ -138,10 +138,10 @@
     "title": "Dead or erroring controls when clicking every visible button/link",
     "area": "ux",
     "severity": "high",
-    "affected": "All public pages \u2014 buttons, links, toggles",
+    "affected": "All public pages — buttons, links, toggles",
     "expected": "Every visible control either navigates, toggles state, or shows feedback; no pageerrors",
     "actual": "Dead clicks or console errors while exercising controls",
-    "repro": "REDTEAM_LIVE=1 pytest ...::test_click_every_visible_control_desk \u2014 see tests/redteam/shots/",
+    "repro": "REDTEAM_LIVE=1 pytest ...::test_click_every_visible_control_desk — see tests/redteam/shots/",
     "acceptance": "Repair dead controls; wire missing handlers; Playwright click suite green.",
     "extra_labels": [
       "ux",
@@ -149,7 +149,7 @@
     ]
   },
   "test_ask_memo_flow_first_time_user": {
-    "title": "Ask\u2192memo first-time flow fails or lacks feedback",
+    "title": "Ask→memo first-time flow fails or lacks feedback",
     "area": "flow",
     "severity": "high",
     "affected": "Core demo path on /",
@@ -183,9 +183,9 @@
     "area": "fallback",
     "severity": "high",
     "affected": "/dashboard first-time operators",
-    "expected": "Dashboard renders stack panels or a clear degraded message \u2014 never raw 500 text",
+    "expected": "Dashboard renders stack panels or a clear degraded message — never raw 500 text",
     "actual": "Console pageerror or Internal Server Error body",
-    "repro": "Open /dashboard \u2014 related to /api/stack 500 on macOS (#31)",
+    "repro": "Open /dashboard — related to /api/stack 500 on macOS (#31)",
     "acceptance": "Dashboard handles /api/stack failure with a user-visible fallback panel.",
     "extra_labels": [
       "ux",

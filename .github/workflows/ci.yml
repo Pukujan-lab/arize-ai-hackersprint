@@ -16,7 +16,9 @@ jobs:
   gates:
     name: gates
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    # The browser suite (four pages x five widths x two themes) runs the whole suite in one job; it passed
+    # 15 minutes once the v3 acceptance tests joined, so the ceiling sits well above the observed time.
+    timeout-minutes: 30
     env:
       LLM_MODE: fake
       ACS_HOTLOAD: "0"
@@ -116,6 +118,8 @@ jobs:
       - name: Frontend build (the same build the deploy host runs, from the same lockfile)
         if: hashFiles('web/package.json') != ''
         working-directory: web
+        env:
+          BUILD_ID: ${{ github.sha }}
         run: |
           corepack enable
           pnpm install --frozen-lockfile

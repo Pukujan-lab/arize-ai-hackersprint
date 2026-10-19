@@ -60,11 +60,10 @@ def test_files_live_in_their_new_folders():
 
 
 def test_runtime_paths_resolve_to_repo_root():
-    from app import coord, graph_store, llm, octo_retriever, seo, server
+    from app import coord, graph_store, llm, octo_retriever, server
     from acs import hotload
 
-    assert server.ROOT == ROOT and (server.ROOT / "static" / "index.html").is_file()
-    assert seo.STATIC == ROOT / "static"
+    assert server.ROOT == ROOT and (server.ROOT / "web" / "package.json").is_file()
     assert llm.CACHE == ROOT / "cache"
     assert graph_store.CACHE == ROOT / "cache" / "graph_meta.pkl"
     assert octo_retriever.CACHE == ROOT / "cache" / "octo" and octo_retriever.SNAP == ROOT / "data" / "octo_snapshot.sqlite"

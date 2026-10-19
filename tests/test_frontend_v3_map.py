@@ -156,7 +156,7 @@ def test_O26_an_unreachable_basemap_leaves_a_working_map_and_no_error(base, brow
     def block_external(page):
         page.route(
             "**/*",
-            lambda r: r.abort() if not r.request.url.startswith("http://127.0.0.1") else r.continue_(),
+            lambda r: r.abort() if not r.request.url.startswith("http://127.0.0.1") else r.fallback(),
         )
 
     ctx, page = _open(browser, base, setup=block_external)

@@ -3,7 +3,7 @@
 A PR that adds a source module, or more than LINE_LIMIT non-test lines, under app/, acs/ or tools/ must either
   - have an "OSS considered" section naming at least one specific project or SDK and why it does not fit, or
   - be a bugfix (label `bugfix` or a `Bugfix:` line) that closes an issue whose evidence is confirmed.
-Docs, tests, static/ and CI-only PRs are exempt. New raw HTTP calls to providers that ship an official SDK get a warning.
+Docs, tests, web/ and CI-only PRs are exempt. New raw HTTP calls to providers that ship an official SDK get a warning.
 
   python tools/pr_policy.py --repo OWNER/REPO --pr N     # in CI (needs GH_TOKEN)
   python tools/pr_policy.py --json pr.json               # offline, same shape as tests/fixtures/pr_policy_cases.json

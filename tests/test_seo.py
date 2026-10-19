@@ -1,3 +1,6 @@
+"""SEO routes: each surviving page carries unique head tags, and the sitemap lists exactly the surviving pages.
+Retired addresses forward (see test_retired_routes.py) and are not advertised."""
+
 import os, sys, re, pathlib
 
 sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
@@ -6,7 +9,7 @@ from fastapi.testclient import TestClient
 from app import server
 
 BASE = "https://arize.design-bakery.com"
-PAGES = ["/", "/dashboard", "/slides", "/map", "/observability", "/guide"]
+PAGES = ["/", "/map", "/observability", "/slides"]
 c = TestClient(server.app)
 
 
@@ -38,7 +41,9 @@ def test_pages_have_unique_seo_tags():
         assert meta(h, "property", "og:image") == BASE + "/og.png"
         assert meta(h, "name", "twitter:card") == "summary_large_image", p
         assert meta(h, "name", "theme-color"), p
-        assert 'href="/static/logo.svg"' in h, p
+        icon = re.search(r'<link[^>]+rel=["\']icon["\'][^>]+href=["\']([^"\']+)["\']', h)
+        assert icon, f"{p}: no icon in the head"
+        assert "/static/" not in icon.group(1), f"{p}: the icon comes from the retired frontend folder"
         assert "noindex" not in h, p
     assert len(titles) == len(PAGES) and len(descs) == len(PAGES)
 
@@ -58,6 +63,8 @@ def test_sitemap():
     assert r.status_code == 200 and "xml" in r.headers["content-type"]
     for p in PAGES:
         assert f"<loc>{BASE}{p}</loc>" in r.text
+    for retired in ("/dashboard", "/guide", "/v1", "/v2"):
+        assert retired not in r.text, f"the sitemap still advertises {retired}"
     assert "/api/" not in r.text
 
 
