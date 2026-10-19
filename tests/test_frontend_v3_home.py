@@ -95,8 +95,10 @@ def test_O10_there_is_exactly_one_listen_control(base, browser, width):
     _memo(page)
     listen = page.get_by_role("button", name="Listen")
     assert listen.count() == 1, f"@{width}: {listen.count()} Listen controls"
+    # O78 adds Mute/Unmute beside Listen; nothing else may offer a second way to start the voice.
     others = page.evaluate(
         """() => [...document.querySelectorAll('button,[role=button]')]
+             .filter(b => !/^(Mute|Unmute)$/.test((b.getAttribute('aria-label') || b.innerText).trim()))
              .filter(b => /speaker|voice|mute|narrat/i.test((b.getAttribute('aria-label')||'') + ' ' + b.innerText))
              .map(b => (b.getAttribute('aria-label')||b.innerText).slice(0, 40))"""
     )
