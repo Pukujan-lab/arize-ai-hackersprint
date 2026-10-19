@@ -259,7 +259,7 @@ function addPrism(out: number[], ring: Ring, y0: number, y1: number, top: Vec3, 
 
 export type SceneSource = {
   states: { name: string; polys: Ring[] }[];
-  counties: { name: string; polys: Ring[]; fill: string }[];
+  counties: { name: string; polys: Ring[]; fill: string; outline: string }[];
   arcs: { from: [number, number]; to: [number, number]; colour: string }[];
   palette: { stateTop: string; stateWall: string; coTop: string; coWall: string; countyTop: string; countyWall: string };
 };
@@ -269,7 +269,12 @@ export type SceneBuffers = {
   stateWall: number[];
   countyTop: number[];
   countyWall: number[];
+  /** The outline of every county, drawn as lines so each boundary is visible. */
+  countyOutline: number[];
+  countyOutlines: number;
   arcs: number[];
+  /** Where each link starts and how many vertices it owns, so a link can draw from source to target. */
+  arcRanges: { start: number; count: number }[];
   stateMeshes: number;
   countyMeshes: number;
   coloradoRaised: boolean;
@@ -285,7 +290,10 @@ export function buildScene(source: SceneSource): SceneBuffers {
   const stateWall: number[] = [];
   const countyTop: number[] = [];
   const countyWall: number[] = [];
+  const countyOutline: number[] = [];
   const arcs: number[] = [];
+  const arcRanges: { start: number; count: number }[] = [];
+  let countyOutlines = 0;
 
   const p = source.palette;
   const coTop = rgb(p.coTop);
@@ -311,15 +319,26 @@ export function buildScene(source: SceneSource): SceneBuffers {
 
   for (const county of source.counties) {
     const top = rgb(county.fill);
+    const edge = rgb(county.outline);
     for (const ring of county.polys) {
       countyMeshes += 1;
       const shifted: Ring = ring.map(([x, y]) => [wx(x), wz(y)] as [number, number]);
       addPrism(countyTop, shifted, COLORADO_DEPTH, SURFACE_Y, top, ctyWall);
+      // Every boundary is a line on the surface, so a county reads as a county and not a tile.
+      countyOutlines += 1;
+      const y = SURFACE_Y + 0.12;
+      for (let i = 0; i < shifted.length; i += 1) {
+        const a = shifted[i];
+        const b = shifted[(i + 1) % shifted.length];
+        push(countyOutline, [a[0], y, a[1]], edge);
+        push(countyOutline, [b[0], y, b[1]], edge);
+      }
     }
   }
 
   for (const arc of source.arcs) {
     const colour = rgb(arc.colour);
+    const start = arcs.length / 8;
     const [x1, z1] = [wx(arc.from[0]), wz(arc.from[1])];
     const [x2, z2] = [wx(arc.to[0]), wz(arc.to[1])];
     const dx = x2 - x1;
@@ -341,9 +360,22 @@ export function buildScene(source: SceneSource): SceneBuffers {
       px = nx;
       pz = nz;
     }
+    arcRanges.push({ start, count: arcs.length / 8 - start });
   }
 
-  return { stateTop, stateWall, countyTop, countyWall, arcs, stateMeshes, countyMeshes, coloradoRaised };
+  return {
+    stateTop,
+    stateWall,
+    countyTop,
+    countyWall,
+    countyOutline,
+    countyOutlines,
+    arcs,
+    arcRanges,
+    stateMeshes,
+    countyMeshes,
+    coloradoRaised,
+  };
 }
 
 // ------------------------------------------------------------------ renderer
@@ -469,12 +501,16 @@ export class SceneRenderer {
     this.meshes[name] = { buffer, count: data.length / 8, mode };
   }
 
+  private arcRanges: { start: number; count: number }[] = [];
+
   setScene(scene: SceneBuffers): void {
     this.upload("stateTop", scene.stateTop, this.gl.TRIANGLES);
     this.upload("stateWall", scene.stateWall, this.gl.TRIANGLES);
     this.upload("countyTop", scene.countyTop, this.gl.TRIANGLES);
     this.upload("countyWall", scene.countyWall, this.gl.TRIANGLES);
+    this.upload("countyOutline", scene.countyOutline, this.gl.LINES);
     this.upload("arcs", scene.arcs, this.gl.LINES);
+    this.arcRanges = scene.arcRanges.slice();
   }
 
   /** The basemap is a picture of the projected plane, laid flat under the solids. */
@@ -530,8 +566,15 @@ export class SceneRenderer {
     gl.viewport(0, 0, w, h);
   }
 
-  private drawMesh(mesh: Mesh, tint: [number, number, number, number], textured: boolean): void {
+  private drawMesh(
+    mesh: Mesh,
+    tint: [number, number, number, number],
+    textured: boolean,
+    start = 0,
+    count = mesh.count,
+  ): void {
     const gl = this.gl;
+    if (count < 1) return;
     gl.bindBuffer(gl.ARRAY_BUFFER, mesh.buffer);
     const stride = 8 * 4;
     gl.enableVertexAttribArray(this.aPos);
@@ -546,10 +589,10 @@ export class SceneRenderer {
     }
     gl.uniform1f(this.uUseTex, textured ? 1 : 0);
     gl.uniform4f(this.uTint, tint[0], tint[1], tint[2], tint[3]);
-    gl.drawArrays(mesh.mode, 0, mesh.count);
+    gl.drawArrays(mesh.mode, start, count);
   }
 
-  render(cam: Camera3, basemapOn: boolean): void {
+  render(cam: Camera3, basemapOn: boolean, arcProgress = 1): void {
     const gl = this.gl;
     gl.clearColor(this.ocean[0], this.ocean[1], this.ocean[2], 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -569,10 +612,22 @@ export class SceneRenderer {
       const mesh = this.meshes[name];
       if (mesh) this.drawMesh(mesh, [0, 0, 0, 1], false);
     }
+    const outline = this.meshes["countyOutline"];
+    if (outline) {
+      gl.disable(gl.DEPTH_TEST);
+      this.drawMesh(outline, [1, 1, 1, 0.85], false);
+      gl.enable(gl.DEPTH_TEST);
+    }
     const arcs = this.meshes["arcs"];
     if (arcs) {
       gl.disable(gl.DEPTH_TEST);
-      this.drawMesh(arcs, [1, 1, 1, 0.9], false);
+      // Each link grows from its source to its target: only the part already drawn is sent.
+      const progress = Math.max(0, Math.min(1, arcProgress));
+      for (const range of this.arcRanges) {
+        const n = Math.floor(range.count * progress);
+        if (n < 2) continue;
+        this.drawMesh(arcs, [1, 1, 1, 0.9], false, range.start, n - (n % 2));
+      }
       gl.enable(gl.DEPTH_TEST);
     }
   }

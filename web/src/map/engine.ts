@@ -38,8 +38,31 @@ import {
 import { narrate, prefetchClip, type Narration } from "./narrator";
 
 export type Camera = { x: number; y: number; zoom: number };
-export type TourState = { active: boolean; index: number; count: number; playing: boolean };
+export type TourState = {
+  active: boolean;
+  index: number;
+  count: number;
+  playing: boolean;
+  /** The stop being read, so the reader can see which line is live. */
+  activeIndex: number;
+  /** The section of the memo the walk is in: short answer, sources, opinion, memo, authorities. */
+  section: string;
+};
 export type Level = "national" | "state" | "county" | "court";
+
+/** One stop of the walk: a section of the memo, or one authority. */
+export type PlanStop = { section: string; text: string; cite: number | null };
+export type Caption = { section: string; shown: number; index: number; total: number };
+export type SpeakerState = {
+  active: boolean;
+  name: string;
+  line: string;
+  status: "idle" | "loading" | "speaking" | "unavailable" | "silent";
+};
+export type StageState = "waiting" | "running" | "done";
+export type PipelineStage = { name: string; state: StageState; message: string };
+export type PipelineState = { replay: boolean; stages: PipelineStage[]; plan: string[] };
+export type MotionState = { running: boolean; born: number[]; arcProgress: number };
 
 /** How far the reader may pull the map out of, or into, the national view. */
 const MIN_ZOOM = 0.6;
@@ -59,31 +82,52 @@ export type PinView = {
   y: number;
   ax: number;
   ay: number;
+  /** How far the pin has grown since the run arrived: 0 before its birth, 1 once it has landed. */
+  scale: number;
+  /** The pin stands for the stop the walk is on. */
+  active: boolean;
 };
 
-export type LabelView = { key: string; text: string; x: number; y: number; strong: boolean };
+export type LabelView = { key: string; text: string; x: number; y: number; w: number; h: number; strong: boolean };
 
 export type MapView = {
   pins: PinView[];
   labels: LabelView[];
   tooltip: string | null;
   summary: string;
+  answer: string;
   level: Level;
   label: string | null;
   tour: TourState;
+  caption: Caption;
+  speaker: SpeakerState;
+  pipeline: PipelineState;
   narrating: boolean;
   muted: boolean;
   loading: boolean;
   basemapReady: boolean;
 };
 
-type Group = Location & { items: number[] };
+type Group = Location & { items: number[]; pinKey: string };
 type Rect = { x: number; y: number; w: number; h: number };
 type Arc = { from: [number, number]; to: [number, number]; type: ArcType };
 
 const CAMERA_MS = 700;
 /** A stop the reader arrives at holds long enough to read before the tour moves on. */
 const STOP_HOLD_MS = 2600;
+/** How long a new run takes to arrive: pins in order, then the links draw from source to target. */
+const ARRIVAL_MS = 2600;
+/** How long one pin takes to grow once it is born. */
+const PIN_GROW_MS = 280;
+/** The gap between one pin's birth and the next. */
+const PIN_STAGGER_MS = 110;
+/** A section stop holds this long before the walk moves to the next section. */
+const SECTION_HOLD_MS = 1800;
+/** The height of a map label, in pixels. */
+const LABEL_H = 16;
+/** Who the page sounds like. */
+const SPEAKER_NAME = "Precedent";
+const STAGE_PLAN = ["planner", "retriever", "answer", "safeguard"];
 const PIN_SIZE = 44;
 /** How far above its anchor a pin's button stands, so the anchor stays clear for the county itself. */
 const PIN_LIFT = 42;
@@ -116,6 +160,7 @@ const PALETTE = {
     countyTop: "#242c5c",
     countyWall: "#141a3c",
     countyLine: "#8b9bd6",
+    countyLineHeld: "#e2e8ff",
     leader: "rgba(165,180,252,0.45)",
     heatLightness: 58,
   },
@@ -130,6 +175,7 @@ const PALETTE = {
     countyTop: "#e8edf8",
     countyWall: "#c4cde0",
     countyLine: "#7c89b0",
+    countyLineHeld: "#1e1b4b",
     leader: "rgba(67,56,202,0.4)",
     heatLightness: 48,
   },
@@ -146,6 +192,17 @@ const countyKey = (name: string) =>
 
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/** Markdown as it is spoken: markers, heading hashes and reference numbers are not said aloud. */
+function plainText(markdown: string): string {
+  return String(markdown || "")
+    .replace(/\[(\d{1,3})\]/g, "")
+    .replace(/[*_`#>]/g, "")
+    .replace(/^\s*[-•]\s*/gm, "")
+    .replace(/\s+([.,;:])/g, "$1")
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function overlaps(a: Rect, b: Rect): boolean {
   return !(a.x + a.w <= b.x || b.x + b.w <= a.x || a.y + a.h <= b.y || b.y + b.h <= a.y);
@@ -181,7 +238,7 @@ export class MapEngine {
   labels: LabelView[] = [];
   heat: Record<string, number> = {};
   arcCounts: Record<ArcType, number> = { cc: 0, cs: 0, st: 0, fed: 0, other: 0 };
-  summaryText = "0 counties linked · 0 jurisdictions · 0 links";
+  summaryText = "no authority yet";
 
   level: Level = "national";
   focusCounty: string | null = null;
@@ -221,17 +278,33 @@ export class MapEngine {
 
   private tooltipText: string | null = null;
 
-  tour: TourState = { active: false, index: 0, count: 0, playing: false };
+  tour: TourState = { active: false, index: 0, count: 0, playing: false, activeIndex: 0, section: "" };
   narrating = false;
   /** The reader silenced the voice; the walk still advances, in silence. */
   muted = false;
   /** A clip for the line being spoken is being fetched. */
   loading = false;
+  speaker: SpeakerState = { active: false, name: SPEAKER_NAME, line: "", status: "idle" };
+  pipeline: PipelineState = { replay: false, stages: [], plan: STAGE_PLAN.slice() };
+  motion: MotionState = { running: false, born: [], arcProgress: 1 };
+  /** The short answer, in the memo's own words, so the map can be read on its own. */
+  answerText = "";
   private session: Narration | null = null;
   /** Bumped whenever narration stops, so a clip that arrives late cannot report progress. */
   private narrationToken = 0;
   private tourHold = false;
   private tourStartedAt = 0;
+  /** -1 when the walk is on the authorities; 0..3 while it reads a section of the memo. */
+  private prologue = -1;
+  private captionText = "";
+  private captionShown = 0;
+  private captionTimer: number | null = null;
+  private arrivalStart = 0;
+  private bornAt: number[] = [];
+  /** The reader has touched the map, so a run that arrives later does not start talking on its own. */
+  interacted = false;
+  /** Set while the walk moves its own camera, so its focus is not mistaken for a reader's. */
+  private walking = false;
 
   // ---------------------------------------------------------------- lifecycle
 
@@ -279,6 +352,8 @@ export class MapEngine {
 
   detach(): void {
     this.silence();
+    this.stopCaption();
+    this.motion = { ...this.motion, running: false };
   }
 
   resize(width: number, height: number): void {
@@ -326,24 +401,77 @@ export class MapEngine {
     this.ctx = ctx || {};
     this.locs = this.cites.map((c) => locate(c));
     this.groups = new Map();
+    // A pin is one court at one place: two authorities decided by different courts are two pins even
+    // when both sit in the same city, so an eight-authority run never reads as two dots.
     this.cites.forEach((_, i) => {
       const loc = this.locs[i];
-      const group = this.groups.get(loc.key);
+      const key = loc.court ? `${loc.key}|${loc.court.toLowerCase()}` : loc.key;
+      const group = this.groups.get(key);
       if (group) group.items.push(i);
-      else this.groups.set(loc.key, { ...loc, items: [i] });
+      else this.groups.set(key, { ...loc, items: [i], pinKey: loc.key });
     });
+    const places = new Map<string, number>();
+    for (const group of this.groups.values()) places.set(group.key, (places.get(group.key) || 0) + 1);
+    for (const group of this.groups.values()) {
+      if ((places.get(group.key) || 0) > 1) {
+        const slug = group.court.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        group.pinKey = `${group.key}#${slug || "court"}`;
+      }
+    }
     this.computeHeat();
     this.computeArcs();
     this.tour.count = this.order().length;
     this.tour.index = 0;
+    this.tour.activeIndex = 0;
+    this.tour.section = "";
+    this.prologue = -1;
+    this.captionText = "";
+    this.captionShown = 0;
     this.focusIndex = null;
     this.focusCounty = null;
     this.label = null;
     this.level = "national";
     this.cam = { ...NATIONAL_CAMERA };
     this.camTarget = { ...NATIONAL_CAMERA };
+    this.beginArrival();
     this.rebuild();
     this.refresh();
+  }
+
+  /** A new run arrives with motion: the pins are born in order and the links draw behind them. */
+  private beginArrival(): void {
+    this.arrivalStart = performance.now();
+    this.bornAt = this.groups.size ? [...Array(this.groups.size).keys()].map((i) => i * PIN_STAGGER_MS) : [];
+    if (prefersReducedMotion()) {
+      this.motion = { running: false, born: this.bornAt.slice(), arcProgress: 1 };
+      return;
+    }
+    this.motion = { running: true, born: this.bornAt.slice(), arcProgress: 0 };
+    requestAnimationFrame(this.stepArrival);
+  }
+
+  private stepArrival = (now: number): void => {
+    const elapsed = now - this.arrivalStart;
+    const t = clamp(elapsed / ARRIVAL_MS, 0, 1);
+    this.motion = {
+      running: t < 1,
+      born: this.bornAt.slice(),
+      arcProgress: round4(t),
+    };
+    this.layoutPins();
+    this.render();
+    this.emit();
+    if (this.motion.running) requestAnimationFrame(this.stepArrival);
+  };
+
+  /** How far a pin has grown: 0 until it is born, then 1 over a moment. */
+  private pinScale(index: number, now: number): number {
+    if (prefersReducedMotion() || !this.motion.running) return 1;
+    const born = this.bornAt[index];
+    if (born === undefined) return 1;
+    const age = now - this.arrivalStart - born;
+    if (age <= 0) return 0;
+    return clamp(age / PIN_GROW_MS, 0, 1);
   }
 
   private computeHeat(): void {
@@ -353,9 +481,7 @@ export class MapEngine {
       if (loc && loc.cat === "county" && loc.key.startsWith("c:")) heat[loc.key] = (heat[loc.key] || 0) + 1;
     });
     this.heat = heat;
-    const countyGroups = [...this.groups.values()].filter((g) => g.cat === "county").length;
-    const links = this.edges.filter((e) => this.indexOf(e.src) >= 0 && this.indexOf(e.dst) >= 0).length + countyGroups;
-    this.summaryText = `${Object.keys(heat).length} counties linked · ${jurisdictionCount(this.locs)} jurisdictions · ${links} links`;
+    this.answerText = this.extractShortAnswer();
   }
 
   private computeArcs(): void {
@@ -364,20 +490,29 @@ export class MapEngine {
     for (const e of this.edges) {
       const a = this.indexOf(e.src);
       const b = this.indexOf(e.dst);
+      // A link joins two authorities that are shown; one that names an authority the run dropped is
+      // not drawn and not counted.
       if (a < 0 || b < 0) continue;
       const type = arcType(this.locs[a], this.locs[b]);
       counts[type] += 1;
       arcs.push({ from: project(this.locs[a].ll), to: project(this.locs[b].ll), type });
     }
-    const denver = this.groups.get("denver");
-    if (denver) {
-      for (const g of this.groups.values()) {
-        if (!g.up) continue;
-        arcs.push({ from: project(g.ll), to: project(denver.ll), type: "cs" });
-      }
-    }
     this.arcCounts = counts;
     this.arcs = arcs;
+    this.summaryText = this.composeSummary();
+  }
+
+  /** The map's own summary: the short answer first, the counts as the secondary detail. */
+  private composeSummary(): string {
+    const counties = Object.keys(this.heat).length;
+    const countyText = counties
+      ? `${counties} ${counties === 1 ? "county" : "counties"} linked`
+      : "no county linked";
+    const jurisdictions = jurisdictionCount(this.locs);
+    const counts = `${countyText} · ${jurisdictions} ${jurisdictions === 1 ? "jurisdiction" : "jurisdictions"} · ${
+      this.arcs.length
+    } ${this.arcs.length === 1 ? "link" : "links"}`;
+    return this.answerText ? `${this.answerText} · ${counts}` : counts;
   }
 
   private indexOf(id: string): number {
@@ -429,11 +564,24 @@ export class MapEngine {
     return this.buffers.stateMeshes || (this.world ? this.world.states.reduce((n, s) => n + s.polys.length, 0) : 0);
   }
 
-  scene(): { mode: "3d" | "flat"; stateMeshes: number; countyMeshes: number; coloradoRaised: boolean } {
+  /** The county boundaries the scene draws: one outline per county ring, in either drawing mode. */
+  get countyOutlineCount(): number {
+    if (this.buffers.countyOutlines) return this.buffers.countyOutlines;
+    return this.world ? this.world.counties.reduce((n, c) => n + c.polys.length, 0) : 0;
+  }
+
+  scene(): {
+    mode: "3d" | "flat";
+    stateMeshes: number;
+    countyMeshes: number;
+    countyOutlines: number;
+    coloradoRaised: boolean;
+  } {
     return {
       mode: this.renderer ? "3d" : "flat",
       stateMeshes: this.stateMeshCount,
       countyMeshes: this.countyMeshCount,
+      countyOutlines: this.countyOutlineCount,
       // Only the extruded scene stands Colorado above its neighbours; the flat drawing does not.
       coloradoRaised: !!this.renderer && this.buffers.coloradoRaised,
     };
@@ -443,13 +591,24 @@ export class MapEngine {
     return {
       camera: { x: round4(this.cam.x), y: round4(this.cam.y), zoom: round4(this.cam.zoom) },
       pane: this.pane,
-      tour: { ...this.tour },
+      tour: { ...this.tour, activeIndex: this.tour.index },
       theme: this.theme,
       focus: this.focusIndex,
       level: this.level,
       focusCounty: this.focusCounty,
       label: this.label,
       scene: this.scene(),
+      summary: this.summaryText,
+      shortAnswer: this.answerText,
+      speaker: { ...this.speaker },
+      pipeline: {
+        replay: this.pipeline.replay,
+        stages: this.pipeline.stages.map((stage) => ({ ...stage })),
+        plan: this.pipeline.plan.slice(),
+      },
+      motion: { running: this.motion.running, born: this.motion.born.slice(), arcProgress: this.motion.arcProgress },
+      arcsDrawn: this.arcs.length,
+      arcCounts: { ...this.arcCounts },
       narrating: this.narrating,
       muted: this.muted,
       loading: this.loading,
@@ -464,20 +623,44 @@ export class MapEngine {
     return this.summaryText;
   }
 
+  shortAnswer(): string {
+    return this.answerText;
+  }
+
   view(): MapView {
     return {
       pins: this.pins,
       labels: this.labels,
       tooltip: this.tooltipText,
       summary: this.summaryText,
+      answer: this.answerText,
       level: this.level,
       label: this.label,
-      tour: { ...this.tour },
+      tour: { ...this.tour, activeIndex: this.tour.index },
+      caption: this.caption(),
+      speaker: { ...this.speaker },
+      pipeline: {
+        replay: this.pipeline.replay,
+        stages: this.pipeline.stages.map((stage) => ({ ...stage })),
+        plan: this.pipeline.plan.slice(),
+      },
       narrating: this.narrating,
       muted: this.muted,
       loading: this.loading,
       basemapReady: !!this.basemapImage,
     };
+  }
+
+  /** The pipeline as the run reports it: only the stages that have started, in order. */
+  setPipeline(stages: PipelineStage[], replay: boolean): void {
+    this.pipeline = { replay, stages: stages.map((stage) => ({ ...stage })), plan: STAGE_PLAN.slice() };
+    this.emit();
+  }
+
+  setReplay(replay: boolean): void {
+    if (this.pipeline.replay === replay) return;
+    this.pipeline = { ...this.pipeline, replay };
+    this.emit();
   }
 
   // ---------------------------------------------------------------- camera
@@ -516,11 +699,22 @@ export class MapEngine {
     return [(minX + maxX) / 2, (minY + maxY) / 2];
   }
 
+  /**
+   * The reader has touched the map: the walk and the voice stop, and a run that arrives later does
+   * not start talking on its own. The walk's own camera moves do not come through here.
+   */
+  private touch(): void {
+    if (this.walking) return;
+    this.interacted = true;
+    if (this.tour.active || this.narrating) this.stopAll();
+  }
+
   /** Bring the camera to a county and name it. */
   zoomToCounty(name: string): void {
     const key = countyKey(name);
     const shape = this.countyShapes.find((c) => c.key === key);
     if (!shape) return;
+    this.touch();
     this.focusCounty = shape.key;
     this.focusIndex = null;
     this.level = "county";
@@ -532,6 +726,7 @@ export class MapEngine {
   /** Bring the camera to a court's pin and name it. */
   zoomToCourt(i: number): void {
     if (!this.cites[i] || !this.locs[i]) return;
+    this.touch();
     this.focusIndex = i;
     this.level = "court";
     this.label = this.cites[i].title || this.locs[i].label;
@@ -544,6 +739,7 @@ export class MapEngine {
 
   /** Step the camera back out: court → county → state → national. */
   zoomOutLevel(): void {
+    this.touch();
     if (this.level === "court") {
       if (this.focusCounty) {
         this.focusIndex = null;
@@ -596,6 +792,7 @@ export class MapEngine {
   openAuthority(i: number): void {
     const loc = this.locs[i];
     if (!this.cites[i] || !loc) return;
+    this.touch();
     if (loc.cat === "county") {
       this.focusIndex = i;
       this.emit();
@@ -605,6 +802,7 @@ export class MapEngine {
   }
 
   resetCamera(): void {
+    this.touch();
     this.focusIndex = null;
     this.focusCounty = null;
     this.label = null;
@@ -619,6 +817,7 @@ export class MapEngine {
    */
   zoomAround(factor: number, sx?: number, sy?: number): void {
     if (!this.width || !this.height) return;
+    this.touch();
     const zoom = clamp(this.cam.zoom * factor, MIN_ZOOM, MAX_ZOOM);
     if (zoom === this.cam.zoom) return;
     const cx = sx === undefined ? this.width / 2 : sx;
@@ -634,6 +833,7 @@ export class MapEngine {
   /** Drag the map: the point under the pointer follows it, so the camera moves the other way. */
   panBy(dx: number, dy: number): void {
     if (!this.width || !this.height || (dx === 0 && dy === 0)) return;
+    this.touch();
     const k = this.scale();
     this.animating = false;
     this.cam = { x: this.cam.x - dx / k, y: this.cam.y - dy / k, zoom: this.cam.zoom };
@@ -678,13 +878,24 @@ export class MapEngine {
 
   // ---------------------------------------------------------------- tour
 
-  startTour(n?: number): void {
+  /**
+   * The walk. With `prologue` it begins at the top of the memo — the short answer, the sources, the
+   * opinion and the memo — and then walks the authority stops; without it the reader has asked for
+   * the authority walk, which is where the Play control starts.
+   */
+  startTour(n?: number, options: { prologue?: boolean; skipFirst?: boolean } = {}): void {
     const order = this.order();
-    if (!order.length) return;
     this.tour.count = order.length;
-    if (typeof n === "number") this.tour.index = clamp(n, 0, order.length - 1);
+    if (typeof n === "number") this.tour.index = clamp(n, 0, Math.max(0, order.length - 1));
     this.tour.active = true;
     this.tourHold = true;
+    this.interacted = true;
+    if (options.prologue && this.cites.length) {
+      this.prologue = options.skipFirst ? 1 : 0;
+      this.playSection();
+      return;
+    }
+    this.prologue = -1;
     this.playStop();
   }
 
@@ -693,6 +904,7 @@ export class MapEngine {
     this.tour.active = false;
     this.tour.playing = false;
     this.narrating = false;
+    this.prologue = -1;
     this.emit();
   }
 
@@ -705,17 +917,22 @@ export class MapEngine {
 
   /** Escape: the voice and the walk stop together, whatever was speaking. */
   stopAll(): void {
+    this.interacted = true;
     this.stopTour();
   }
 
   nextStop(): void {
+    this.interacted = true;
     this.pauseTour();
+    this.prologue = -1;
     this.tour.index = clamp(this.tour.index + 1, 0, Math.max(0, this.order().length - 1));
     this.emit();
   }
 
   previousStop(): void {
+    this.interacted = true;
     this.pauseTour();
+    this.prologue = -1;
     this.tour.index = clamp(this.tour.index - 1, 0, Math.max(0, this.order().length - 1));
     this.emit();
   }
@@ -725,7 +942,50 @@ export class MapEngine {
     this.tour.active = false;
     this.tour.playing = false;
     this.narrating = false;
+    this.prologue = -1;
     this.emit();
+  }
+
+  /** One section of the memo: the short answer, the sources, the opinion, then the memo itself. */
+  private playSection(): void {
+    const plan = this.plan();
+    this.silence();
+    if (this.prologue < 0 || this.prologue > 3) {
+      this.prologue = -1;
+      this.playStop();
+      return;
+    }
+    const stop = plan[this.prologue];
+    if (!stop) {
+      this.prologue = -1;
+      this.playStop();
+      return;
+    }
+    const index = this.prologue;
+    this.tour.section = stop.section;
+    this.tour.playing = true;
+    this.narrating = true;
+    this.startCaption(stop.text);
+    this.tourStartedAt = performance.now();
+    this.emit();
+
+    const session = this.beginNarration(stop.text, () => {
+      if (this.session !== session || !this.tour.active) return;
+      this.endSpeaking();
+      const elapsed = performance.now() - this.tourStartedAt;
+      const wait = Math.max(0, SECTION_HOLD_MS - elapsed);
+      const advance = () => {
+        if (this.session !== session || !this.tour.active) return;
+        this.prologue = index + 1;
+        this.playSection();
+      };
+      if (wait > 0) window.setTimeout(advance, wait);
+      else advance();
+    });
+    this.session = session;
+
+    const next = plan[index + 1];
+    if (next && !this.muted) prefetchClip(next.text);
   }
 
   private playStop(): void {
@@ -736,17 +996,22 @@ export class MapEngine {
       return;
     }
     const stop = this.tour.index;
+    this.walking = true;
     this.focus(order[stop]);
+    this.walking = false;
     const text = this.spokenFor(order[stop]);
     const hold = this.tourHold;
     this.tourHold = false;
     this.tour.playing = true;
     this.narrating = true;
+    this.tour.section = "Authorities";
+    this.startCaption(text);
     this.tourStartedAt = performance.now();
     this.emit();
 
     const session = this.beginNarration(text, () => {
       if (this.session !== session || !this.tour.active) return;
+      this.endSpeaking();
       const elapsed = performance.now() - this.tourStartedAt;
       const wait = hold ? Math.max(0, STOP_HOLD_MS - elapsed) : 0;
       const advance = () => {
@@ -768,44 +1033,128 @@ export class MapEngine {
     if (next !== undefined && !this.muted) prefetchClip(this.spokenFor(next));
   }
 
+  // ---------------------------------------------------------------- the walk's plan and caption
+
+  /** The stops of the walk, in the order the memo is written. */
+  plan(): PlanStop[] {
+    if (!this.cites.length) return [];
+    const out: PlanStop[] = [
+      { section: "Short answer", text: this.answerText, cite: null },
+      { section: "Sources", text: this.sourcesText(), cite: null },
+      { section: "Opinion", text: this.opinionText(), cite: null },
+      { section: "Memo", text: this.memoText(), cite: null },
+    ];
+    for (const i of this.order()) out.push({ section: "Authorities", text: this.spokenFor(i), cite: i });
+    return out;
+  }
+
+  /** The sources stop: every authority the answer rests on, with the court that decided it. */
+  private sourcesText(): string {
+    const parts = this.cites.map((c, i) => {
+      const court = this.locs[i]?.court || "";
+      const year = String(c.date || "").match(/\d{4}/)?.[0] || "";
+      return [c.title || c.citation || c.id || "", court, year].filter(Boolean).join(", ");
+    });
+    const n = parts.length;
+    if (!n) return "No authority was retrieved for this answer.";
+    return `Sources: ${n} ${n === 1 ? "authority" : "authorities"}. ${parts.slice(0, 8).join("; ")}.`;
+  }
+
+  private sectionText(headings: string[]): string {
+    const raw = String(this.ctx.answer || "");
+    const blocks = raw.split(/\n(?=#{1,6}\s)/);
+    return blocks
+      .filter((block) => headings.some((h) => new RegExp(`^#{1,6}\\s*${h}`, "i").test(block.trim())))
+      .map((block) => plainText(block))
+      .join(" ")
+      .trim();
+  }
+
+  private opinionText(): string {
+    const text = this.sectionText(["Opinion", "Caveat", "Holding"]);
+    return text || "The memo records no separate opinion or caveat.";
+  }
+
+  private memoText(): string {
+    const key = this.sectionText(["Key authorities"]);
+    const text = key || plainText(String(this.ctx.answer || ""));
+    return text.slice(0, 900);
+  }
+
+  /** The caption reveals its text as the voice reads it. */
+  private startCaption(text: string): void {
+    this.stopCaption();
+    this.captionText = text;
+    this.captionShown = Math.min(1, text.length);
+    const step = Math.max(1, Math.ceil(text.length / 40));
+    this.captionTimer = window.setInterval(() => {
+      this.captionShown = Math.min(this.captionText.length, this.captionShown + step);
+      this.emit();
+      if (this.captionShown >= this.captionText.length) this.stopCaption();
+    }, 70);
+  }
+
+  private stopCaption(): void {
+    if (this.captionTimer !== null) {
+      window.clearInterval(this.captionTimer);
+      this.captionTimer = null;
+    }
+  }
+
+  caption(): Caption {
+    const plan = this.plan();
+    const stop = this.prologue >= 0 ? plan[this.prologue] : undefined;
+    const section = stop ? stop.section : this.tour.section;
+    const text = stop ? stop.text : this.captionText;
+    return {
+      section: text ? section : "",
+      shown: Math.min(this.captionShown, text.length),
+      index: this.tour.index,
+      total: text.length,
+    };
+  }
+
+  /** The text of a tour position, for a caller that wants the whole line. */
+  captionText(): string {
+    const plan = this.plan();
+    const stop = this.prologue >= 0 ? plan[this.prologue] : undefined;
+    return stop ? stop.text : this.captionText;
+  }
+
   // ---------------------------------------------------------------- narration
 
   /**
-   * What Listen speaks before the walk begins: the memo's short answer, not the whole memo. The
-   * Markdown that formats the memo on screen is not spoken.
+   * The memo's short answer, in its own words: what Listen speaks first, what the map shows as its
+   * summary, and what the walk's first stop says. The Markdown is not spoken.
    */
-  private shortAnswer(): string {
+  private extractShortAnswer(): string {
     const raw = (this.ctx.answer || "").trim();
     if (!raw) return "";
     const first = raw.split(/\n\s*\n/).find((part) => part.trim()) || raw;
-    return first
-      .replace(/\[(\d{1,3})\]/g, "")
-      .replace(/[*_`#>]/g, "")
-      .replace(/\s+([.,;:])/g, "$1")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 400);
+    return plainText(first).slice(0, 400);
   }
 
-  /** Listen: speak the short answer, then walk the stops. A second press stops both. */
+  /** Listen: speak the short answer, then walk the memo and its authorities. A second press stops both. */
   listen(): void {
     if (this.narrating) {
       this.stopListening();
       return;
     }
-    const text = this.shortAnswer();
-    if (!text) return;
-    this.narrateMemo(() => this.startTour(0));
+    if (!this.answerText) return;
+    this.narrateMemo(() => this.startTour(0, { prologue: true, skipFirst: true }));
   }
 
   narrateMemo(onEnd?: () => void): void {
-    const text = this.shortAnswer();
+    const text = this.answerText;
     if (!text) return;
     this.silence();
     this.narrating = true;
+    this.tour.section = "Short answer";
+    this.startCaption(text);
     this.emit();
     const session = this.beginNarration(text, () => {
       if (this.session !== session) return;
+      this.endSpeaking();
       this.narrating = false;
       this.emit();
       onEnd?.();
@@ -833,7 +1182,8 @@ export class MapEngine {
       this.narrating = false;
       if (walking) {
         // The walk carries on without sound, so the reader keeps their place.
-        this.playStop();
+        if (this.prologue >= 0) this.playSection();
+        else this.playStop();
         return;
       }
     }
@@ -846,17 +1196,50 @@ export class MapEngine {
     this.session?.stop();
     this.session = null;
     this.loading = false;
+    if (this.speaker.active) this.speaker = { ...this.speaker, active: false };
   }
 
-  /** Start one line, telling the page while its clip is being fetched. */
+  /** The line has ended: the indicator stops, and a state the reader needs to see is kept. */
+  private endSpeaking(): void {
+    const status = this.speaker.status;
+    this.speaker = {
+      ...this.speaker,
+      active: false,
+      status: status === "speaking" || status === "loading" ? "idle" : status,
+    };
+  }
+
+  private setSpeakerStatus(status: SpeakerState["status"]): void {
+    this.speaker = { ...this.speaker, status };
+  }
+
+  /** Start one line, telling the page while its clip is being fetched, playing or unavailable. */
   private beginNarration(text: string, onEnd: () => void): Narration {
     const token = (this.narrationToken += 1);
     this.loading = false;
+    this.speaker = {
+      active: true,
+      name: SPEAKER_NAME,
+      line: text.length > 240 ? text.slice(0, 240) + "…" : text,
+      status: this.muted ? "silent" : "loading",
+    };
+    this.emit();
     return narrate(text, onEnd, {
       muted: this.muted,
       loading: (on) => {
         if (token !== this.narrationToken) return;
         this.loading = on;
+        if (on) this.setSpeakerStatus("loading");
+        this.emit();
+      },
+      playing: () => {
+        if (token !== this.narrationToken) return;
+        this.setSpeakerStatus("speaking");
+        this.emit();
+      },
+      unavailable: () => {
+        if (token !== this.narrationToken) return;
+        this.setSpeakerStatus("unavailable");
         this.emit();
       },
     });
@@ -1248,7 +1631,10 @@ export class MapEngine {
     groups.sort((a, b) => b.items.length - a.items.length || a.key.localeCompare(b.key));
     const placed: Rect[] = [];
     const out: PinView[] = [];
-    for (const group of groups) {
+    const now = performance.now();
+    const activeCite = this.prologue < 0 && this.tour.active ? this.order()[this.tour.index] : undefined;
+    for (let order = 0; order < groups.length; order += 1) {
+      const group = groups[order];
       const [px, py] = project(group.ll);
       const anchor = this.toScreen(px, py, SURFACE_Y);
       if (!anchor) continue;
