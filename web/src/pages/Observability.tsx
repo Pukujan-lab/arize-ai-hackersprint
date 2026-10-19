@@ -52,6 +52,37 @@ function Figure({ label, value, note, small }: { label: string; value: string; n
   );
 }
 
+/** A region the spec names in its accessible-name table, so the page can be read by that name. */
+function Panel({ name, children }: { name: string; children: ReactNode }) {
+  return (
+    <section role="region" aria-label={name} className="mt-6 rounded-lg border border-border p-4">
+      <h2 className="text-sm font-semibold">{name}</h2>
+      <div className="mt-2 space-y-2 text-sm">{children}</div>
+    </section>
+  );
+}
+
+function Facts({ rows }: { rows: { label: string; value: string }[] }) {
+  return (
+    <dl className="grid grid-cols-1 gap-y-1 text-sm sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-x-4">
+      {rows.map((row) => (
+        <div key={row.label} className="contents">
+          <dt className="text-muted-foreground">{row.label}</dt>
+          <dd className="break-words tabular-nums">{row.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+/** A stage duration as a reader reads it: 2.1s, 840 ms, 7.5 ms — never a bare millisecond count. */
+function duration(value: number | null): string {
+  if (value === null) return "duration not reported";
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}s`;
+  if (value >= 10) return `${Math.round(value)} ms`;
+  return `${Math.round(value * 10) / 10} ms`;
+}
+
 function Filter({
   id,
   label,
@@ -243,6 +274,11 @@ export default function Observability() {
   }, [filtered, details]);
 
   const questionLabel = detail?.question || selected?.question || "Question not recorded";
+  const retrieval = detail?.retrieval ?? null;
+  const stages = retrieval?.stages ?? [];
+  const engineInfo = stack?.engine ?? null;
+  const tracingInfo = stack?.tracing ?? null;
+  const retentionInfo = stack?.retention ?? null;
 
   return (
     <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
@@ -496,6 +532,121 @@ export default function Observability() {
             )}
           </section>
         )}
+
+        <Panel name="Retrieval stages">
+          {!stages.length ? (
+            <p className="text-muted-foreground">
+              {selected
+                ? "This run recorded no retrieval stages."
+                : "Pick a run to see the retrieval stages it took."}
+            </p>
+          ) : (
+            <ol className="space-y-2">
+              {stages.map((stage, index) => (
+                <li key={`${stage.name}-${index}`} className="rounded-md border border-border px-3 py-2">
+                  <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                    <span className="text-xs tabular-nums text-muted-foreground">{index + 1}</span>
+                    <span className="break-words text-sm font-medium">{stage.name}</span>
+                    <span className="ml-auto text-xs tabular-nums text-muted-foreground">{duration(stage.durationMs)}</span>
+                  </div>
+                  {stage.skipped && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Did not run: {stage.reason || "the engine did not say why"}
+                    </p>
+                  )}
+                </li>
+              ))}
+            </ol>
+          )}
+          {retrieval?.source && <p className="text-xs text-muted-foreground">Path: {retrieval.source}</p>}
+          {retrieval?.graphSource && (
+            <p className="text-xs text-muted-foreground">
+              Citation graph: {retrieval.graphSource}
+              {retrieval.graphRevision ? ` · revision ${retrieval.graphRevision}` : ""}
+            </p>
+          )}
+          {retrieval?.engineOk === false && (
+            <p className="text-xs text-muted-foreground">
+              The retrieval engine did not answer{retrieval.engineReason ? `: ${retrieval.engineReason}` : "."}
+            </p>
+          )}
+        </Panel>
+
+        <Panel name="Tracing">
+          {!tracingInfo ? (
+            <p className="text-muted-foreground">The server did not report tracing.</p>
+          ) : (
+            <>
+              <p>
+                {tracingInfo.ok === true
+                  ? "Spans reached Arize."
+                  : "Not connected — spans did not reach Arize, so no trace of this run is there."}
+              </p>
+              {tracingInfo.ok !== true && tracingInfo.reason && (
+                <p className="break-words text-xs text-muted-foreground">Exporter reason: {tracingInfo.reason}</p>
+              )}
+              <Facts
+                rows={[
+                  { label: "Project", value: tracingInfo.project || "not reported" },
+                  { label: "Spans sent", value: count(tracingInfo.sent) },
+                  { label: "Spans dropped", value: count(tracingInfo.dropped) },
+                  { label: "Spans queued", value: count(tracingInfo.queued) },
+                ]}
+              />
+            </>
+          )}
+        </Panel>
+
+        <Panel name="Retention">
+          {!retentionInfo ? (
+            <p className="text-muted-foreground">The server did not report the retention caps.</p>
+          ) : (
+            <>
+              <Facts
+                rows={[
+                  { label: "Saved runs kept", value: count(retentionInfo.runsKept) },
+                  { label: "Saved runs on disk now", value: count(retentionInfo.runsOnDisk) },
+                  { label: "Trace queue cap", value: `${count(retentionInfo.traceQueueMax)} spans` },
+                  { label: "Spans dropped", value: count(retentionInfo.spansDropped) },
+                ]}
+              />
+              <p className="text-xs text-muted-foreground">
+                Both stores are first in, first out: when a cap is reached the oldest entry is dropped first.
+              </p>
+            </>
+          )}
+        </Panel>
+
+        <Panel name="Retrieval engine">
+          {!engineInfo ? (
+            <p className="text-muted-foreground">The server did not report the retrieval engine.</p>
+          ) : (
+            <>
+              <p>
+                {engineInfo.ok === true
+                  ? `Engine ${engineInfo.status || "ready"}`
+                  : engineInfo.configured === false
+                    ? "The engine address is not configured"
+                    : `Engine ${engineInfo.status || "not answering"}`}
+              </p>
+              <Facts
+                rows={[
+                  { label: "Corpus", value: `${count(engineInfo.chunkCount)} passages · ${count(engineInfo.caseCount)} cases` },
+                  { label: "Corpus revision", value: engineInfo.corpusRevision || "not reported" },
+                  { label: "Graph revision", value: engineInfo.graphRevision || "not reported" },
+                  { label: "Lexical", value: engineInfo.lexical || "not reported" },
+                  { label: "Dense model", value: engineInfo.denseModel || "not loaded" },
+                  { label: "Rerank model", value: engineInfo.rerankModel || "not loaded" },
+                  { label: "JEV model", value: engineInfo.jevModel || "not loaded" },
+                  { label: "Scorer", value: engineInfo.scorer || "not reported" },
+                ]}
+              />
+              {engineInfo.lastError && (
+                <p className="break-words text-xs text-muted-foreground">Last error: {engineInfo.lastError}</p>
+              )}
+            </>
+          )}
+        </Panel>
       </main>
     </div>
   );

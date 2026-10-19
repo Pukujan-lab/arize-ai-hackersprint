@@ -8,6 +8,51 @@ export type SavedRun = { run_id: string; question: string; n: number | null; ts:
 
 export type Step = { record: Record<string, unknown>; t: number | null; agent: string; kind: string };
 
+/** One retrieval stage: what ran, how long it took, and why it did not run when it did not. */
+export type RetrievalStage = { name: string; durationMs: number | null; skipped: boolean; reason: string };
+
+/** The path a run's retrieval actually took, as the run recorded it. */
+export type Retrieval = {
+  source: string;
+  stages: RetrievalStage[];
+  graphSource: string;
+  graphRevision: string;
+  engineOk: boolean | null;
+  engineReason: string;
+};
+
+export type EngineInfo = {
+  configured: boolean | null;
+  ok: boolean | null;
+  status: string;
+  chunkCount: number | null;
+  caseCount: number | null;
+  corpusRevision: string;
+  graphRevision: string;
+  lexical: string;
+  denseModel: string;
+  rerankModel: string;
+  jevModel: string;
+  scorer: string;
+  lastError: string;
+};
+
+export type TracingInfo = {
+  ok: boolean | null;
+  reason: string;
+  project: string;
+  sent: number | null;
+  dropped: number | null;
+  queued: number | null;
+};
+
+export type RetentionInfo = {
+  runsKept: number | null;
+  runsOnDisk: number | null;
+  traceQueueMax: number | null;
+  spansDropped: number | null;
+};
+
 export type RunDetail = {
   runId: string;
   question: string;
@@ -19,6 +64,7 @@ export type RunDetail = {
   prevRunId: string | null;
   followUps: string[];
   steps: Step[];
+  retrieval: Retrieval | null;
 };
 
 export type StackInfo = {
@@ -28,6 +74,9 @@ export type StackInfo = {
   edges: number | null;
   how: Record<string, string>;
   runs: { run_id: string; elapsed: number | null; provider: string; pass: boolean | null }[];
+  engine: EngineInfo | null;
+  tracing: TracingInfo | null;
+  retention: RetentionInfo | null;
 };
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
@@ -135,6 +184,74 @@ export function toSteps(events: Record<string, unknown>[]): Step[] {
   });
 }
 
+/** The stages a run recorded, in the order the engine emitted them. A missing duration stays null. */
+export function toStages(raw: unknown): RetrievalStage[] {
+  if (!Array.isArray(raw)) return [];
+  const out: RetrievalStage[] = [];
+  for (const item of raw) {
+    if (!isRecord(item)) continue;
+    const name = text(item.name) || text(item.stage);
+    if (!name) continue;
+    out.push({ name, durationMs: num(item.duration_ms), skipped: item.skipped === true, reason: text(item.reason) });
+  }
+  return out;
+}
+
+export function toRetrieval(raw: unknown): Retrieval | null {
+  if (!isRecord(raw)) return null;
+  const graph = isRecord(raw.graph) ? raw.graph : {};
+  const engineBlock = isRecord(raw.engine) ? raw.engine : {};
+  return {
+    source: text(raw.source),
+    stages: toStages(raw.stages),
+    graphSource: text(graph.source),
+    graphRevision: text(graph.revision),
+    engineOk: typeof engineBlock.ok === "boolean" ? engineBlock.ok : null,
+    engineReason: text(engineBlock.reason),
+  };
+}
+
+function toEngine(raw: unknown): EngineInfo | null {
+  if (!isRecord(raw)) return null;
+  return {
+    configured: typeof raw.configured === "boolean" ? raw.configured : null,
+    ok: typeof raw.ok === "boolean" ? raw.ok : null,
+    status: text(raw.status),
+    chunkCount: num(raw.chunk_count),
+    caseCount: num(raw.case_count),
+    corpusRevision: text(raw.corpus_revision),
+    graphRevision: text(raw.graph_revision),
+    lexical: text(raw.lexical),
+    denseModel: text(raw.dense_model),
+    rerankModel: text(raw.rerank_model),
+    jevModel: text(raw.jev_model),
+    scorer: text(raw.scorer),
+    lastError: text(raw.last_error),
+  };
+}
+
+function toTracing(raw: unknown): TracingInfo | null {
+  if (!isRecord(raw)) return null;
+  return {
+    ok: typeof raw.ok === "boolean" ? raw.ok : null,
+    reason: text(raw.reason),
+    project: text(raw.project),
+    sent: num(raw.sent),
+    dropped: num(raw.dropped),
+    queued: num(raw.queued),
+  };
+}
+
+function toRetention(raw: unknown): RetentionInfo | null {
+  if (!isRecord(raw)) return null;
+  return {
+    runsKept: num(raw.runs_kept),
+    runsOnDisk: num(raw.runs_on_disk),
+    traceQueueMax: num(raw.trace_queue_max),
+    spansDropped: num(raw.spans_dropped),
+  };
+}
+
 export function toDetail(runId: string, raw: unknown): RunDetail {
   const root = isRecord(raw) ? raw : {};
   const result = isRecord(root.result) ? root.result : {};
@@ -152,6 +269,7 @@ export function toDetail(runId: string, raw: unknown): RunDetail {
     prevRunId: text(result.prev_run_id) || null,
     followUps,
     steps: toSteps(events),
+    retrieval: toRetrieval(result.retrieval),
   };
 }
 
@@ -181,6 +299,9 @@ export function toStack(raw: unknown): StackInfo {
     edges: num(surreal.edges),
     how,
     runs: runs.filter((run) => run.run_id),
+    engine: toEngine(root.engine),
+    tracing: toTracing(root.tracing),
+    retention: toRetention(root.retention),
   };
 }
 
