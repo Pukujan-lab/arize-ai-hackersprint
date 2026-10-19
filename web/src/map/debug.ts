@@ -23,6 +23,7 @@ export function installDebug(engine: MapEngine): void {
     zoomOutLevel: () => engine.zoomOutLevel(),
     countyScreen: (name: string) => engine.countyScreen(name),
     pinScreen: (i: number) => engine.pinScreen(i),
+    pinCites: (i: number) => engine.pinCites(i),
     hoverCounty: (key: string | null) => engine.hoverCounty(key),
     tooltip: () => engine.tooltip(),
     get pinCount() {

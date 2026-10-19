@@ -72,6 +72,8 @@ export type MapView = {
   label: string | null;
   tour: TourState;
   narrating: boolean;
+  muted: boolean;
+  loading: boolean;
   basemapReady: boolean;
 };
 
@@ -221,7 +223,13 @@ export class MapEngine {
 
   tour: TourState = { active: false, index: 0, count: 0, playing: false };
   narrating = false;
+  /** The reader silenced the voice; the walk still advances, in silence. */
+  muted = false;
+  /** A clip for the line being spoken is being fetched. */
+  loading = false;
   private session: Narration | null = null;
+  /** Bumped whenever narration stops, so a clip that arrives late cannot report progress. */
+  private narrationToken = 0;
   private tourHold = false;
   private tourStartedAt = 0;
 
@@ -270,8 +278,7 @@ export class MapEngine {
   }
 
   detach(): void {
-    this.session?.stop();
-    this.session = null;
+    this.silence();
   }
 
   resize(width: number, height: number): void {
@@ -444,6 +451,8 @@ export class MapEngine {
       label: this.label,
       scene: this.scene(),
       narrating: this.narrating,
+      muted: this.muted,
+      loading: this.loading,
     };
   }
 
@@ -465,6 +474,8 @@ export class MapEngine {
       label: this.label,
       tour: { ...this.tour },
       narrating: this.narrating,
+      muted: this.muted,
+      loading: this.loading,
       basemapReady: !!this.basemapImage,
     };
   }
@@ -577,6 +588,22 @@ export class MapEngine {
     this.zoomToCourt(i);
   }
 
+  /**
+   * Open the authority a pin stands for. A court's pin brings the camera to that court; a county's
+   * pin does not move the map, because the county itself is the place that zooms and the reader is
+   * reading the authority, not looking for the county.
+   */
+  openAuthority(i: number): void {
+    const loc = this.locs[i];
+    if (!this.cites[i] || !loc) return;
+    if (loc.cat === "county") {
+      this.focusIndex = i;
+      this.emit();
+      return;
+    }
+    this.zoomToCourt(i);
+  }
+
   resetCamera(): void {
     this.focusIndex = null;
     this.focusCounty = null;
@@ -662,8 +689,7 @@ export class MapEngine {
   }
 
   stopTour(): void {
-    this.session?.stop();
-    this.session = null;
+    this.silence();
     this.tour.active = false;
     this.tour.playing = false;
     this.narrating = false;
@@ -671,11 +697,15 @@ export class MapEngine {
   }
 
   pauseTour(): void {
-    this.session?.stop();
-    this.session = null;
+    this.silence();
     this.tour.playing = false;
     this.narrating = false;
     this.emit();
+  }
+
+  /** Escape: the voice and the walk stop together, whatever was speaking. */
+  stopAll(): void {
+    this.stopTour();
   }
 
   nextStop(): void {
@@ -691,7 +721,7 @@ export class MapEngine {
   }
 
   private finishTour(): void {
-    this.session = null;
+    this.silence();
     this.tour.active = false;
     this.tour.playing = false;
     this.narrating = false;
@@ -700,7 +730,7 @@ export class MapEngine {
 
   private playStop(): void {
     const order = this.order();
-    this.session?.stop();
+    this.silence();
     if (this.tour.index >= order.length) {
       this.finishTour();
       return;
@@ -715,7 +745,7 @@ export class MapEngine {
     this.tourStartedAt = performance.now();
     this.emit();
 
-    const session = narrate(text, () => {
+    const session = this.beginNarration(text, () => {
       if (this.session !== session || !this.tour.active) return;
       const elapsed = performance.now() - this.tourStartedAt;
       const wait = hold ? Math.max(0, STOP_HOLD_MS - elapsed) : 0;
@@ -732,8 +762,10 @@ export class MapEngine {
     });
     this.session = session;
 
+    // The next clip is fetched while this one plays, so the walk never waits on the network. It is
+    // only cached, never played, so it cannot cut the current line off.
     const next = order[stop + 1];
-    if (next !== undefined) prefetchClip(this.spokenFor(next));
+    if (next !== undefined && !this.muted) prefetchClip(this.spokenFor(next));
   }
 
   // ---------------------------------------------------------------- narration
@@ -769,11 +801,10 @@ export class MapEngine {
   narrateMemo(onEnd?: () => void): void {
     const text = this.shortAnswer();
     if (!text) return;
-    this.session?.stop();
-    this.session = null;
+    this.silence();
     this.narrating = true;
     this.emit();
-    const session = narrate(text, () => {
+    const session = this.beginNarration(text, () => {
       if (this.session !== session) return;
       this.narrating = false;
       this.emit();
@@ -783,11 +814,52 @@ export class MapEngine {
   }
 
   stopListening(): void {
-    this.session?.stop();
-    this.session = null;
+    this.silence();
     this.narrating = false;
     if (this.tour.playing) this.tour.playing = false;
     this.emit();
+  }
+
+  /**
+   * Mute silences every narration: the clip speaking now stops, and later lines are fetched and
+   * played not at all. A tour that was walking keeps walking, silently.
+   */
+  setMuted(next: boolean): void {
+    if (this.muted === next) return;
+    this.muted = next;
+    if (next) {
+      const walking = this.tour.active && this.tour.playing;
+      this.silence();
+      this.narrating = false;
+      if (walking) {
+        // The walk carries on without sound, so the reader keeps their place.
+        this.playStop();
+        return;
+      }
+    }
+    this.emit();
+  }
+
+  /** Stop whatever is speaking and forget it, so a clip that arrives late changes nothing. */
+  private silence(): void {
+    this.narrationToken += 1;
+    this.session?.stop();
+    this.session = null;
+    this.loading = false;
+  }
+
+  /** Start one line, telling the page while its clip is being fetched. */
+  private beginNarration(text: string, onEnd: () => void): Narration {
+    const token = (this.narrationToken += 1);
+    this.loading = false;
+    return narrate(text, onEnd, {
+      muted: this.muted,
+      loading: (on) => {
+        if (token !== this.narrationToken) return;
+        this.loading = on;
+        this.emit();
+      },
+    });
   }
 
   // ---------------------------------------------------------------- hover
@@ -1143,6 +1215,15 @@ export class MapEngine {
     const pin = this.pins.find((p) => p.items.includes(i));
     if (!pin) return null;
     return { x: round4(pin.x), y: round4(pin.y) };
+  }
+
+  /**
+   * The citations the pin for citation i stands for. A pin is one place, so every authority that
+   * resolves to that place shares it; the answer is the pin's own list, never a guess.
+   */
+  pinCites(i: number): number[] {
+    const pin = this.pins.find((p) => p.items.includes(i));
+    return pin ? pin.items.slice() : [];
   }
 
   /** Where a county's centre sits on the canvas, or null when it is not on screen. */

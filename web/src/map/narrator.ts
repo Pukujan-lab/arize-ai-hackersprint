@@ -39,12 +39,22 @@ function request(text: string): Promise<Clip> {
   return pending;
 }
 
-/** Ask for a clip now so it is ready when the reader reaches that line. */
+/**
+ * Ask for a clip now so it is ready when the reader reaches that line. It is only cached: a queued
+ * clip never plays, so it can never cut off the line that is speaking.
+ */
 export function prefetchClip(text: string): void {
   void request(text);
 }
 
 export type Narration = { stop: () => void };
+
+export type NarrationHooks = {
+  /** The reader has muted the voice: the line ends on its own timer without fetching or playing. */
+  muted?: boolean;
+  /** Told when this line's clip is being fetched, so the page can say so while it waits. */
+  loading?: (loading: boolean) => void;
+};
 
 /** The clip's length in milliseconds as it reports it, else as its timings imply, else null. */
 function clipLengthMs(el: HTMLAudioElement, starts: number[], chars: number): number | null {
@@ -58,7 +68,25 @@ function clipLengthMs(el: HTMLAudioElement, starts: number[], chars: number): nu
 }
 
 /** Speak a line, calling onEnd when the clip finishes or when no clip can be played. */
-export function narrate(text: string, onEnd: () => void): Narration {
+export function narrate(text: string, onEnd: () => void, hooks: NarrationHooks = {}): Narration {
+  if (hooks.muted) {
+    // Silenced: nothing is fetched and nothing is played, but the line still ends so a walk keeps
+    // going. Unmuting takes effect on the next line.
+    let done = false;
+    const timer = window.setTimeout(() => {
+      if (done) return;
+      done = true;
+      onEnd();
+    }, SILENT_ADVANCE_MS);
+    return {
+      stop() {
+        if (done) return;
+        done = true;
+        window.clearTimeout(timer);
+      },
+    };
+  }
+
   let finished = false;
   let audio: HTMLAudioElement | null = null;
   let timer: number | null = null;
@@ -132,7 +160,10 @@ export function narrate(text: string, onEnd: () => void): Narration {
     arm(lengthMs);
   };
 
+  // The clip is being fetched, which can take a moment; the page says so while it waits.
+  hooks.loading?.(true);
   void request(text).then((clip) => {
+    hooks.loading?.(false);
     if (finished) return;
     if (!clip || !clip.audio_b64) {
       silently();

@@ -2,9 +2,11 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { MoreHorizontal } from "lucide-react";
 import MapPane from "@/components/MapPane";
-import Memo, { sourceHref } from "@/components/Memo";
+import Memo from "@/components/Memo";
 import SiteHeader from "@/components/SiteHeader";
-import type { Citation, RunResult } from "@/lib/citations";
+import SourcesPanel from "@/components/SourcesPanel";
+import type { RunResult } from "@/lib/citations";
+import { isCache, readJson, toRuns, whenLabel, type SavedRun } from "@/lib/runs";
 import { cn } from "@/lib/utils";
 import { installDebug } from "@/map/debug";
 import { MapEngine, type MapView } from "@/map/engine";
@@ -20,27 +22,109 @@ const menuItemClass =
 const POLL_MS = 1000;
 const RUN_TIMEOUT_MS = 90_000;
 
-type RunResponse = { events?: unknown[]; result?: RunResult | null; partial?: string | null };
+/** Where a dismissed getting-started cue is remembered, so a later visit is not greeted again. */
+const STARTED_KEY = "precedent_getting_started";
+
+/** Three questions a first-time reader can send as they stand. */
+const EXAMPLES = [
+  "Which Colorado counties apply the homestead exemption to mineral rights?",
+  "Does a severed mineral estate keep the homestead exemption?",
+  "How does a bankruptcy estate treat a Colorado homestead exemption?",
+];
+
+/** What each agent's step is called while the run is working. */
+const STAGES: Record<string, string> = {
+  planner: "Planning the run",
+  retriever: "Retrieving authorities",
+  answer: "Writing the answer",
+  safeguard: "Checking the citations",
+};
+
+type RunTick = { events?: unknown[]; result?: RunResult | null; partial?: string | null };
+
+type Progress = { stage: string; detail: string; draft: string };
 
 const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
 
+/** The stage the pipeline has reached, from the events the run endpoint reports. */
+function stageOf(events: unknown): { stage: string; detail: string } {
+  const list = Array.isArray(events)
+    ? events.filter((event): event is Record<string, unknown> => !!event && typeof event === "object")
+    : [];
+  const last = list[list.length - 1];
+  const agent = typeof last?.agent === "string" ? last.agent.trim() : "";
+  const kind = typeof last?.kind === "string" ? last.kind.trim() : "";
+  const msg = typeof last?.msg === "string" ? last.msg.trim() : "";
+  const stage = STAGES[agent.toLowerCase()] || (agent ? `${agent}${kind ? ` · ${kind}` : ""}` : STAGES.planner);
+  return { stage, detail: msg };
+}
+
+/** How the answer was produced: the citation check, how long it took, and where it came from. */
+function answerFacts(result: RunResult | null) {
+  const guard = result?.safeguard;
+  const pass = guard && typeof guard.pass === "boolean" ? guard.pass : null;
+  const verified = guard && Array.isArray(guard.used) ? guard.used.length : null;
+  const elapsed = typeof result?.elapsed_s === "number" && Number.isFinite(result.elapsed_s) ? result.elapsed_s : null;
+  const provider = (result?.provider || "").trim();
+  const source = !provider
+    ? "not recorded"
+    : isCache(provider)
+      ? "cache"
+      : /template/i.test(provider)
+        ? "offline template"
+        : provider;
+  return {
+    check: pass === null ? "Citation check not recorded" : pass ? "Citation check passed" : "Citation check failed",
+    verified,
+    elapsed,
+    source,
+  };
+}
+
+function cueDismissed(): boolean {
+  try {
+    return localStorage.getItem(STARTED_KEY) === "dismissed";
+  } catch {
+    return false;
+  }
+}
+
 /**
- * Read a run until the server has written its result.
+ * Read a run until the server has written its result, reporting every tick on the way: the events
+ * say which stage the pipeline has reached and `partial` is the answer as it is being written.
  *
  * `/api/ask` only starts the four agents and answers with a run id at once; the result lands several
  * seconds later. Reading the run once would always miss it, so keep asking until it is there.
  */
-async function waitForRun(runId: string): Promise<RunResult | null> {
+async function loadRun(
+  runId: string,
+  onTick: (tick: RunTick) => void,
+  { quietMeansEmpty = false }: { quietMeansEmpty?: boolean } = {},
+): Promise<RunResult | null> {
   const deadline = Date.now() + RUN_TIMEOUT_MS;
   for (;;) {
+    let data: RunTick | null = null;
     try {
       const response = await fetch(`/api/run/${encodeURIComponent(runId)}`, { cache: "no-store" });
       if (response.ok) {
-        const data: RunResponse | null = await response.json();
-        if (data && data.result) return data.result;
+        try {
+          data = (await response.json()) as RunTick;
+        } catch {
+          // A page rather than run data: this address has no run to read, and waiting will not help.
+          if (quietMeansEmpty) return null;
+        }
       }
     } catch {
       // A blip mid-run must not lose an answer the agents are still writing: fall through and retry.
+    }
+    if (data) {
+      onTick(data);
+      if (data.result) return data.result;
+      // An address the server has never written a run for has no events and no draft: it is empty,
+      // not late. A run that is still working always reports at least one of the two.
+      if (quietMeansEmpty && !data.partial && !(data.events && data.events.length)) return null;
+    } else if (quietMeansEmpty) {
+      return null;
     }
     if (Date.now() >= deadline) return null;
     await sleep(POLL_MS);
@@ -48,7 +132,7 @@ async function waitForRun(runId: string): Promise<RunResult | null> {
 }
 
 export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const runParam = searchParams.get("run");
 
   const engineRef = useRef<MapEngine | null>(null);
@@ -60,13 +144,19 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
   const [result, setResult] = useState<RunResult | null>(null);
   const [status, setStatus] = useState<"idle" | "loading" | "empty" | "error">("idle");
   const [notice, setNotice] = useState<string | null>(null);
+  const [progress, setProgress] = useState<Progress | null>(null);
   const [asking, setAsking] = useState(false);
   const [question, setQuestion] = useState("");
+  const [needsQuestion, setNeedsQuestion] = useState(false);
   const [prevRunId, setPrevRunId] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [followUpsOpen, setFollowUpsOpen] = useState(false);
   const [runInfoOpen, setRunInfoOpen] = useState(false);
+  const [savedOpen, setSavedOpen] = useState(false);
+  const [savedRuns, setSavedRuns] = useState<SavedRun[]>([]);
+  const [savedPhase, setSavedPhase] = useState<"idle" | "loading" | "error">("idle");
+  const [cueGone, setCueGone] = useState(cueDismissed);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
@@ -87,17 +177,27 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
     return () => engine.detach();
   }, [engine]);
 
-  // The memo drawer closes on Escape and on a click outside it; the source list closes on Escape.
+  // The memo drawer and the saved-run panel close on Escape, and on a click outside the drawer.
   useEffect(() => {
-    if (!menuOpen && !sourcesOpen) return;
+    if (!menuOpen && !sourcesOpen && !savedOpen) return;
     const onKey = (event: KeyboardEvent) => {
       if (event.key !== "Escape") return;
       setMenuOpen(false);
       setSourcesOpen(false);
+      setSavedOpen(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [menuOpen, sourcesOpen]);
+  }, [menuOpen, sourcesOpen, savedOpen]);
+
+  // Escape always stops the voice and the walk, wherever the reader is on the page.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") engine.stopAll();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [engine]);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -109,6 +209,26 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
     document.addEventListener("pointerdown", onDown);
     return () => document.removeEventListener("pointerdown", onDown);
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (!savedOpen) return;
+    let cancelled = false;
+    setSavedPhase("loading");
+    readJson("/api/runs")
+      .then((raw) => {
+        if (cancelled) return;
+        setSavedRuns(toRuns(raw));
+        setSavedPhase("idle");
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setSavedRuns([]);
+        setSavedPhase("error");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [savedOpen]);
 
   const applyResult = useCallback(
     (next: RunResult, runId: string) => {
@@ -127,11 +247,17 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
     let cancelled = false;
     setStatus("loading");
     setNotice(null);
-    fetch(`/api/run/${encodeURIComponent(runParam)}`)
-      .then((response) => response.json())
-      .then((data) => {
+    setProgress({ stage: "Opening the run", detail: "", draft: "" });
+    loadRun(
+      runParam,
+      (tick) => {
         if (cancelled) return;
-        const payload: RunResult | null = data && data.result ? data.result : null;
+        setProgress({ ...stageOf(tick.events), draft: tick.partial || "" });
+      },
+      { quietMeansEmpty: true },
+    )
+      .then((payload) => {
+        if (cancelled) return;
         if (!payload) {
           setStatus("empty");
           return;
@@ -140,21 +266,10 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
         setStatus("idle");
       })
       .catch(() => {
-        if (cancelled) return;
-        if (import.meta.env.DEV) {
-          void import("@/lib/demo-run").then((mod) => {
-            if (cancelled) return;
-            applyResult(mod.DEMO_RUN as unknown as RunResult, runParam);
-            setStatus("idle");
-            const probe = new URLSearchParams(window.location.search).get("probe");
-            if (probe === "county") setTimeout(() => engine.zoomToCounty("boulder"), 400);
-            if (probe === "court") setTimeout(() => engine.zoomToCourt(7), 400);
-            if (probe === "menu") setTimeout(() => setMenuOpen(true), 400);
-            if (probe === "listen") setTimeout(() => engine.listen(), 400);
-          });
-          return;
-        }
-        setStatus("error");
+        if (!cancelled) setStatus("error");
+      })
+      .finally(() => {
+        if (!cancelled) setProgress(null);
       });
     return () => {
       cancelled = true;
@@ -164,10 +279,16 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
   const ask = async (event: React.FormEvent) => {
     event.preventDefault();
     const text = question.trim();
-    if (!text || asking) return;
+    if (!text) {
+      setNeedsQuestion(true);
+      return;
+    }
+    setNeedsQuestion(false);
+    if (asking) return;
     setAsking(true);
     setStatus("loading");
     setNotice(null);
+    setProgress({ stage: STAGES.planner, detail: "", draft: "" });
     try {
       const response = await fetch("/api/ask", {
         method: "POST",
@@ -182,7 +303,9 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
         setStatus("error");
         return;
       }
-      const payload = await waitForRun(data.run_id);
+      const payload = await loadRun(data.run_id, (tick) => {
+        setProgress({ ...stageOf(tick.events), draft: tick.partial || "" });
+      });
       if (!payload) {
         setNotice("That run is taking longer than expected. Please try again.");
         setStatus("error");
@@ -195,12 +318,36 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
       setStatus("error");
     } finally {
       setAsking(false);
+      setProgress(null);
     }
+  };
+
+  const dismissCue = () => {
+    setCueGone(true);
+    try {
+      localStorage.setItem(STARTED_KEY, "dismissed");
+    } catch {
+      // Private mode or a full quota: the cue stays dismissed for this visit.
+    }
+  };
+
+  const chooseExample = (text: string) => {
+    setQuestion(text);
+    setNeedsQuestion(false);
+    inputRef.current?.focus();
+  };
+
+  const openSaved = (runId: string) => {
+    setSavedOpen(false);
+    const next = new URLSearchParams(searchParams);
+    next.set("run", runId);
+    setSearchParams(next);
   };
 
   const memo = (result && result.answer) || "";
   const citations = result?.citations || [];
-  const followUps = (result as (RunResult & { followups?: string[] }) | null)?.followups || [];
+  const followUps = result?.followups || [];
+  const facts = answerFacts(result);
 
   // The memo controls sit at the top of the memo pane at every width; the body is what the pane
   // switch hides on a phone, so the controls stay reachable while the map is showing.
@@ -234,14 +381,22 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
         <div className="col-start-1 row-start-1 shrink-0 border-b border-border px-3 py-2">
           <div className="flex flex-wrap items-center gap-1.5">
             <h1 className="mr-auto text-sm font-semibold">Memo</h1>
-            <button
-              type="button"
-              className={buttonClass}
-              onClick={() => engine.listen()}
-              disabled={!memo}
-            >
+            <button type="button" className={buttonClass} onClick={() => setSavedOpen(true)}>
+              Open a saved run
+            </button>
+            <button type="button" className={buttonClass} onClick={() => engine.listen()} disabled={!memo}>
               {view.narrating ? "Stop listening" : "Listen"}
             </button>
+            {memo && (
+              <button type="button" className={buttonClass} onClick={() => engine.setMuted(!view.muted)}>
+                {view.muted ? "Unmute" : "Mute"}
+              </button>
+            )}
+            {view.loading && (
+              <span role="status" aria-label="Audio loading" className="text-xs text-muted-foreground">
+                Audio loading…
+              </span>
+            )}
             {memo && (
               <div className="relative" ref={menuRef}>
                 <button
@@ -295,21 +450,91 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
               {notice || "That question didn't come back. Please try again."}
             </p>
           )}
-          {status === "loading" && (
-            <p role="status" className="mb-3 text-sm text-muted-foreground">
-              The four agents are working on this. The memo appears here as soon as they finish.
+
+          {needsQuestion && (
+            <p
+              role="alert"
+              aria-label="Question needed"
+              className="mb-3 max-w-[70ch] rounded-md border border-border bg-card px-3 py-2 text-sm text-foreground"
+            >
+              Type a question first — the memo needs one.
             </p>
           )}
-          {memo ? (
-            <Memo answer={memo} citations={citations} />
-          ) : (
-            (status === "idle" || status === "empty") && (
-              <p className="max-w-[70ch] text-sm text-muted-foreground">
-                {status === "empty"
-                  ? "This run has no memo yet. Ask a question to start one."
-                  : "Ask a legal question and the memo it returns appears here, with the map of every authority behind it."}
+
+          {status === "loading" && (
+            <section
+              aria-label="Run progress"
+              className="mb-3 max-w-[70ch] rounded-md border border-border bg-card/60 px-3 py-2"
+            >
+              <p role="status" className="text-sm font-medium">
+                {progress?.stage || STAGES.planner}
               </p>
-            )
+              {progress?.detail ? <p className="mt-0.5 text-xs text-muted-foreground">{progress.detail}</p> : null}
+              {progress?.draft ? (
+                <div className="mt-2 border-t border-border pt-2">
+                  <p className="text-xs text-muted-foreground">Draft, as it is written</p>
+                  <div className="mt-1">
+                    <Memo answer={progress.draft} citations={[]} />
+                  </div>
+                </div>
+              ) : null}
+            </section>
+          )}
+
+          {memo ? (
+            <>
+              <div
+                role="note"
+                aria-label="Answer status"
+                className="mb-3 flex max-w-[70ch] flex-wrap gap-x-4 gap-y-0.5 rounded-md border border-border bg-card/60 px-3 py-2 text-xs text-muted-foreground"
+              >
+                <span className="font-medium text-foreground">{facts.check}</span>
+                <span>References verified: {facts.verified === null ? "not recorded" : facts.verified}</span>
+                <span>Run time: {facts.elapsed === null ? "not recorded" : `${facts.elapsed.toFixed(1)} s`}</span>
+                <span>Answer source: {facts.source}</span>
+              </div>
+              <Memo answer={memo} citations={citations} />
+            </>
+          ) : (
+            <>
+              {!cueGone && status !== "loading" && (
+                <section
+                  aria-label="Getting started"
+                  className="mb-4 max-w-[70ch] rounded-lg border border-border bg-card p-3"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h2 className="mr-auto text-sm font-semibold">Getting started</h2>
+                    <button type="button" className={buttonClass} onClick={dismissCue}>
+                      Dismiss getting started
+                    </button>
+                  </div>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Ask a legal question, or start from one of these.
+                  </p>
+                  <ul className="mt-2 space-y-1.5">
+                    {EXAMPLES.map((example) => (
+                      <li key={example}>
+                        <button
+                          type="button"
+                          className="flex min-h-[44px] w-full items-center rounded-md border border-border px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                          onClick={() => chooseExample(example)}
+                        >
+                          {example}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+
+              {(status === "idle" || status === "empty") && (
+                <p className="max-w-[70ch] text-sm text-muted-foreground">
+                  {status === "empty"
+                    ? "This run has no memo yet. Ask a question to start one."
+                    : "Ask a legal question and the memo it returns appears here, with the map of every authority behind it."}
+                </p>
+              )}
+            </>
           )}
 
           {followUpsOpen && (
@@ -344,35 +569,61 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
           )}
         </section>
 
-        {sourcesOpen && (
-          <div role="dialog" aria-label="Sources" className="fixed inset-0 z-40 flex flex-col bg-background px-4 py-3">
+        {sourcesOpen && <SourcesPanel citations={citations} onClose={() => setSourcesOpen(false)} />}
+
+        {savedOpen && (
+          <div role="dialog" aria-label="Saved runs" className="fixed inset-0 z-50 flex flex-col bg-background px-4 py-3">
             <div className="flex shrink-0 items-center gap-2">
-              <h2 className="mr-auto text-sm font-semibold">Sources</h2>
-              <button type="button" className={buttonClass} onClick={() => setSourcesOpen(false)}>
+              <h2 className="mr-auto text-sm font-semibold">Saved runs</h2>
+              <button type="button" className={buttonClass} onClick={() => setSavedOpen(false)}>
                 Close
               </button>
             </div>
-            <ul className="mx-auto mt-3 min-h-0 w-full max-w-[70ch] flex-1 space-y-2 overflow-y-auto">
-              {citations.map((citation, index) => (
-                <li key={`${citation.id}-${index}`}>
-                  <a
-                    href={sourceHref(citation)}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block rounded-md border border-border px-3 py-2 text-sm text-foreground underline-offset-2 hover:bg-accent hover:underline"
-                  >
-                    <span className="font-medium">{citation.title || citation.citation || "Authority"}</span>
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {[citation.citation, citation.court, citation.date].filter(Boolean).join(" · ") || "Citation not recorded"}
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <div className="mx-auto mt-3 min-h-0 w-full max-w-[70ch] flex-1 overflow-y-auto">
+              {savedPhase === "loading" && <p className="text-sm text-muted-foreground">Reading your saved runs…</p>}
+              {savedPhase === "error" && (
+                <p className="text-sm text-muted-foreground">
+                  Your saved runs are unavailable right now. Ask a question to start a new one.
+                </p>
+              )}
+              {savedPhase === "idle" && !savedRuns.length && (
+                <p className="text-sm text-muted-foreground">No saved runs yet. Ask a question and it appears here.</p>
+              )}
+              {!!savedRuns.length && (
+                <ul className="space-y-2">
+                  {savedRuns.map((run) => {
+                    const meta = [
+                      run.n === null ? "" : `${run.n} ${run.n === 1 ? "authority" : "authorities"}`,
+                      run.ts ? whenLabel(run.ts) : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ");
+                    return (
+                      <li key={run.run_id}>
+                        <button
+                          type="button"
+                          className="flex min-h-[44px] w-full items-center rounded-md border border-border px-3 py-2 text-left text-sm font-medium text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                          onClick={() => openSaved(run.run_id)}
+                        >
+                          {run.question}
+                        </button>
+                        {meta && <p className="mt-0.5 text-xs text-muted-foreground">{meta}</p>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
           </div>
         )}
 
-        <MapPane engine={engine} view={view} pane={pane} onShowMemo={() => setPane("memo")} />
+        <MapPane
+          engine={engine}
+          view={view}
+          pane={pane}
+          citations={citations}
+          onShowMemo={() => setPane("memo")}
+        />
 
         <form
           onSubmit={ask}
@@ -382,7 +633,10 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
             ref={inputRef}
             aria-label="Ask a question"
             value={question}
-            onChange={(event) => setQuestion(event.target.value)}
+            onChange={(event) => {
+              setQuestion(event.target.value);
+              if (event.target.value.trim()) setNeedsQuestion(false);
+            }}
             placeholder="Ask a legal question"
             className="h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground"
           />

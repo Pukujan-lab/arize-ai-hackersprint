@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Layers, Minus, Plus, RotateCcw } from "lucide-react";
+import { citeType, type Citation } from "@/lib/citations";
 import { cn } from "@/lib/utils";
+import { sourceHref } from "@/components/Memo";
 import { MapEngine, type MapView } from "@/map/engine";
 
 const PIN_COLORS: Record<string, string> = {
@@ -30,10 +32,20 @@ type Props = {
   engine: MapEngine;
   view: MapView;
   pane: "memo" | "map";
+  citations: Citation[];
   onShowMemo: () => void;
 };
 
-export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
+/** A passage as an excerpt: whitespace collapsed, cut at a word, so its opening reads intact. */
+function excerpt(text: string, max = 220): string {
+  const clean = String(text || "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (clean.length <= max) return clean;
+  return clean.slice(0, max).replace(/[,;:.\s]+\S*$/, "") + "…";
+}
+
+export default function MapPane({ engine, view, pane, citations, onShowMemo }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
@@ -44,6 +56,8 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
   const countyRef = useRef<string | null>(null);
   const [basemap, setBasemap] = useState(true);
   const [keyOpen, setKeyOpen] = useState(false);
+  /** The citation whose authority is open. One at a time: a second pin replaces the first. */
+  const [authority, setAuthority] = useState<number | null>(null);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -106,6 +120,22 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
     };
   }, [keyOpen]);
 
+  // Escape closes the authority detail, as it closes every other panel on the page.
+  useEffect(() => {
+    if (authority === null) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setAuthority(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [authority]);
+
+  // A new run draws new pins; a detail that no pin stands for any more is closed, not left stale.
+  useEffect(() => {
+    if (authority === null || !view.pins.length) return;
+    if (!view.pins.some((pin) => pin.items.includes(authority))) setAuthority(null);
+  }, [authority, view.pins]);
+
   const trackCounty = (event: React.MouseEvent<HTMLCanvasElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
     const key = engine.countyAtScreen(event.clientX - rect.left, event.clientY - rect.top);
@@ -117,6 +147,7 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
 
   const clickMap = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (draggedRef.current) return;
+    setAuthority(null);
     const rect = event.currentTarget.getBoundingClientRect();
     const key = engine.countyAtScreen(event.clientX - rect.left, event.clientY - rect.top);
     if (key) engine.zoomToCounty(key);
@@ -228,7 +259,8 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
                   event.clientY - (box.top + box.height / 2),
                 );
                 if (off <= size / 2 + 1) {
-                  engine.focus(pin.index);
+                  engine.openAuthority(pin.index);
+                  setAuthority(pin.index);
                   return;
                 }
                 const pane = containerRef.current;
@@ -328,7 +360,48 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
           </div>
         )}
 
-        {view.tooltip && (
+        {authority !== null && citations[authority] && (
+          // Informational, so it passes clicks through to the map and the pins beneath it: the
+          // only things in it that take a press are Close and the link to the document.
+          <div
+            role="dialog"
+            aria-label="Authority"
+            className="pointer-events-none absolute bottom-2 left-2 right-2 z-20 rounded-md border border-border bg-card/95 px-3 py-2 text-xs text-card-foreground shadow-lg sm:right-auto sm:w-[22rem]"
+          >
+            <div className="flex items-start gap-2">
+              <h2 className="mr-auto min-w-0 text-sm font-semibold">
+                {citations[authority].title || citations[authority].citation || "Authority"}
+              </h2>
+              <button
+                type="button"
+                className="pointer-events-auto h-11 w-11 shrink-0 rounded-md border border-border text-xs font-medium"
+                onClick={() => setAuthority(null)}
+              >
+                Close
+              </button>
+            </div>
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-0.5 text-muted-foreground">
+              <span>{citeType(citations[authority])}</span>
+              <span>{citations[authority].court || "Court not recorded"}</span>
+              <span>{citations[authority].date || "Date not recorded"}</span>
+            </div>
+            {citations[authority].passage ? (
+              <p className="mt-1 leading-relaxed">“{excerpt(citations[authority].passage || "")}”</p>
+            ) : (
+              <p className="mt-1 text-muted-foreground">No passage was retrieved — from the citation graph.</p>
+            )}
+            <a
+              className="pointer-events-auto mt-1 inline-block text-xs font-medium underline underline-offset-2"
+              href={sourceHref(citations[authority])}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              Open the document
+            </a>
+          </div>
+        )}
+
+        {view.tooltip && authority === null && (
           <div className="pointer-events-none absolute bottom-2 left-2 right-2 rounded-md border border-border bg-card/95 px-3 py-2 text-xs text-card-foreground shadow">
             {view.tooltip}
           </div>

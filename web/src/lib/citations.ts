@@ -16,12 +16,26 @@ export type Citation = {
 
 export type Edge = { src: string; dst: string };
 
+/** What the citation check reports about one run. */
+export type Safeguard = {
+  pass?: boolean;
+  used?: string[];
+  invalid?: string[];
+  unknown_authorities?: string[];
+  unsupported_claims?: string[];
+  disclaimer?: string;
+};
+
 export type RunResult = {
   run_id?: string;
   question?: string;
   answer?: string;
   citations?: Citation[];
   edges?: Edge[];
+  provider?: string;
+  elapsed_s?: number;
+  safeguard?: Safeguard;
+  followups?: string[];
 };
 
 export type Category = "county" | "state" | "statute" | "federal";
