@@ -69,8 +69,8 @@ def test_O8_follow_up_and_new_question_are_offered_after_a_memo(base, browser):
     ctx, page = _page(browser, base)
     _ask(page)
     _memo(page)
-    assert page.get_by_role("button", name="Follow-up").count() == 1
-    assert page.get_by_role("button", name="New question").count() == 1
+    assert page.get_by_role("button", name="Follow-up", exact=True).count() == 1
+    assert page.get_by_role("button", name="New question", exact=True).count() == 1
     ctx.close()
 
 
