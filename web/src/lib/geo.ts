@@ -1,6 +1,6 @@
 // Projection and the vendored map geometry. The geometry is pre-projected into the 975×610 space
 // that d3.geoAlbersUsa().scale(1300).translate([487.5, 305]) produces, and it ships inside this
-// build (web/public/vendor) rather than being read from /static at runtime.
+// build (web/public/vendor) rather than being fetched from a separate asset folder at runtime.
 
 export type Ring = [number, number][];
 export type StateShape = { name: string; polys: Ring[] };

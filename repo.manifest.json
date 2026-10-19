@@ -66,14 +66,6 @@
       "runtime_data": "applied to the Octo workspace, not stored locally"
     },
     {
-      "path": "static/",
-      "kind": "dir",
-      "owner": "app",
-      "purpose": "Current frontend pages (demo, map, dashboard, slides, guide, observability). Deleted at the v3 cutover; the builder owns web/ and chooses its implementation.",
-      "agents_may_edit": true,
-      "runtime_data": "nothing (code only)"
-    },
-    {
       "path": "web/",
       "kind": "dir",
       "owner": "app",

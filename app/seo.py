@@ -1,11 +1,12 @@
 """SEO routes: /robots.txt, /sitemap.xml, /og.png (public pages only; no API routes)."""
 
 import pathlib
+from fastapi import HTTPException
 from fastapi.responses import PlainTextResponse, Response, FileResponse
 
 BASE = "https://arize.design-bakery.com"
-PAGES = ["/", "/dashboard", "/slides", "/map", "/observability", "/guide"]
-STATIC = pathlib.Path(__file__).resolve().parent.parent / "static"
+PAGES = ["/", "/map", "/observability", "/slides"]
+DIST = pathlib.Path(__file__).resolve().parent.parent / "web" / "dist"
 
 
 def install(app):
@@ -23,4 +24,7 @@ def install(app):
 
     @app.get("/og.png", include_in_schema=False)
     def og():
-        return FileResponse(STATIC / "og.png", media_type="image/png")
+        path = DIST / "og.png"
+        if not path.is_file():
+            raise HTTPException(status_code=404, detail="og.png is built into web/dist; run pnpm --dir web build")
+        return FileResponse(path, media_type="image/png")

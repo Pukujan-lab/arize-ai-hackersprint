@@ -1480,42 +1480,6 @@
         "summary": "Tts Ts"
       }
     },
-    "/dashboard": {
-      "get": {
-        "operationId": "dashboard_dashboard_get",
-        "responses": {
-          "200": {
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Dashboard"
-      }
-    },
-    "/guide": {
-      "get": {
-        "operationId": "guide_page_guide_get",
-        "responses": {
-          "200": {
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "Guide Page"
-      }
-    },
     "/map": {
       "get": {
         "operationId": "map_page_map_get",
@@ -1568,42 +1532,6 @@
           }
         },
         "summary": "Slides"
-      }
-    },
-    "/v1": {
-      "get": {
-        "operationId": "v1_page_v1_get",
-        "responses": {
-          "200": {
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "V1 Page"
-      }
-    },
-    "/v2": {
-      "get": {
-        "operationId": "v2_page_v2_get",
-        "responses": {
-          "200": {
-            "content": {
-              "text/html": {
-                "schema": {
-                  "type": "string"
-                }
-              }
-            },
-            "description": "Successful Response"
-          }
-        },
-        "summary": "V2 Page"
       }
     }
   }
