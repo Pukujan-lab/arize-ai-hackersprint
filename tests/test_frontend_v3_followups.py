@@ -41,7 +41,7 @@ def _followups(page):
     page.get_by_role("button", name="Follow-ups", exact=True).click()
     heading = page.get_by_role("heading", name="Follow-ups", exact=True)
     heading.wait_for(timeout=5000)
-    return heading.locator("..")
+    return heading.locator("xpath=..")
 
 
 def _memo_text(page):
@@ -79,8 +79,15 @@ def test_O102_a_followup_asks_with_the_run_as_context(base, browser):
     panel = _followups(page)
     panel.get_by_role("button", name=followup).click()
 
+    outside = ""
     for _ in range(30):
-        if "follow-up" in _memo_text(page):
+        whole = _memo_text(page)
+        try:
+            panel_text = panel.inner_text().lower()
+        except Exception:  # the panel closed with the new run
+            panel_text = ""
+        outside = whole.replace(panel_text, "", 1) if panel_text else whole
+        if "follow-up" in outside:
             break
         page.wait_for_timeout(500)
 
@@ -88,7 +95,7 @@ def test_O102_a_followup_asks_with_the_run_as_context(base, browser):
     body = sent[0]
     assert body.get("question") == followup, f"the follow-up was not asked verbatim: {body}"
     assert RUN_ID in json.dumps(body), f"the follow-up did not carry the current run as context: {body}"
-    assert "follow-up" in _memo_text(page), f"the resulting memo does not say it answered a follow-up: {_memo_text(page)[:400]!r}"
+    assert "follow-up" in outside, f"the resulting memo does not say it answered a follow-up: {outside[:400]!r}"
     ctx.close()
 
 
