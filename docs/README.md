@@ -4,7 +4,7 @@ Most of these files were written during the HackSprint NYC build on 2026-10-16, 
 
 Current:
 
-- `FRONTEND_INVENTORY.md`: every page, control, owning file and API route in `static/`, plus known clutter. Start here for frontend work.
+- `FRONTEND_INVENTORY.md`: every page, control, owning file and API route in `web/`, plus known clutter. Start here for frontend work.
 - `V2_CHECKPOINT.md`: the v2 frontend decision, layout rules, the dark-default theme and what has been built so far.
 - `continuity/cgm-pin.md`: which writing-helper commit this repo pins, what `.content-system/` holds, and how CI checks it.
 - `continuity/oio-pin.md`: which OIO commit this repo pins, the installer layout under `.oio/`, and how CI checks it.
