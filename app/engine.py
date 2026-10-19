@@ -130,7 +130,7 @@ def _engine_block(data):
 # --- retrieve -----------------------------------------------------------------------------------
 
 _last_lock = threading.Lock()
-_last = {"stages": [], "error": None, "at": 0.0}
+_last: dict = {"stages": [], "error": None, "at": 0.0}
 
 
 def stage_record(raw):
