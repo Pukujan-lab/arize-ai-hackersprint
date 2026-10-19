@@ -126,3 +126,49 @@ def test_O16_a_failed_run_says_so_and_leaves_no_blank_pane(base, browser):
     assert text.strip(), "the page went blank after a failed run"
     assert any(w in text.lower() for w in ("wrong", "error", "try again", "couldn't", "could not")), f"a failed run left no readable message: {text[:200]!r}"
     ctx.close()
+
+
+def test_O7_asking_waits_for_a_run_the_server_is_still_working_on(base, browser):
+    """The server returns the run id at once and writes result.json when the agents finish, so the page
+    has to keep asking until the result exists. A single read would fail every real question."""
+    body = json.dumps({"result": load_fixture("run-parity.json")})
+    seen = []
+
+    def setup(page):
+        page.route(
+            "**/api/ask",
+            lambda r: r.fulfill(status=200, content_type="application/json", body=json.dumps({"run_id": "v3-slow"})),
+        )
+
+        def run_route(route):
+            seen.append(1)
+            if len(seen) < 3:
+                route.fulfill(status=200, content_type="application/json", body=json.dumps({"events": [], "result": None, "partial": "planning"}))
+            else:
+                route.fulfill(status=200, content_type="application/json", body=body)
+
+        page.route("**/api/run/v3-slow", run_route)
+
+    ctx, page = open_page(browser, base, "/", DESKTOP, setup=setup)
+    _ask(page)
+    _memo(page)
+    assert len(seen) >= 3, "the page stopped asking before the run was ready"
+    assert "didn't come back" not in page.inner_text("body").lower()
+    ctx.close()
+
+
+def test_O16_a_rate_limited_question_says_to_wait_instead_of_failing(base, browser):
+    message = "You're asking a bit fast - max 6 questions per minute. Give it a few seconds and try again."
+
+    def setup(page):
+        page.route(
+            "**/api/ask",
+            lambda r: r.fulfill(status=429, content_type="application/json", body=json.dumps({"error": message, "rate_limited": True})),
+        )
+
+    ctx, page = open_page(browser, base, "/", DESKTOP, setup=setup)
+    _ask(page)
+    page.wait_for_timeout(1500)
+    text = page.inner_text("body")
+    assert "asking a bit fast" in text.lower(), f"the rate-limit reason was replaced by generic copy: {text[:200]!r}"
+    ctx.close()
