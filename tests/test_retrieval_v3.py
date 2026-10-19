@@ -51,9 +51,7 @@ def live_server():
 
 
 def _post(base, path, body):
-    req = urllib.request.Request(
-        base + path, json.dumps(body).encode(), {"Content-Type": "application/json", "User-Agent": "legal-graph/0.1"}
-    )
+    req = urllib.request.Request(base + path, json.dumps(body).encode(), {"Content-Type": "application/json", "User-Agent": "legal-graph/0.1"})
     return json.load(urllib.request.urlopen(req, timeout=30))
 
 
@@ -124,9 +122,7 @@ def test_O95_a_question_with_no_authority_says_so(live):
 def test_O96_a_typo_and_an_everyday_word_still_find_the_authority(live):
     result = _ask(live, "am i allowed to carry gun withotu license")
     haystack = " ".join(_ids(result)).lower()
-    assert any(word in haystack for word in ("trinen", "concealed carry", "18-12-105", "18-12-204")), (
-        f"the misspelled question returned {_ids(result)}"
-    )
+    assert any(word in haystack for word in ("trinen", "concealed carry", "18-12-105", "18-12-204")), f"the misspelled question returned {_ids(result)}"
 
 
 def test_O97_a_retrieved_authority_survives_a_missing_graph_node():
@@ -194,12 +190,8 @@ def test_O97_a_retrieved_authority_survives_a_missing_graph_node():
 def test_O98_the_graph_contributes_question_relevant_authorities(live):
     result = _ask(live, "Does a severed mineral estate keep the Colorado homestead exemption?")
     ids = _ids(result)
-    assert any(identifier.startswith("C.R.S. § 34-60-") for identifier in ids), (
-        f"the citation graph did not contribute the oil-and-gas sections: {ids}"
-    )
-    assert not any("CFR" in identifier or "eCFR" in identifier for identifier in ids), (
-        f"generic in-degree titles outrank the question: {ids}"
-    )
+    assert any(identifier.startswith("C.R.S. § 34-60-") for identifier in ids), f"the citation graph did not contribute the oil-and-gas sections: {ids}"
+    assert not any("CFR" in identifier or "eCFR" in identifier for identifier in ids), f"generic in-degree titles outrank the question: {ids}"
 
 
 @needs_live
