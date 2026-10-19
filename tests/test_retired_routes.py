@@ -79,6 +79,18 @@ def test_the_old_frontend_folder_is_gone():
     assert not (ROOT / "static").exists(), "the old frontend folder still exists; a retired page can come back"
 
 
+@pytest.mark.parametrize("path", ["/", "/map", "/observability", "/slides"])
+def test_a_missing_build_fails_loudly_instead_of_serving_a_page(monkeypatch, path):
+    from fastapi.testclient import TestClient
+
+    from app import server
+
+    monkeypatch.setattr(server, "WEB_INDEX", ROOT / "web" / "dist" / "no-such-build" / "index.html")
+    r = TestClient(server.app).get(path)
+    assert r.status_code == 503, f"{path} answered {r.status_code} without a build; something else is being served"
+    assert "<html" not in r.text.lower(), f"{path} returned a page body without a build"
+
+
 def test_built_assets_are_content_hashed():
     html = (ROOT / "web" / "dist" / "index.html").read_text(encoding="utf-8")
     assets = re.findall(r'(?:src|href)="(/[^"]+\.(?:js|css))"', html)
