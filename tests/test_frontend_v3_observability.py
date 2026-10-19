@@ -47,14 +47,14 @@ RESULT = {
 STACK = load_fixture("stack-observability.json")
 RUN = load_fixture("run-observability.json")
 RUN_ID = RUN["run_id"]
-OBSERVED_RUNS = [
-    {"run_id": RUN_ID, "question": RUN["question"], "n": len(RUN["citations"]), "ts": "2026-10-19T12:00:00Z"}
-]
+OBSERVED_RUNS = [{"run_id": RUN_ID, "question": RUN["question"], "n": len(RUN["citations"]), "ts": "2026-10-19T12:00:00Z"}]
+
 
 @pytest.fixture(scope="module")
 def base():
     with app_server() as url:
         yield url
+
 
 @pytest.fixture(scope="module")
 def browser():
@@ -62,6 +62,7 @@ def browser():
         b = p.chromium.launch()
         yield b
         b.close()
+
 
 def _stub(page, runs=RUNS, runs_status=200):
     def handle(route):
@@ -78,16 +79,19 @@ def _stub(page, runs=RUNS, runs_status=200):
 
     page.route("**/*", handle)
 
+
 def _open(browser, base, **kw):
     ctx, page = open_page(browser, base, "/observability", DESKTOP, setup=lambda p: _stub(p, **kw))
     page.wait_for_timeout(1500)
     return ctx, page
+
 
 def test_O39_saved_runs_are_listed_and_selectable(base, browser):
     ctx, page = _open(browser, base)
     for run in RUNS:
         assert page.get_by_role("button", name=run["question"]).count() == 1, f"{run['run_id']} is not listed by its question"
     ctx.close()
+
 
 def test_O40_the_selected_run_shows_its_summary_steps_and_timings(base, browser):
     ctx, page = _open(browser, base)
@@ -101,6 +105,7 @@ def test_O40_the_selected_run_shows_its_summary_steps_and_timings(base, browser)
     assert "4.2" in text or "4.2s" in text, "the step timings are not shown"
     ctx.close()
 
+
 def test_O41_a_step_opens_its_raw_details(base, browser):
     ctx, page = _open(browser, base)
     control = page.get_by_role("button", name="Raw details").first
@@ -110,6 +115,7 @@ def test_O41_a_step_opens_its_raw_details(base, browser):
     shown = page.inner_text("body")
     assert "agent" in shown and "kind" in shown, "the raw details do not show the step's record"
     ctx.close()
+
 
 def test_O42_an_unavailable_source_is_stated_not_blank(base, browser):
     ctx, page = _open(browser, base, runs_status=503)
@@ -138,9 +144,7 @@ def _stub_observability(page, stack):
 
 def _open_observability(browser, base, stack=None):
     stack = stack if stack is not None else STACK
-    ctx, page = open_page(
-        browser, base, "/observability", DESKTOP, setup=lambda p: _stub_observability(p, stack)
-    )
+    ctx, page = open_page(browser, base, "/observability", DESKTOP, setup=lambda p: _stub_observability(p, stack))
     page.wait_for_timeout(1500)
     return ctx, page
 
@@ -173,9 +177,7 @@ def test_O105_tracing_reports_failure_and_counts(base, browser):
     text = _panel(page, "Tracing")
 
     assert "arize" in text, f"the tracing panel does not name where spans go: {text!r}"
-    assert "permission_denied" in text or "permission denied" in text, (
-        f"the tracing panel hides why export failed: {text!r}"
-    )
+    assert "permission_denied" in text or "permission denied" in text, f"the tracing panel hides why export failed: {text!r}"
     assert "not connected" in text or "failed" in text, f"the tracing panel does not say export is failing: {text!r}"
     assert re.search(r"\b0\b", text), f"the tracing panel does not report how many spans were sent: {text!r}"
     assert re.search(r"\b4\b", text), f"the tracing panel does not report how many spans were dropped: {text!r}"
@@ -200,9 +202,7 @@ def test_O106_saved_runs_and_the_trace_queue_are_bounded_fifo(base, browser):
     text = _panel(page, "Retention")
 
     assert re.search(r"\b200\b", text), f"the retention panel does not report the saved-run cap: {text!r}"
-    assert re.search(r"\b2000\b", text) or re.search(r"\b2,000\b", text), (
-        f"the retention panel does not report the trace-queue cap: {text!r}"
-    )
+    assert re.search(r"\b2000\b", text) or re.search(r"\b2,000\b", text), f"the retention panel does not report the trace-queue cap: {text!r}"
     assert re.search(r"\b4\b", text), f"the retention panel does not report how many spans were dropped: {text!r}"
     assert "oldest" in text, f"the retention panel does not say the oldest entry is dropped first: {text!r}"
     ctx.close()
