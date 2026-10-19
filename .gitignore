@@ -36,3 +36,5 @@ tests/redteam/shots/*
 !tests/redteam/shots/evidence/**
 .dyad/
 .aba-gate-tests/
+
+RUN_META.json
