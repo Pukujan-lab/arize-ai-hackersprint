@@ -52,7 +52,7 @@ def _open(browser, base, path="/map", width=DESKTOP, setup=None):
 def test_O17_the_map_renders_the_country_and_the_county_layer(base, browser):
     ctx, page = _open(browser, base)
     assert map_call(page, "countyMeshCount") > 0, "no county polygons were rendered"
-    assert map_call(page, "stateCount") >= 1, "no state geometry was rendered"
+    assert map_call(page, "stateMeshCount") >= 50, "the extruded country is not rendered"
     ctx.close()
 
 
