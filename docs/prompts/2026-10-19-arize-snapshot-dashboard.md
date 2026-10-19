@@ -69,10 +69,10 @@ cd /Users/teresaguajardo/aba/workspaces/prec-v3-119
   tests/test_frontend_v3_observability.py -q
 ```
 
-The four `O107` gates drive the page with `tests/fixtures/arize-snapshot.json`: two traces, one with a
-live run and one snapshot-only, four judge scores each, three spans each, a dataset and an experiment. The
-fourth gate serves a `503` from `/api/arize` and requires the page to say the snapshot is unavailable while
-still showing the live run.
+The `O107` gates drive the page with `tests/fixtures/arize-snapshot.json`: two traces, one with a live run
+and one snapshot-only, four judge scores each, three spans each, a dataset and an experiment. The last gate
+serves a `503` from `/api/arize` and requires the page to say the snapshot is unavailable while still
+showing the live run.
 
 Also keep green:
 
