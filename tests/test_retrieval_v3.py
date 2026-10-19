@@ -91,6 +91,13 @@ def assignment_restored():
             path.unlink()
 
 
+@pytest.fixture(autouse=True)
+def _restore_assignment():
+    """Every ask rewrites the coordination file; the suite must leave it exactly as it found it."""
+    with assignment_restored():
+        yield
+
+
 @pytest.fixture(scope="module")
 def live():
     if not LIVE:
