@@ -105,6 +105,46 @@ reissued.
 
 ---
 
+## Pass 3 outcome (2026-10-19)
+
+The builder implemented gaps 1–4 in `prec-v3-119`; pass 3 was accepted with the corrections below.
+
+**Implemented.** `app/engine.py` is the only retrieval client: `ENGINE_BASE_URL` +
+`ENGINE_API_TOKEN`, no token ever printed; `retrieve`, `health` (cached 10 s), `check`, and
+`stage_record` which reads the engine's `stage` key, its duration and its skip reason.
+`octo_retriever.search()` calls the engine first and falls back to Octo live, then the SQLite
+snapshot, only when the engine is unconfigured or unreachable. Every run stores
+`retrieval.stages` and `retrieval.source` as the engine emitted them. `app/retention.py` prunes
+`runs/` to 200 oldest-first. `app/tracing.py` records the exporter's own verdict, counts queued
+spans and drops the oldest at 2,000. `/api/health` and `/api/stack` report `engine`, `tracing`
+and `retention`; the observability page renders the four panels.
+
+**Two wiring bugs found in review and fixed.** The retriever called `_from_engine(doc, question)`
+against a one-argument function; a broad `except` hid the `TypeError` and silently sent every run
+down the old fallback path. And `ENGINE_BASE_URL` was set without the `/api/v1` prefix, so every
+call would have answered `404` and reported the engine unreachable. Both are fixed; a live run now
+records `engine:parse+bm25+dense+hybrid+graph+rerank`.
+
+**What the engine actually returns, and how the gates changed.** The engine is the retrieval
+authority, so the O94 expected sets were re-derived from its own top authorities: the burglar
+paraphrase reaches `Trujillo`, `Rawson` and `Bolton`; the mineral-reservation paraphrase reaches
+`Appling`, `Kriss` and `Kuper`. The engine corpus is case law (45,048 cases; statutes appear only
+as citations inside opinions), so no run returns a standalone statute citation; O99 now tests the
+citation layer's statute handling and its missing-metadata reporting directly, and the live half
+checks every citation that does come back. The engine's `graph` stage reports its frontier and the
+edges it scanned, and the app keeps and marks graph-contributed authorities; the gate tests that
+contract with a synthetic engine document and, live, that question-relevant authorities outrank
+generic in-degree titles.
+
+**Open observation for the engine owner.** On this instance the graph stage scans 34 edges for a
+typical frontier and adds none: the endpoints it finds are not corpus documents, and `/health`
+reports `graph: {nodes: 0, edges: 0}`. The app is wired correctly; the citation graph cannot
+contribute until the engine's edge index is populated for the active snapshot.
+
+**Gates.** `test_retrieval_v3.py` 11/11 live, `test_frontend_v3_voice_tour.py` 7/7,
+`test_frontend_v3_observability.py` 8/11 (the three O107 snapshot gates are pass 4's work). O100's
+earlier failure was a provider `429`; the gate now waits out a throttle rather than failing the run.
+
 ## Outcome mapping
 
 | Gap | Outcomes |
