@@ -56,7 +56,7 @@ def _ask(page):
 
 
 def _memo(page):
-    page.get_by_text(" ".join(MEMO_WORDS), exact=False).wait_for(timeout=30000)
+    page.get_by_text(MEMO_WORDS, exact=False).wait_for(timeout=30000)
 
 
 def _menu(page):

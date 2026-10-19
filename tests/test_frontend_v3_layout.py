@@ -192,13 +192,17 @@ def test_O50_every_page_renders_in_both_themes(base, browser, path):
 def test_O51_the_page_works_from_the_keyboard_and_escape_closes_a_drawer(base, browser):
     ctx, page = _open(browser, base, "/", DESKTOP)
     reached = []
-    for _ in range(40):
+    # The memo's citation links sit between the navigation and the composer, so the field can be
+    # several dozen tabs away; keep tabbing until it is reached.
+    for _ in range(200):
         page.keyboard.press("Tab")
         reached.append(
             page.evaluate(
                 "() => (document.activeElement && (document.activeElement.innerText || document.activeElement.getAttribute('aria-label') || '')).slice(0, 40)"
             )
         )
+        if any("Ask a question" in r for r in reached):
+            break
     joined = " | ".join(reached)
     for name in ("Home", "Map", "Observability", "Slides"):
         assert name in joined, f"the keyboard never reaches the {name} link"

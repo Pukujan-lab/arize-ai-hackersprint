@@ -175,13 +175,23 @@ def tiny_text(page, minimum=12):
 
 
 def covered(page, selector):
-    """Elements matching selector whose centre point is covered by some other element (overlap)."""
+    """Elements matching selector whose centre point is covered by some other element (overlap).
+
+    An element scrolled out of a clipping ancestor is not on screen, so it is not counted: its centre
+    is outside the ancestor's box even though its layout rect still intersects the viewport.
+    """
     return page.evaluate(
         VISIBLE_JS
         + """
         (sel) => [...document.querySelectorAll(sel)].filter(__vis).filter(el => {
           const r = el.getBoundingClientRect(); const x = r.left + r.width / 2, y = r.top + r.height / 2;
           if (y < 0 || y > innerHeight || x < 0 || x > innerWidth) return false;
+          for (let node = el.parentElement; node && node !== document.body; node = node.parentElement) {
+            const cs = getComputedStyle(node);
+            if (!/(auto|scroll|hidden|clip)/.test(cs.overflowX + ' ' + cs.overflowY)) continue;
+            const c = node.getBoundingClientRect();
+            if (x < c.left || x > c.right || y < c.top || y > c.bottom) return false;
+          }
           const hit = document.elementFromPoint(x, y); return !(hit && (hit === el || el.contains(hit) || hit.contains(el)));
         }).map(el => { const r = el.getBoundingClientRect(); const h = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
           return el.outerHTML.slice(0, 80) + ' covered by ' + (h ? h.outerHTML.slice(0, 80) : 'nothing'); })
