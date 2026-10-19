@@ -58,6 +58,12 @@ def _memo(page):
     page.get_by_text(" ".join(MEMO_WORDS), exact=False).wait_for(timeout=30000)
 
 
+def _menu(page):
+    """Open the memo drawer: O67 keeps the run's actions behind one control."""
+    page.get_by_role("button", name="Memo menu", exact=True).click()
+    page.wait_for_timeout(200)
+
+
 def test_O7_asking_shows_a_memo_without_reloading(base, browser):
     ctx, page = _page(browser, base)
     _ask(page)
@@ -69,6 +75,7 @@ def test_O8_follow_up_and_new_question_are_offered_after_a_memo(base, browser):
     ctx, page = _page(browser, base)
     _ask(page)
     _memo(page)
+    _menu(page)
     assert page.get_by_role("button", name="Follow-up", exact=True).count() == 1
     assert page.get_by_role("button", name="New question", exact=True).count() == 1
     ctx.close()
@@ -100,6 +107,7 @@ def test_O12_sources_link_to_the_original_documents(base, browser):
     ctx, page = _page(browser, base)
     _ask(page)
     _memo(page)
+    _menu(page)
     page.get_by_role("button", name="Sources").click()
     links = page.evaluate("() => [...document.querySelectorAll('a[href^=http]')].map(a => a.getAttribute('href'))")
     assert links, "the Sources panel has no link to an original document"
@@ -111,6 +119,7 @@ def test_O13_follow_ups_and_run_info_are_reachable(base, browser):
     _ask(page)
     _memo(page)
     for name in ("Follow-ups", "Run info"):
+        _menu(page)
         control = page.get_by_role("button", name=name)
         assert control.count() == 1, f"{name} is not reachable from Home"
         control.click()

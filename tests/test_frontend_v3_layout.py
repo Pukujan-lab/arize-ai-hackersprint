@@ -203,10 +203,17 @@ def test_O51_the_page_works_from_the_keyboard_and_escape_closes_a_drawer(base, b
         assert name in joined, f"the keyboard never reaches the {name} link"
     assert any("Ask a question" in r for r in reached), "the keyboard never reaches the question field"
 
+    # O67 puts the source list behind the memo drawer; the panel itself is the dialog named Sources.
+    page.get_by_role("button", name="Memo menu", exact=True).click()
     page.get_by_role("button", name="Sources").click()
     page.wait_for_timeout(300)
-    assert page.evaluate("() => [...document.querySelectorAll('a[href^=http]')].some(a => a.checkVisibility())"), "the Sources panel did not open"
+    assert page.evaluate(
+        """() => {
+          const panel = document.querySelector('[role=dialog][aria-label=Sources]');
+          return !!panel && [...panel.querySelectorAll('a[href^=http]')].some(a => a.checkVisibility());
+        }"""
+    ), "the Sources panel did not open"
     page.keyboard.press("Escape")
     page.wait_for_timeout(400)
-    assert not page.evaluate("() => [...document.querySelectorAll('a[href^=http]')].some(a => a.checkVisibility())"), "Escape did not close the Sources panel"
+    assert page.evaluate("() => !document.querySelector('[role=dialog][aria-label=Sources]')"), "Escape did not close the Sources panel"
     ctx.close()

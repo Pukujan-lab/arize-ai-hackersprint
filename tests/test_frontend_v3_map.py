@@ -145,6 +145,8 @@ def test_O23_the_camera_moves_to_a_citation_and_resets(base, browser):
 def test_O25_the_basemap_can_be_turned_off_without_losing_the_map(base, browser):
     ctx, page = _open(browser, base)
     before = (map_call(page, "pinCount"), map_call(page, "countyMeshCount"), map_call(page, "arcCounts"))
+    # O70 collapses the basemap switch behind the map key, so open it before reaching for the switch.
+    page.get_by_role("button", name="Map key", exact=True).click()
     page.get_by_role("checkbox", name="Basemap").uncheck()
     page.wait_for_timeout(800)
     after = (map_call(page, "pinCount"), map_call(page, "countyMeshCount"), map_call(page, "arcCounts"))
