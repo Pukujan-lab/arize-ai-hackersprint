@@ -65,16 +65,19 @@ def test_health_does_not_advertise_down_tts_providers(client):
 
 
 def test_theme_css_exists():
-    css = ROOT / "static" / "theme" / "precedent-theme.css"
-    assert css.is_file(), "static/theme/precedent-theme.css missing (404 on every page)"
+    css = ROOT / "web" / "src" / "globals.css"
+    assert css.is_file(), "web/src/globals.css missing: the built app ships no theme"
+    body = css.read_text(encoding="utf-8")
+    assert "--background" in body and "--foreground" in body, "the theme defines no surface tokens"
+    assert "prefers-color-scheme: dark" in body, "the theme has no dark scheme"
 
 
 def test_out_of_state_courts_not_silently_denver():
-    js = (ROOT / "static" / "map3d.js").read_text()
+    src = (ROOT / "web" / "src" / "lib" / "citations.ts").read_text(encoding="utf-8")
     # The final return of locate() must not hard-code Denver as a silent default.
-    start = js.find("function locate")
-    body = js[start : start + 1200]
-    assert 'return {key:"denver",ll:DENVER,label:"Colorado courts (Denver)"' not in body, (
+    start = src.find("export function locate")
+    body = src[start : start + 2600]
+    assert 'return { key: "denver", ll: DENVER, label: "Colorado courts (Denver)", cat: "state" };' not in body, (
         "locate() silently pins unknown courts to Denver without an uncertainty path"
     )
 
