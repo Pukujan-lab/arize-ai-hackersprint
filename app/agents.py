@@ -212,7 +212,9 @@ def retriever(run, question, extra_seeds=None):
 
         graph_source = (record.get("graph") or {}).get("source") or ""
         if edges:
-            graph_source = "local-citation-edges" if not graph_source or graph_source.startswith(("not reported", "none")) else graph_source + " + local-citation-edges"
+            graph_source = (
+                "local-citation-edges" if not graph_source or graph_source.startswith(("not reported", "none")) else graph_source + " + local-citation-edges"
+            )
         elif not graph_source:
             graph_source = "none"
         retrieval = {

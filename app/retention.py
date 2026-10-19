@@ -26,6 +26,7 @@ def prune_runs(keep=None):
     excess = len(dirs) - RUNS_KEPT
     if excess <= 0:
         return len(dirs)
+
     def modified(directory):
         try:
             return directory.stat().st_mtime

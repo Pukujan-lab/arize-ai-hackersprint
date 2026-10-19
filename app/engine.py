@@ -194,6 +194,7 @@ def stage_source(stages):
 
 # --- check --------------------------------------------------------------------------------------
 
+
 def check(claims, scorer=None, threshold=None):
     """POST /api/v1/check: does each claim's cited passage support it?
 
@@ -210,6 +211,7 @@ def check(claims, scorer=None, threshold=None):
 
 
 # --- what the stack reports ---------------------------------------------------------------------
+
 
 def status(stages=None):
     """The `engine` object `/api/health` and `/api/stack` report. Absent fields stay None."""

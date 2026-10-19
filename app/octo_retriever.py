@@ -120,6 +120,7 @@ def _cache_put(h, question, source, passages, retrieval=None):
 
 # --- the engine's answer, as passages -------------------------------------------------------------------
 
+
 def passage_header(text):
     """The line a passage begins with: `Case Name | Court of X | YYYY`. Empty when it carries none."""
     head = str(text or "").split("\n")[0]
@@ -249,7 +250,7 @@ def search(question, k=12):
             engine_error = failure.reason
             stats.put("octo_last_source", "engine unreachable")
         else:
-            passages, record = _from_engine(doc, question)
+            passages, record = _from_engine(doc)
             if passages:
                 _cache_put(h, question, record["source"], passages, record)
                 stats.bump("octo_engine")
