@@ -1,7 +1,7 @@
 import re, json
 import os, time, uuid, threading, pathlib, httpx, subprocess
-from fastapi import FastAPI, Depends
-from fastapi.responses import HTMLResponse, Response, JSONResponse
+from fastapi import FastAPI, Depends, HTTPException
+from fastapi.responses import FileResponse, HTMLResponse, Response, JSONResponse
 from app import contracts
 from app import agents, tracing, limits, ttschain, octocache
 from acs import board as acs_board
@@ -14,9 +14,114 @@ from fastapi.staticfiles import StaticFiles
 app.mount("/static", StaticFiles(directory=str(ROOT / "static")), name="static")
 threading.Thread(target=agents.graph, daemon=True).start()
 
+# --- Frontend v3 -------------------------------------------------------------------------------
+# web/dist is the built frontend. When it is present the four surviving addresses serve it, each
+# with its own head; otherwise the old pages in static/ keep answering. Nothing under /api changes.
+WEB_DIST = ROOT / "web" / "dist"
+WEB_INDEX = WEB_DIST / "index.html"
+SITE_BASE = "https://arize.design-bakery.com"
+
+_V3_PAGES = {
+    "/": {
+        "title": "Precedent · Ask, read the memo, tour the map",
+        "description": "Ask a legal question and read the memo it returns, then tour the citation map behind every authority the answer relies on.",
+    },
+    "/map": {
+        "title": "Precedent · The citation map behind the memo",
+        "description": "The citation map opened on its own pane: every authority in the memo pinned at the court that decided it, over the extruded United States.",
+    },
+    "/observability": {
+        "title": "Precedent · How a run was made",
+        "description": "How a run was made: the agents that planned, retrieved, wrote and verified the memo, the steps each one took and the authorities it cited.",
+    },
+    "/slides": {
+        "title": "Precedent · The run, slide by slide",
+        "description": "The deck that walks through a run, from the question to the memo to the citation map and its guided tour of every authority the answer cites.",
+    },
+}
+
+
+def _build_id():
+    """The commit this build came from: written by the build, else the environment, else git."""
+    try:
+        written = (WEB_DIST / "build-id").read_text().strip()
+        if written:
+            return written
+    except Exception:
+        pass
+    for key in ("BUILD_ID", "GITHUB_SHA"):
+        value = (os.environ.get(key) or "").strip()
+        if value:
+            return value
+    try:
+        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=str(ROOT), capture_output=True, text=True, timeout=5).stdout.strip()
+    except Exception:
+        return ""
+
+
+def _v3_head(path, meta):
+    url = SITE_BASE + path
+    title, desc = meta["title"], meta["description"]
+    parts = [
+        f'<meta name="description" content="{desc}">',
+        f'<link rel="canonical" href="{url}">',
+        f'<meta property="og:title" content="{title}">',
+        f'<meta property="og:description" content="{desc}">',
+        f'<meta property="og:image" content="{SITE_BASE}/og.png">',
+        f'<meta property="og:url" content="{url}">',
+        '<meta property="og:type" content="website">',
+        '<meta name="twitter:card" content="summary_large_image">',
+        '<meta name="theme-color" content="#0b1020">',
+        '<link rel="icon" href="/static/logo.svg">',
+        f'<meta name="build-id" content="{_build_id()}">',
+    ]
+    if path == "/":
+        parts.append(
+            '<script type="application/ld+json">'
+            '{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Precedent",'
+            f'"applicationCategory":"LegalService","url":"{SITE_BASE}/"}}</script>'
+        )
+    return "\n    ".join(parts)
+
+
+def _v3_page(path):
+    """The built page with this route's title, description, canonical and build id in its head."""
+    html = WEB_INDEX.read_text()
+    meta = _V3_PAGES[path]
+    html = re.sub(r"<title>.*?</title>", lambda _m: f"<title>{meta['title']}</title>", html, count=1, flags=re.S)
+    block = _v3_head(path, meta)
+    if "<!--seo-->" in html:
+        return html.replace("<!--seo-->", block)
+    return html.replace("</head>", block + "\n  </head>", 1)
+
+
+def _v3_ready():
+    return WEB_INDEX.exists()
+
+
+def _dist_file(base, rel):
+    """A file from the built frontend, or 404 — never anything outside it."""
+    root = base.resolve()
+    target = (root / rel).resolve()
+    if root not in target.parents or not target.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(target)
+
+
+@app.get("/assets/{rel:path}", include_in_schema=False)
+def web_asset(rel: str):
+    return _dist_file(WEB_DIST / "assets", rel)
+
+
+@app.get("/vendor/{rel:path}", include_in_schema=False)
+def web_vendor(rel: str):
+    return _dist_file(WEB_DIST / "vendor", rel)
+
 
 @app.get("/", response_class=HTMLResponse)
 def index():
+    if _v3_ready():
+        return _v3_page("/")
     return (ROOT / "static" / "v2.html").read_text()
 
 
@@ -244,6 +349,8 @@ def dashboard():
 
 @app.get("/slides", response_class=HTMLResponse)
 def slides():
+    if _v3_ready():
+        return _v3_page("/slides")
     return (ROOT / "static" / "slides.html").read_text()
 
 
@@ -531,6 +638,8 @@ _MAP_DESC = "Ask a legal question, read the memo it returns and tour the 3D map 
 
 @app.get("/map", response_class=HTMLResponse)
 def map_page():
+    if _v3_ready():
+        return _v3_page("/map")
     html = (ROOT / "static" / "v2.html").read_text()
     html = html.replace('data-mobile-pane="answer"', 'data-mobile-pane="map"')
     html = html.replace(f"<title>{_V2_APP_TITLE}</title>", f"<title>{_MAP_TITLE}</title>")
@@ -544,6 +653,8 @@ def map_page():
 
 @app.get("/observability", response_class=HTMLResponse)
 def observability_page():
+    if _v3_ready():
+        return _v3_page("/observability")
     return (ROOT / "static" / "observability.html").read_text()
 
 
