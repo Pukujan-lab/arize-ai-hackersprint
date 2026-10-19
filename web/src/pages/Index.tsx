@@ -176,148 +176,132 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
   const citations = result?.citations || [];
   const followUps = (result as (RunResult & { followups?: string[] }) | null)?.followups || [];
 
+  // The memo controls sit at the top of the memo pane at every width; the body is what the pane
+  // switch hides on a phone, so the controls stay reachable while the map is showing.
+  const memoBodyHidden = pane !== "memo";
+
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
       <SiteHeader />
-      <main className="grid min-h-0 flex-1 grid-cols-1 grid-rows-1 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
-        <section
-          className={cn(
-            "relative col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col",
-            pane !== "memo" && "invisible lg:visible",
-          )}
-        >
-          <div className="shrink-0 border-b border-border px-3 py-2">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <h1 className="mr-auto text-sm font-semibold">Memo</h1>
-              <button
-                type="button"
-                className={buttonClass}
-                onClick={() => (view.narrating ? engine.stopListening() : engine.narrateMemo())}
-                disabled={!memo}
-              >
-                {view.narrating ? "Stop listening" : "Listen"}
-              </button>
-              {memo && (
-                <>
-                  <button type="button" className={buttonClass} onClick={() => setSourcesOpen(true)}>
-                    Sources
-                  </button>
-                  <button type="button" className={buttonClass} onClick={() => setFollowUpsOpen((open) => !open)}>
-                    Follow-ups
-                  </button>
-                  <button type="button" className={buttonClass} onClick={() => setRunInfoOpen((open) => !open)}>
-                    Run info
-                  </button>
-                  <button
-                    type="button"
-                    className={buttonClass}
-                    disabled={asking}
-                    onClick={() => {
-                      inputRef.current?.focus();
-                    }}
-                  >
-                    Follow-up
-                  </button>
-                  <button
-                    type="button"
-                    className={buttonClass}
-                    onClick={() => {
-                      setPrevRunId(null);
-                      setQuestion("");
-                      inputRef.current?.focus();
-                    }}
-                  >
-                    New question
-                  </button>
-                </>
-              )}
-              <button
-                type="button"
-                className={cn(buttonClass, "lg:hidden")}
-                onClick={() => setPane("map")}
-              >
+      <main className="grid min-h-0 flex-1 grid-cols-1 grid-rows-[auto_minmax(0,1fr)_auto] lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)]">
+        <div className="col-start-1 row-start-1 shrink-0 border-b border-border px-3 py-2">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h1 className="mr-auto text-sm font-semibold">Memo</h1>
+            <button
+              type="button"
+              className={buttonClass}
+              onClick={() => (view.narrating ? engine.stopListening() : engine.narrateMemo())}
+              disabled={!memo}
+            >
+              {view.narrating ? "Stop listening" : "Listen"}
+            </button>
+            {memo && (
+              <>
+                <button type="button" className={buttonClass} onClick={() => setSourcesOpen(true)}>
+                  Sources
+                </button>
+                <button type="button" className={buttonClass} onClick={() => setFollowUpsOpen((open) => !open)}>
+                  Follow-ups
+                </button>
+                <button type="button" className={buttonClass} onClick={() => setRunInfoOpen((open) => !open)}>
+                  Run info
+                </button>
+                <button
+                  type="button"
+                  className={buttonClass}
+                  disabled={asking}
+                  onClick={() => {
+                    inputRef.current?.focus();
+                  }}
+                >
+                  Follow-up
+                </button>
+                <button
+                  type="button"
+                  className={buttonClass}
+                  onClick={() => {
+                    setPrevRunId(null);
+                    setQuestion("");
+                    inputRef.current?.focus();
+                  }}
+                >
+                  New question
+                </button>
+              </>
+            )}
+            {pane === "memo" && (
+              <button type="button" className={cn(buttonClass, "lg:hidden")} onClick={() => setPane("map")}>
                 Show map
               </button>
-            </div>
-            <form onSubmit={ask} className="mt-2 flex items-center gap-1.5">
-              <input
-                ref={inputRef}
-                aria-label="Ask a question"
-                value={question}
-                onChange={(event) => setQuestion(event.target.value)}
-                placeholder="Ask a legal question"
-                className="h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground"
-              />
-              <button
-                type="submit"
-                disabled={asking}
-                className="h-11 shrink-0 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:pointer-events-none disabled:opacity-50"
-              >
-                Ask
-              </button>
-            </form>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-            {(notice || status === "error") && (
-              <p
-                role="status"
-                className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-foreground"
-              >
-                {notice || "That question didn't come back. Please try again."}
-              </p>
-            )}
-            {status === "loading" && (
-              <p role="status" className="mb-3 text-sm text-muted-foreground">
-                The four agents are working on this. The memo appears here as soon as they finish.
-              </p>
-            )}
-            {memo ? (
-              <p className="whitespace-pre-wrap text-sm leading-relaxed">{memo}</p>
-            ) : (
-              (status === "idle" || status === "empty") && (
-                <p className="text-sm text-muted-foreground">
-                  {status === "empty"
-                    ? "This run has no memo yet. Ask a question to start one."
-                    : "Ask a legal question and the memo it returns appears here, with the map of every authority behind it."}
-                </p>
-              )
-            )}
-
-            {followUpsOpen && (
-              <section className="mt-4 rounded-md border border-border p-3">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Follow-ups</h2>
-                {followUps.length ? (
-                  <ul className="mt-2 space-y-1 text-sm">
-                    {followUps.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="mt-2 text-sm text-muted-foreground">No follow-up questions were recorded for this run.</p>
-                )}
-              </section>
-            )}
-
-            {runInfoOpen && (
-              <section className="mt-4 rounded-md border border-border p-3 text-sm">
-                <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Run info</h2>
-                <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-                  <dt className="text-muted-foreground">Run</dt>
-                  <dd className="font-mono text-xs">{prevRunId || "—"}</dd>
-                  <dt className="text-muted-foreground">Question</dt>
-                  <dd>{result?.question || "—"}</dd>
-                  <dt className="text-muted-foreground">Authorities</dt>
-                  <dd>{citations.length}</dd>
-                  <dt className="text-muted-foreground">Links</dt>
-                  <dd>{engine.summary()}</dd>
-                </dl>
-              </section>
             )}
           </div>
+        </div>
 
-          {sourcesOpen && (
-            <div role="dialog" aria-label="Sources" className="absolute inset-0 z-30 flex flex-col bg-background/95 px-4 py-3">
+        <section
+          className={cn(
+            "col-start-1 row-start-2 min-h-0 min-w-0 overflow-y-auto px-4 py-3",
+            memoBodyHidden && "invisible lg:visible",
+          )}
+        >
+          {(notice || status === "error") && (
+            <p
+              role="status"
+              className="mb-3 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-foreground"
+            >
+              {notice || "That question didn't come back. Please try again."}
+            </p>
+          )}
+          {status === "loading" && (
+            <p role="status" className="mb-3 text-sm text-muted-foreground">
+              The four agents are working on this. The memo appears here as soon as they finish.
+            </p>
+          )}
+          {memo ? (
+            <p className="whitespace-pre-wrap text-sm leading-relaxed">{memo}</p>
+          ) : (
+            (status === "idle" || status === "empty") && (
+              <p className="text-sm text-muted-foreground">
+                {status === "empty"
+                  ? "This run has no memo yet. Ask a question to start one."
+                  : "Ask a legal question and the memo it returns appears here, with the map of every authority behind it."}
+              </p>
+            )
+          )}
+
+          {followUpsOpen && (
+            <section className="mt-4 rounded-md border border-border p-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Follow-ups</h2>
+              {followUps.length ? (
+                <ul className="mt-2 space-y-1 text-sm">
+                  {followUps.map((item) => (
+                    <li key={item}>{item}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">No follow-up questions were recorded for this run.</p>
+              )}
+            </section>
+          )}
+
+          {runInfoOpen && (
+            <section className="mt-4 rounded-md border border-border p-3 text-sm">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Run info</h2>
+              <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+                <dt className="text-muted-foreground">Run</dt>
+                <dd className="font-mono text-xs">{prevRunId || "—"}</dd>
+                <dt className="text-muted-foreground">Question</dt>
+                <dd>{result?.question || "—"}</dd>
+                <dt className="text-muted-foreground">Authorities</dt>
+                <dd>{citations.length}</dd>
+                <dt className="text-muted-foreground">Links</dt>
+                <dd>{engine.summary()}</dd>
+              </dl>
+              </section>
+            )}
+        </section>
+
+        {sourcesOpen && (
+          <div role="dialog" aria-label="Sources" className="fixed inset-0 z-40 flex flex-col bg-background/95 px-4 py-3">
               <div className="flex shrink-0 items-center gap-2">
                 <h2 className="mr-auto text-sm font-semibold">Sources</h2>
                 <button type="button" className={buttonClass} onClick={() => setSourcesOpen(false)}>
@@ -341,11 +325,31 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
                   </li>
                 ))}
               </ul>
-            </div>
-          )}
-        </section>
+          </div>
+        )}
 
         <MapPane engine={engine} view={view} pane={pane} onShowMemo={() => setPane("memo")} />
+
+        <form
+          onSubmit={ask}
+          className="col-start-1 row-start-3 flex items-center gap-1.5 border-t border-border bg-card px-3 py-2 lg:col-span-2"
+        >
+          <input
+            ref={inputRef}
+            aria-label="Ask a question"
+            value={question}
+            onChange={(event) => setQuestion(event.target.value)}
+            placeholder="Ask a legal question"
+            className="h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground"
+          />
+          <button
+            type="submit"
+            disabled={asking}
+            className="h-11 shrink-0 rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground disabled:pointer-events-none disabled:opacity-50"
+          >
+            Ask
+          </button>
+        </form>
       </main>
     </div>
   );

@@ -30,6 +30,10 @@ import { narrate, prefetchClip, type Narration } from "./narrator";
 export type Camera = { x: number; y: number; zoom: number };
 export type TourState = { active: boolean; index: number; count: number; playing: boolean };
 
+/** How far the reader may pull the map out of, or into, the national view. */
+const MIN_ZOOM = 0.6;
+const MAX_ZOOM = 8;
+
 export type PinView = {
   key: string;
   cat: Category;
@@ -169,6 +173,7 @@ export class MapEngine {
   private animStart = 0;
   private animating = false;
   private focusIndex: number | null = null;
+  private avoid: Rect[] = [];
 
   private tooltipText: string | null = null;
 
@@ -228,6 +233,22 @@ export class MapEngine {
   setPane(pane: "memo" | "map"): void {
     this.pane = pane;
     this.emit();
+  }
+
+  /**
+   * Screen rectangles, in pane coordinates, that the pins must keep clear of: the map's own floating
+   * controls. Without this a pin can land under a zoom button and swallow its clicks.
+   */
+  setAvoidRects(rects: { x: number; y: number; w: number; h: number }[]): void {
+    const same =
+      rects.length === this.avoid.length &&
+      rects.every((r, i) => {
+        const q = this.avoid[i];
+        return r.x === q.x && r.y === q.y && r.w === q.w && r.h === q.h;
+      });
+    if (same) return;
+    this.avoid = rects.map((r) => ({ x: r.x, y: r.y, w: r.w, h: r.h }));
+    this.refresh();
   }
 
   setTheme(theme: "light" | "dark"): void {
@@ -392,6 +413,34 @@ export class MapEngine {
     this.emit();
   }
 
+  /**
+   * Zoom by a factor around a point of the pane — its centre unless the wheel says otherwise — so that
+   * whatever is under that point stays under it.
+   */
+  zoomAround(factor: number, sx?: number, sy?: number): void {
+    if (!this.width || !this.height) return;
+    const zoom = clamp(this.cam.zoom * factor, MIN_ZOOM, MAX_ZOOM);
+    if (zoom === this.cam.zoom) return;
+    const cx = sx === undefined ? this.width / 2 : sx;
+    const cy = sy === undefined ? this.height / 2 : sy;
+    const [px, py] = this.toProjected(cx, cy);
+    const k = this.baseScale() * zoom;
+    this.animating = false;
+    this.cam = { x: px - (cx - this.width / 2) / k, y: py - (cy - this.height / 2) / k, zoom };
+    this.camTarget = { ...this.cam };
+    this.refresh();
+  }
+
+  /** Drag the map: the point under the pointer follows it, so the camera moves the other way. */
+  panBy(dx: number, dy: number): void {
+    if (!this.width || !this.height || (dx === 0 && dy === 0)) return;
+    const k = this.scale();
+    this.animating = false;
+    this.cam = { x: this.cam.x - dx / k, y: this.cam.y - dy / k, zoom: this.cam.zoom };
+    this.camTarget = { ...this.cam };
+    this.refresh();
+  }
+
   private moveCamera(target: Camera): void {
     this.camTarget = { ...target };
     if (prefersReducedMotion()) {
@@ -408,6 +457,8 @@ export class MapEngine {
   }
 
   private stepCamera = (now: number): void => {
+    // A pan or a zoom stops the animation, but a frame it already asked for may still arrive.
+    if (!this.animating) return;
     const t = clamp((now - this.animStart) / CAMERA_MS, 0, 1);
     const e = 1 - Math.pow(1 - t, 3);
     this.cam = {
@@ -758,9 +809,14 @@ export class MapEngine {
     }
   }
 
+  /** The projected plane → screen scale at the national view, before the camera's own zoom. */
+  private baseScale(): number {
+    return Math.min(this.width / WORLD_WIDTH, this.height / WORLD_HEIGHT) * 0.92;
+  }
+
   private scale(): number {
     if (!this.width || !this.height) return 1;
-    return Math.min(this.width / WORLD_WIDTH, this.height / WORLD_HEIGHT) * 0.92 * this.cam.zoom;
+    return this.baseScale() * this.cam.zoom;
   }
 
   private toScreen(px: number, py: number): [number, number] {
@@ -856,6 +912,7 @@ export class MapEngine {
           const rect = { x: x - PIN_SIZE / 2, y: y - PIN_SIZE / 2, w: PIN_SIZE, h: PIN_SIZE };
           if (rect.x < 4 || rect.y < PIN_TOP_BAND || rect.x + PIN_SIZE > W - 4 || rect.y + PIN_SIZE > H - PIN_BOTTOM_BAND)
             continue;
+          if (this.avoid.some((q) => overlaps(rect, q))) continue;
           if (placed.some((q) => overlaps(rect, q))) continue;
           spot = [x, y];
           break;

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { Minus, Plus, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { MapEngine, type MapView } from "@/map/engine";
 
@@ -8,6 +9,15 @@ const PIN_COLORS: Record<string, string> = {
   statute: "#f59e0b",
   federal: "#ec4899",
 };
+
+/** One press of a zoom button, and how far one wheel notch pulls the map in or out. */
+const ZOOM_STEP = 1.6;
+const WHEEL_ZOOM = 0.0015;
+/** Below this a pointer has not moved enough to be a drag, so a tap on a pin stays a click. */
+const DRAG_SLOP = 5;
+
+const zoomButtonClass =
+  "grid h-11 w-11 place-items-center rounded-md border border-border bg-card/95 text-card-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground";
 
 type Props = {
   engine: MapEngine;
@@ -19,7 +29,10 @@ type Props = {
 export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const controlsRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ x: number; y: number } | null>(null);
+  /** Set once a press has travelled far enough to be a drag, so the press cannot also click a pin. */
+  const draggedRef = useRef(false);
   const countyRef = useRef<string | null>(null);
   const [basemap, setBasemap] = useState(true);
 
@@ -34,11 +47,34 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
     const measure = () => {
       const rect = element.getBoundingClientRect();
       engine.resize(Math.round(rect.width), Math.round(rect.height));
+      const controls = controlsRef.current;
+      if (!controls) return;
+      const box = controls.getBoundingClientRect();
+      engine.setAvoidRects([
+        { x: box.left - rect.left, y: box.top - rect.top, w: box.width, h: box.height },
+      ]);
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
+    if (controlsRef.current) observer.observe(controlsRef.current);
     return () => observer.disconnect();
+  }, [engine]);
+
+  // React's own wheel handler is passive, so the listener that can hold the page still is this one.
+  useEffect(() => {
+    const element = containerRef.current;
+    if (!element) return;
+    const onWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      engine.stopTour();
+      const rect = element.getBoundingClientRect();
+      const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? 100 : 1;
+      const factor = Math.exp(-event.deltaY * unit * WHEEL_ZOOM);
+      engine.zoomAround(factor, event.clientX - rect.left, event.clientY - rect.top);
+    };
+    element.addEventListener("wheel", onWheel, { passive: false });
+    return () => element.removeEventListener("wheel", onWheel);
   }, [engine]);
 
   const trackCounty = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -56,7 +92,7 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
   return (
     <section
       className={cn(
-        "col-start-1 row-start-1 flex min-h-0 min-w-0 flex-col border-border lg:col-start-2 lg:border-l",
+        "col-start-1 row-start-2 flex min-h-0 min-w-0 flex-col border-border lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:border-l",
         pane !== "map" && "invisible lg:visible",
       )}
     >
@@ -69,26 +105,39 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
 
       <div
         ref={containerRef}
-        className="relative min-h-0 flex-1 overflow-hidden bg-background"
+        className="relative min-h-0 flex-1 touch-none overflow-hidden bg-background"
         onMouseLeave={() => {
           countyRef.current = null;
           engine.clearTooltip();
         }}
         onPointerDown={(event) => {
+          draggedRef.current = false;
           dragRef.current = { x: event.clientX, y: event.clientY };
         }}
         onPointerMove={(event) => {
           const start = dragRef.current;
-          if (!start || !event.buttons) return;
-          if (Math.hypot(event.clientX - start.x, event.clientY - start.y) > 5) {
+          if (!start) return;
+          // A mouse released outside the pane never sends its own pointerup, so stop here instead.
+          if (event.pointerType === "mouse" && !event.buttons) {
             dragRef.current = null;
+            return;
+          }
+          const dx = event.clientX - start.x;
+          const dy = event.clientY - start.y;
+          if (!draggedRef.current) {
+            if (Math.hypot(dx, dy) <= DRAG_SLOP) return;
+            draggedRef.current = true;
             engine.stopTour();
           }
+          dragRef.current = { x: event.clientX, y: event.clientY };
+          engine.panBy(dx, dy);
         }}
         onPointerUp={() => {
           dragRef.current = null;
         }}
-        onWheel={() => engine.stopTour()}
+        onPointerCancel={() => {
+          dragRef.current = null;
+        }}
       >
         <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" onMouseMove={trackCounty} />
 
@@ -143,7 +192,10 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
               onMouseLeave={() => engine.clearTooltip()}
               onFocus={() => engine.hoverPin(pin.key)}
               onBlur={() => engine.clearTooltip()}
-              onClick={() => engine.focus(pin.index)}
+              onClick={() => {
+                // The press that ended this click may have been a drag across the map.
+                if (!draggedRef.current) engine.focus(pin.index);
+              }}
             >
               <span
                 className="block rounded-full ring-2 ring-white/70"
@@ -152,6 +204,39 @@ export default function MapPane({ engine, view, pane, onShowMemo }: Props) {
             </button>
           );
         })}
+
+        <div
+          ref={controlsRef}
+          role="group"
+          aria-label="Map view"
+          className="absolute right-1 top-14 flex flex-col gap-1"
+          onPointerDown={(event) => event.stopPropagation()}
+        >
+          <button
+            type="button"
+            aria-label="Zoom in"
+            className={zoomButtonClass}
+            onClick={() => engine.zoomAround(ZOOM_STEP)}
+          >
+            <Plus aria-hidden="true" className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Zoom out"
+            className={zoomButtonClass}
+            onClick={() => engine.zoomAround(1 / ZOOM_STEP)}
+          >
+            <Minus aria-hidden="true" className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            aria-label="Reset view"
+            className={zoomButtonClass}
+            onClick={() => engine.resetCamera()}
+          >
+            <RotateCcw aria-hidden="true" className="h-5 w-5" />
+          </button>
+        </div>
 
         {view.tooltip && (
           <div className="pointer-events-none absolute bottom-2 left-2 right-2 rounded-md border border-border bg-card/95 px-3 py-2 text-xs text-card-foreground shadow">
