@@ -1,0 +1,239 @@
+{
+  "question": "What counts as motor vehicle theft?",
+  "answer": "**Short answer:** AI drafting was unavailable for this question, so no synthesized answer was generated; the top retrieved authority is **C.R.S. Title 42, Article** [1] - review the key authorities below.\n\n### Key authorities\n- **C.R.S. Title 42, Article** [1] - co statute, cited by 844\n- **Prosecution of multiple counts for same act.** [2] - statute, cited by 246\n- **C.R.S. Title 18, Article** [3] - co statute, cited by 794\n- **Motor vehicle theft** [4] - statute, cited by 51\n- **Motor vehicle liability policy.** [5] - statute, cited by 7\n\n### Caveat\nTemplate summary (offline mode) built only from retrieved authorities; verify against the full opinions.",
+  "order": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "stops": [
+    {
+      "index": 0,
+      "text": "C.R.S. Title 42, Article: Cited by Motor vehicle liability policy. in this answer's sources. In the memo: AI drafting was unavailable for this question, so no synthesized answer was generated; the top retrieved authority is C.R.S.",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ],
+      "title": "C.R.S. Title 42, Article",
+      "ref": "[1]",
+      "court": null,
+      "date": null
+    },
+    {
+      "index": 1,
+      "text": "Prosecution of multiple counts for same act. (2025): Cited by C.R.S. § 18-3-106 in this answer's sources. In the memo: Prosecution of multiple counts for same act. - statute, cited by 246.",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ],
+      "title": "Prosecution of multiple counts for same act.",
+      "ref": "[2]",
+      "court": null,
+      "date": "2025"
+    },
+    {
+      "index": 2,
+      "text": "C.R.S. Title 18, Article: Cited by Motor vehicle theft in this answer's sources. In the memo: C.R.S.",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ],
+      "title": "C.R.S. Title 18, Article",
+      "ref": "[3]",
+      "court": null,
+      "date": null
+    },
+    {
+      "index": 3,
+      "text": "Motor vehicle theft (2025):  In the memo: Motor vehicle theft - statute, cited by 51.",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ],
+      "title": "Motor vehicle theft",
+      "ref": "[4]",
+      "court": null,
+      "date": "2025"
+    },
+    {
+      "index": 4,
+      "text": "Motor vehicle liability policy. (2025):  In the memo: Motor vehicle liability policy. - statute, cited by 7.",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ],
+      "title": "Motor vehicle liability policy.",
+      "ref": "[5]",
+      "court": null,
+      "date": "2025"
+    }
+  ],
+  "citations": [
+    {
+      "index": 0,
+      "id": "C.R.S. Title 42, Article",
+      "title": "C.R.S. Title 42, Article",
+      "ref": "[1]",
+      "court": null,
+      "date": null,
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ]
+    },
+    {
+      "index": 1,
+      "id": "C.R.S. § 18-1-408",
+      "title": "Prosecution of multiple counts for same act.",
+      "ref": "[2]",
+      "court": null,
+      "date": "2025",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ]
+    },
+    {
+      "index": 2,
+      "id": "C.R.S. Title 18, Article",
+      "title": "C.R.S. Title 18, Article",
+      "ref": "[3]",
+      "court": null,
+      "date": null,
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ]
+    },
+    {
+      "index": 3,
+      "id": "C.R.S. § 18-4-409",
+      "title": "Motor vehicle theft",
+      "ref": "[4]",
+      "court": null,
+      "date": "2025",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ]
+    },
+    {
+      "index": 4,
+      "id": "C.R.S. § 42-7-413",
+      "title": "Motor vehicle liability policy.",
+      "ref": "[5]",
+      "court": null,
+      "date": "2025",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ]
+    },
+    {
+      "index": 5,
+      "id": "C.R.S. § 42-4-1213",
+      "title": "Parking in electric motor vehicle charging stations",
+      "ref": "[6]",
+      "court": null,
+      "date": "2025",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ]
+    },
+    {
+      "index": 6,
+      "id": "C.R.S. § 42-3-122",
+      "title": "Perjury on a motor vehicle registration application.",
+      "ref": "[7]",
+      "court": null,
+      "date": "2025",
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ]
+    },
+    {
+      "index": 7,
+      "id": "C.R.S. § 18-3-106",
+      "title": "C.R.S. § 18-3-106",
+      "ref": "[8]",
+      "court": null,
+      "date": null,
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ]
+    }
+  ],
+  "edges": 7,
+  "arcCounts": {
+    "cc": 0,
+    "cs": 0,
+    "st": 6,
+    "fed": 0,
+    "other": 0
+  },
+  "pins": [
+    {
+      "key": "capitol",
+      "cat": "statute",
+      "label": "Colorado State Capitol (C.R.S.)",
+      "ll": [
+        39.7392,
+        -104.9848
+      ],
+      "count": 8
+    }
+  ],
+  "countyHeat": {},
+  "countyCount": 0,
+  "stateCount": 1,
+  "summary": "0 counties linked · 1 jurisdictions · 6 links",
+  "source": {
+    "base": "https://arize.design-bakery.com",
+    "run": "150452-fcbb43",
+    "viewport": "1440x900"
+  }
+}
