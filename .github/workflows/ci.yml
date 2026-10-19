@@ -116,6 +116,8 @@ jobs:
       - name: Frontend build (the same build the deploy host runs, from the same lockfile)
         if: hashFiles('web/package.json') != ''
         working-directory: web
+        env:
+          BUILD_ID: ${{ github.sha }}
         run: |
           corepack enable
           pnpm install --frozen-lockfile

@@ -55,7 +55,7 @@ build_frontend() {
   if ! command -v pnpm >/dev/null; then echo "::error::pnpm is required to build web/"; return 1; fi
   out=$(mktemp -d)
   if ! git archive "$rev" web | tar -x -C "$out"; then rm -rf "$out"; return 1; fi
-  if ! ( cd "$out/web" && pnpm install --frozen-lockfile && pnpm build ); then rm -rf "$out"; return 1; fi
+  if ! ( cd "$out/web" && pnpm install --frozen-lockfile && BUILD_ID="$rev" pnpm build ); then rm -rf "$out"; return 1; fi
   if [ ! -d "$out/web/dist" ]; then echo "::error::web build produced no dist/"; rm -rf "$out"; return 1; fi
   mkdir -p web/releases
   rm -rf "web/releases/$rev"
