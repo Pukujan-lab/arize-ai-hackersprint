@@ -23,11 +23,7 @@ def page(browser, path, storage=None, w=1440, h=900):
     pg.on("pageerror", lambda e: errs.append(str(e)))
     pg.on("console", lambda m: m.type == "error" and not re.search(r"favicon|404|net::|Failed to load resource", m.text) and errs.append(m.text))
     if storage:
-        pg.add_init_script(
-            "(" + repr(storage) + ").forEach(([k,v])=>localStorage.setItem(k,v))".replace("'", '"')
-            if False
-            else "".join(f"localStorage.setItem({k!r},{v!r});" for k, v in storage.items())
-        )
+        pg.add_init_script("".join(f"localStorage.setItem({k!r},{v!r});" for k, v in storage.items()))
     pg.goto(BASE + path, wait_until="load")
     pg.errs = errs
     return pg

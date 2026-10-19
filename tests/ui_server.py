@@ -3,6 +3,7 @@ and measure layout (horizontal scroll, tap targets, text size, overlap). Browser
 Playwright and its Chromium are installed (CI installs both) and skip cleanly otherwise."""
 
 import contextlib
+import json
 import os
 import pathlib
 import socket
@@ -14,6 +15,8 @@ import urllib.request
 import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
+FIXTURES = pathlib.Path(__file__).resolve().parent / "fixtures"
+V3_PAGES = ["/", "/map", "/observability", "/slides"]
 PAGES = ["/", "/map", "/dashboard", "/slides", "/guide", "/observability"]
 ALL_PAGES = PAGES + ["/runs"]
 WIDTHS = [360, 390, 768, 1024, 1440]
@@ -65,13 +68,52 @@ def app_server():
         proc.wait(timeout=10)
 
 
-def open_page(browser, base, path, width, height=900, storage=None):
-    ctx = browser.new_context(viewport={"width": width, "height": height}, storage_state=storage)
+def open_page(browser, base, path, width, height=900, storage=None, setup=None, color_scheme=None, motion=None):
+    ctx = browser.new_context(
+        viewport={"width": width, "height": height},
+        storage_state=storage,
+        color_scheme=color_scheme,
+        reduced_motion=motion,
+    )
     page = ctx.new_page()
+    if setup:
+        setup(page)
     page.goto(base + path, wait_until="domcontentloaded")
     page.wait_for_load_state("load")
     page.wait_for_timeout(800)
     return ctx, page
+
+
+def load_fixture(name):
+    return json.loads((FIXTURES / name).read_text(encoding="utf-8"))
+
+
+def result_payload(run, run_id="v3-run"):
+    return {
+        "run_id": run.get("run_id") or run_id,
+        "question": run.get("question", ""),
+        "answer": run.get("answer", ""),
+        "citations": run.get("citations", []),
+        "edges": run.get("edges", []),
+    }
+
+
+def serve_run(page, run, run_id="v3-run"):
+    """Answer /api/run/<id> with a fixture so a page renders a known run without a live model."""
+    body = json.dumps({"result": result_payload(run, run_id)})
+    page.route(f"**/api/run/{run_id}", lambda r: r.fulfill(status=200, content_type="application/json", body=body))
+
+
+def open_run(browser, base, run, path="/", width=DESKTOP, run_id="v3-run"):
+    return open_page(browser, base, f"{path}?run={run_id}", width, setup=lambda p: serve_run(p, run, run_id))
+
+
+def map_ready(page, timeout=30000):
+    page.wait_for_function("window.__precedentMap && window.__precedentMap.v1 && window.__precedentMap.v1.ready", timeout=timeout)
+
+
+def map_call(page, expr):
+    return page.evaluate(f"() => window.__precedentMap.v1.{expr}")
 
 
 VISIBLE_JS = """
@@ -152,6 +194,7 @@ def chromium_ready():
 
 
 needs_chromium = pytest.mark.skipif(not chromium_ready(), reason="Playwright Chromium not installed")
+needs_v3 = pytest.mark.skipif(not (ROOT / "web" / "dist" / "index.html").exists(), reason="v3 build is not present yet")
 
 
 def _has_data():
