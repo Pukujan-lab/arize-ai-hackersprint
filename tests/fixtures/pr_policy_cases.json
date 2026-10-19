@@ -46,7 +46,7 @@
         "labels": [],
         "files": [
           {
-            "path": "static/map.js",
+            "path": "web/src/map/engine.ts",
             "status": "modified",
             "additions": 600
           }
