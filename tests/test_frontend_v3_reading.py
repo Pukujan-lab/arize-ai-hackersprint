@@ -133,7 +133,7 @@ def test_O71_listen_speaks_the_short_answer_then_walks_the_stops_with_a_transcri
     page.get_by_role("button", name="Listen", exact=True).click()
     assert page.get_by_role("button", name="Stop listening", exact=True).is_visible(), "Listen did not start"
 
-    page.wait_for_function("() => window.__precedentMap.v1.state().tour.active", timeout=20000)
+    page.wait_for_function("() => window.__precedentMap.v1.state().tour.active", timeout=45000)
     assert page.evaluate("() => window.__precedentMap.v1.state().tour.index") == 0, "the tour did not start at stop one"
 
     transcript = page.get_by_label("Tour transcript")
@@ -142,13 +142,14 @@ def test_O71_listen_speaks_the_short_answer_then_walks_the_stops_with_a_transcri
     first_line = transcript.inner_text().strip()
     assert first_line, "the transcript is empty"
 
+    # A stop is spoken at the clip's own length; a full line can run about twenty seconds.
     page.wait_for_function(
         """(previous) => {
           const el = document.querySelector('[aria-label="Tour transcript"]');
           return !!el && el.innerText.trim().length > 0 && el.innerText.trim() !== previous;
         }""",
         arg=first_line,
-        timeout=20000,
+        timeout=45000,
     )
 
     page.get_by_role("button", name="Stop tour", exact=True).click()

@@ -89,13 +89,17 @@ def load_fixture(name):
 
 
 def result_payload(run, run_id="v3-run"):
-    return {
+    payload = {
         "run_id": run.get("run_id") or run_id,
         "question": run.get("question", ""),
         "answer": run.get("answer", ""),
         "citations": run.get("citations", []),
         "edges": run.get("edges", []),
     }
+    for key in ("provider", "elapsed_s", "safeguard", "followups", "documents"):
+        if key in run:
+            payload[key] = run[key]
+    return payload
 
 
 def serve_run(page, run, run_id="v3-run"):
