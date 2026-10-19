@@ -148,6 +148,8 @@ def retriever(run, question, extra_seeds=None):
                 seeds, qt = g.seeds(question, k=10)
             except Exception as e:
                 gerr = gerr or f"{type(e).__name__}: {e}"
+        # A follow-up carries the authorities it was asked from: they seed the fallback candidate set first.
+        seeds = list(dict.fromkeys(list(extra_seeds or []) + list(seeds)))
         if seeds:
             run.event(
                 A,
