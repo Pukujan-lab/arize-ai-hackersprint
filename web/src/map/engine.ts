@@ -100,6 +100,8 @@ export type MapView = {
   label: string | null;
   tour: TourState;
   caption: Caption;
+  /** The whole line the caption is revealing, so the page can show it as the voice reads it. */
+  captionText: string;
   speaker: SpeakerState;
   pipeline: PipelineState;
   narrating: boolean;
@@ -193,6 +195,21 @@ const countyKey = (name: string) =>
 const prefersReducedMotion = () =>
   typeof window !== "undefined" && !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+/**
+ * A hue, saturation and lightness as a hex colour. The scene's parser reads hex, so every colour the
+ * map hands it is written the one way it understands.
+ */
+function hslHex(hue: number, saturation: number, lightness: number): string {
+  const k = (n: number) => (n + hue / 30) % 12;
+  const a = (saturation / 100) * Math.min(lightness / 100, 1 - lightness / 100);
+  const f = (n: number) => lightness / 100 - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const byte = (n: number) =>
+    Math.round(255 * clamp(f(n), 0, 1))
+      .toString(16)
+      .padStart(2, "0");
+  return `#${byte(0)}${byte(8)}${byte(4)}`;
+}
+
 /** Markdown as it is spoken: markers, heading hashes and reference numbers are not said aloud. */
 function plainText(markdown: string): string {
   return String(markdown || "")
@@ -251,7 +268,10 @@ export class MapEngine {
     stateWall: [],
     countyTop: [],
     countyWall: [],
+    countyOutline: [],
+    countyOutlines: 0,
     arcs: [],
+    arcRanges: [],
     stateMeshes: 0,
     countyMeshes: 0,
     coloradoRaised: true,
@@ -296,7 +316,7 @@ export class MapEngine {
   private tourStartedAt = 0;
   /** -1 when the walk is on the authorities; 0..3 while it reads a section of the memo. */
   private prologue = -1;
-  private captionText = "";
+  private captionLine = "";
   private captionShown = 0;
   private captionTimer: number | null = null;
   private arrivalStart = 0;
@@ -425,7 +445,7 @@ export class MapEngine {
     this.tour.activeIndex = 0;
     this.tour.section = "";
     this.prologue = -1;
-    this.captionText = "";
+    this.captionLine = "";
     this.captionShown = 0;
     this.focusIndex = null;
     this.focusCounty = null;
@@ -442,6 +462,11 @@ export class MapEngine {
   private beginArrival(): void {
     this.arrivalStart = performance.now();
     this.bornAt = this.groups.size ? [...Array(this.groups.size).keys()].map((i) => i * PIN_STAGGER_MS) : [];
+    if (!this.groups.size) {
+      // Nothing arrived: there is no motion to run and no link left to draw.
+      this.motion = { running: false, born: [], arcProgress: 1 };
+      return;
+    }
     if (prefersReducedMotion()) {
       this.motion = { running: false, born: this.bornAt.slice(), arcProgress: 1 };
       return;
@@ -556,6 +581,11 @@ export class MapEngine {
     return Object.keys(this.heat).length;
   }
 
+  /** The links the map draws: every one joins two authorities the run shows. */
+  get arcsDrawn(): number {
+    return this.arcs.length;
+  }
+
   get countyMeshCount(): number {
     return this.buffers.countyMeshes || (this.world ? this.world.counties.reduce((n, c) => n + c.polys.length, 0) : 0);
   }
@@ -638,6 +668,7 @@ export class MapEngine {
       label: this.label,
       tour: { ...this.tour, activeIndex: this.tour.index },
       caption: this.caption(),
+      captionText: this.captionText(),
       speaker: { ...this.speaker },
       pipeline: {
         replay: this.pipeline.replay,
@@ -901,6 +932,7 @@ export class MapEngine {
 
   stopTour(): void {
     this.silence();
+    this.stopCaption();
     this.tour.active = false;
     this.tour.playing = false;
     this.narrating = false;
@@ -939,6 +971,7 @@ export class MapEngine {
 
   private finishTour(): void {
     this.silence();
+    this.stopCaption();
     this.tour.active = false;
     this.tour.playing = false;
     this.narrating = false;
@@ -1084,13 +1117,13 @@ export class MapEngine {
   /** The caption reveals its text as the voice reads it. */
   private startCaption(text: string): void {
     this.stopCaption();
-    this.captionText = text;
+    this.captionLine = text;
     this.captionShown = Math.min(1, text.length);
     const step = Math.max(1, Math.ceil(text.length / 40));
     this.captionTimer = window.setInterval(() => {
-      this.captionShown = Math.min(this.captionText.length, this.captionShown + step);
+      this.captionShown = Math.min(this.captionLine.length, this.captionShown + step);
       this.emit();
-      if (this.captionShown >= this.captionText.length) this.stopCaption();
+      if (this.captionShown >= this.captionLine.length) this.stopCaption();
     }, 70);
   }
 
@@ -1105,7 +1138,7 @@ export class MapEngine {
     const plan = this.plan();
     const stop = this.prologue >= 0 ? plan[this.prologue] : undefined;
     const section = stop ? stop.section : this.tour.section;
-    const text = stop ? stop.text : this.captionText;
+    const text = stop ? stop.text : this.captionLine;
     return {
       section: text ? section : "",
       shown: Math.min(this.captionShown, text.length),
@@ -1118,7 +1151,7 @@ export class MapEngine {
   captionText(): string {
     const plan = this.plan();
     const stop = this.prologue >= 0 ? plan[this.prologue] : undefined;
-    return stop ? stop.text : this.captionText;
+    return stop ? stop.text : this.captionLine;
   }
 
   // ---------------------------------------------------------------- narration
@@ -1164,6 +1197,7 @@ export class MapEngine {
 
   stopListening(): void {
     this.silence();
+    this.stopCaption();
     this.narrating = false;
     if (this.tour.playing) this.tour.playing = false;
     this.emit();
@@ -1196,7 +1230,14 @@ export class MapEngine {
     this.session?.stop();
     this.session = null;
     this.loading = false;
-    if (this.speaker.active) this.speaker = { ...this.speaker, active: false };
+    // Nothing is being spoken any more, so the indicator stops and the state says so — except for a
+    // voice that could not be heard at all, which stays reported until the next line.
+    const status = this.speaker.status;
+    this.speaker = {
+      ...this.speaker,
+      active: false,
+      status: status === "speaking" || status === "loading" ? "idle" : status,
+    };
   }
 
   /** The line has ended: the indicator stops, and a state the reader needs to see is kept. */
@@ -1407,8 +1448,18 @@ export class MapEngine {
     if (!n) return p.countyTop;
     const max = Math.max(1, ...Object.values(this.heat));
     const h = n / max;
-    const hue = 0.42 - 0.3 * h;
-    return `hsl(${Math.round(hue * 360)}, 72%, ${p.heatLightness}%)`;
+    const hue = (0.42 - 0.3 * h) * 360;
+    return hslHex(hue, 72, p.heatLightness);
+  }
+
+  /**
+   * The boundary colour of a county: brighter where an authority is placed in it, so the counties the
+   * run touches stand out from the sixty-four.
+   */
+  private countyOutline(county: CountyShape): string {
+    const p = this.palette();
+    const held = (this.heat["c:" + county.name.toLowerCase()] || 0) > 0;
+    return held ? p.countyLineHeld : p.countyLine;
   }
 
   /** Build (or rebuild) the scene: vertex buffers for the solid map, or the flat layer without WebGL. */
@@ -1419,7 +1470,12 @@ export class MapEngine {
       this.renderer.setOcean(p.ocean);
       this.buffers = buildScene({
         states: this.world.states,
-        counties: this.world.counties.map((c) => ({ name: c.name, polys: c.polys, fill: this.countyFill(c) })),
+        counties: this.world.counties.map((c) => ({
+          name: c.name,
+          polys: c.polys,
+          fill: this.countyFill(c),
+          outline: this.countyOutline(c),
+        })),
         arcs: this.arcs.map((a) => ({ from: a.from, to: a.to, colour: ARC_COLORS[a.type] })),
         palette: {
           stateTop: p.stateTop,
@@ -1468,7 +1524,7 @@ export class MapEngine {
     for (const county of this.world.counties) {
       const n = this.heat["c:" + county.name.toLowerCase()] || 0;
       g.fillStyle = this.countyFill(county);
-      g.strokeStyle = n > 0 ? "#0f172a" : p.countyLine;
+      g.strokeStyle = n > 0 ? p.countyLineHeld : p.countyLine;
       g.lineWidth = n > 0 ? 0.55 : 0.3;
       for (const ring of county.polys) {
         this.flatTrace(g, ring);
@@ -1542,15 +1598,16 @@ export class MapEngine {
   render(): void {
     if (!this.width || !this.height) return;
     this.ensureCamera();
+    const progress = clamp(this.motion.arcProgress, 0, 1);
     if (this.renderer) {
       this.renderer.resize(this.width, this.height);
-      this.renderer.render(this.cam3 as Camera3, this.basemapOn && !!this.basemapImage);
+      this.renderer.render(this.cam3 as Camera3, this.basemapOn && !!this.basemapImage, progress);
       return;
     }
-    this.renderFlat();
+    this.renderFlat(progress);
   }
 
-  private renderFlat(): void {
+  private renderFlat(progress = 1): void {
     const canvas = this.canvas;
     if (!canvas) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -1574,6 +1631,7 @@ export class MapEngine {
     if (this.staticLayer) g.drawImage(this.staticLayer, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     g.lineWidth = 1.7 / k;
     for (const arc of this.arcs) {
+      if (progress <= 0.02) break;
       const [x1, y1] = arc.from;
       const [x2, y2] = arc.to;
       const dx = x2 - x1;
@@ -1585,7 +1643,13 @@ export class MapEngine {
       g.strokeStyle = ARC_COLORS[arc.type];
       g.beginPath();
       g.moveTo(x1, y1);
-      g.quadraticCurveTo(cx, cy, x2, y2);
+      // A link grows from its source to its target: only the part already drawn is traced.
+      const steps = Math.max(2, Math.round(14 * progress));
+      for (let i = 1; i <= steps; i += 1) {
+        const t = (i / steps) * progress;
+        const u = 1 - t;
+        g.lineTo(u * u * x1 + 2 * u * t * cx + t * t * x2, u * u * y1 + 2 * u * t * cy + t * t * y2);
+      }
       g.stroke();
     }
     g.restore();
@@ -1673,6 +1737,8 @@ export class MapEngine {
         y,
         ax,
         ay,
+        scale: this.pinScale(order, now),
+        active: activeCite !== undefined && group.items.includes(activeCite),
       });
     }
     this.pins = out;
@@ -1680,12 +1746,46 @@ export class MapEngine {
   }
 
   /**
-   * The names that belong to a level: county names while a county is in view, court names while a court
-   * is. Nothing at the national view, so the drawing stays quiet.
+   * The names that belong to a level: court names while a court is in view, county names while a
+   * county is, the state's name while the state is. Nothing at the national view, so the drawing
+   * stays quiet.
+   *
+   * A label states what it names — for a court, the authority, the court that decided it and the
+   * year — and is placed where it overlaps no other label and no pin. A label with no free place is
+   * not drawn, and is not reported.
    */
   private layoutLabels(): void {
     const out: LabelView[] = [];
-    if (this.level === "county") {
+    const W = this.width;
+    const H = this.height;
+    if (!W || !H) {
+      this.labels = out;
+      return;
+    }
+    // Pins own their own box, so a label never lands on one.
+    const placed: Rect[] = this.pins.map((pin) => ({
+      x: pin.x - PIN_SIZE / 2,
+      y: pin.y - PIN_SIZE / 2,
+      w: PIN_SIZE,
+      h: PIN_SIZE,
+    }));
+    const onScreen = (x: number, y: number) => x > -30 && y > -10 && x < W + 30 && y < H + 10;
+
+    if (this.level === "court") {
+      const pins = this.pins.filter((pin) => onScreen(pin.ax, pin.ay));
+      // The court the reader asked for, and then the stop the walk is on, are named first, so their
+      // labels are never the ones that do not fit.
+      const rank = (pin: PinView) => (pin.items.includes(this.focusIndex ?? -1) ? 2 : 0) + (pin.active ? 1 : 0);
+      pins.sort((a, b) => rank(b) - rank(a));
+      for (const pin of pins) {
+        const c = this.cites[pin.index];
+        if (!c) continue;
+        const court = this.locs[pin.index]?.court || "";
+        const year = String(c.date || "").match(/\d{4}/)?.[0] || "";
+        const text = [c.title || c.citation || "Authority", court, year].filter(Boolean).join(" · ");
+        this.placeLabel(out, placed, `court:${pin.key}`, text, pin.x, pin.y, pin.active);
+      }
+    } else if (this.level === "county") {
       const shapes = this.countyShapes
         .map((shape) => ({ shape, n: this.heat["c:" + shape.key] || 0 }))
         .filter((entry) => entry.n > 0 || entry.shape.key === this.focusCounty)
@@ -1693,26 +1793,63 @@ export class MapEngine {
         .slice(0, 12);
       for (const { shape } of shapes) {
         const point = this.toScreen(shape.c[0], shape.c[1], SURFACE_Y);
-        if (!point) continue;
-        out.push({
-          key: "county:" + shape.key,
-          text: `${shape.name} County`,
-          x: point[0],
-          y: point[1],
-          strong: shape.key === this.focusCounty,
-        });
-      }
-    } else if (this.level === "court") {
-      for (const pin of this.pins) {
-        out.push({ key: "court:" + pin.key, text: pin.titles[0] || pin.label, x: pin.ax, y: pin.ay, strong: true });
+        if (!point || !onScreen(point[0], point[1])) continue;
+        this.placeLabel(
+          out,
+          placed,
+          `county:${shape.key}`,
+          `${shape.name} County`,
+          point[0],
+          point[1],
+          shape.key === this.focusCounty,
+          0,
+        );
       }
     } else if (this.level === "state") {
       const co = this.world?.states.find((s) => s.name === "Colorado");
       const [x, y] = co ? this.centreOf(co.polys) : [WORLD_WIDTH / 2, WORLD_HEIGHT / 2];
       const point = this.toScreen(x, y, SURFACE_Y);
-      if (point) out.push({ key: "state:co", text: "Colorado", x: point[0], y: point[1], strong: true });
+      if (point) this.placeLabel(out, placed, "state:co", "Colorado", point[0], point[1], true, 0);
     }
     this.labels = out;
+  }
+
+  /**
+   * Put one label beside its anchor: above it, below it, then to either side, and finally on the
+   * anchor itself for a label with no pin to clear. Returns nothing when no place is free.
+   */
+  private placeLabel(
+    out: LabelView[],
+    placed: Rect[],
+    key: string,
+    text: string,
+    ax: number,
+    ay: number,
+    strong: boolean,
+    lift = PIN_SIZE / 2,
+  ): void {
+    if (!text) return;
+    // Wide enough for the whole line at the label's own type size, so nothing the label states is
+    // cut off, but never wider than the pane it is drawn in.
+    const w = Math.min(Math.round(text.length * 6.6) + 12, Math.max(160, this.width - 8));
+    const h = LABEL_H;
+    const candidates: [number, number][] = [
+      [ax, ay - lift - h / 2 - 2],
+      [ax, ay + lift + h / 2 + 2],
+      [ax + lift + w / 2 + 2, ay],
+      [ax - lift - w / 2 - 2, ay],
+      [ax, ay - lift - h * 2 - 6],
+      [ax, ay],
+    ];
+    for (const [x, y] of candidates) {
+      const rect = { x: x - w / 2, y: y - h / 2, w, h };
+      if (rect.x < 2 || rect.y < 2 || rect.x + w > this.width - 2 || rect.y + h > this.height - 2) continue;
+      if (placed.some((q) => overlaps(rect, q))) continue;
+      if (this.avoid.some((q) => overlaps(rect, q))) continue;
+      placed.push(rect);
+      out.push({ key, text, x: round4(x), y: round4(y), w, h, strong });
+      return;
+    }
   }
 
   private refresh(): void {

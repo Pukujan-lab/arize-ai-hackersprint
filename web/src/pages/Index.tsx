@@ -9,7 +9,7 @@ import type { RunResult } from "@/lib/citations";
 import { isCache, readJson, toRuns, whenLabel, type SavedRun } from "@/lib/runs";
 import { cn } from "@/lib/utils";
 import { installDebug } from "@/map/debug";
-import { MapEngine, type MapView } from "@/map/engine";
+import { MapEngine, type MapView, type PipelineStage } from "@/map/engine";
 
 type Pane = "memo" | "map";
 
@@ -57,6 +57,45 @@ function stageOf(events: unknown): { stage: string; detail: string } {
   const msg = typeof last?.msg === "string" ? last.msg.trim() : "";
   const stage = STAGES[agent.toLowerCase()] || (agent ? `${agent}${kind ? ` · ${kind}` : ""}` : STAGES.planner);
   return { stage, detail: msg };
+}
+
+/** The four stages a run reports, in the order the pipeline runs them. */
+const STAGE_PLAN = ["planner", "retriever", "answer", "safeguard"];
+/** A stage that reports one of these has finished its work. */
+const STAGE_DONE = /^(done|release|pass|complete|finished)$/i;
+
+/**
+ * The pipeline as the run's own events report it: a stage is running from its first event and done
+ * once a later stage starts, or once it reports itself finished. A stage that never reported is not
+ * listed — the map shows what the run did, not what it might have done.
+ */
+function pipelineFrom(events: unknown): PipelineStage[] {
+  const list = Array.isArray(events)
+    ? events.filter((event): event is Record<string, unknown> => !!event && typeof event === "object")
+    : [];
+  const stages: PipelineStage[] = [];
+  for (const event of list) {
+    const name = String(event.agent || "").trim().toLowerCase();
+    if (!STAGE_PLAN.includes(name)) continue;
+    const kind = String(event.kind || "").trim();
+    const message = typeof event.msg === "string" ? event.msg.trim() : "";
+    let stage = stages.find((entry) => entry.name === name);
+    if (!stage) {
+      // A stage that has started has ended every stage that began before it.
+      for (const earlier of stages) if (earlier.state === "running") earlier.state = "done";
+      stage = { name, state: "running" as const, message };
+      stages.push(stage);
+    } else if (message) {
+      stage.message = message;
+    }
+    if (STAGE_DONE.test(kind)) stage.state = "done";
+  }
+  return stages;
+}
+
+/** A run that produced an answer ran every stage of the pipeline. */
+function pipelineDone(): PipelineStage[] {
+  return STAGE_PLAN.map((name) => ({ name, state: "done" as const, message: "" }));
 }
 
 /** How the answer was produced: the citation check, how long it took, and where it came from. */
@@ -149,6 +188,10 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
   const [question, setQuestion] = useState("");
   const [needsQuestion, setNeedsQuestion] = useState(false);
   const [prevRunId, setPrevRunId] = useState<string | null>(null);
+  /** The question this memo was asked as a follow-up to, so the memo can say so. */
+  const [followUpTo, setFollowUpTo] = useState<string | null>(null);
+  /** The saved run the map should speak on its own, once and only when it is opened from an address. */
+  const [autoSpeakFor, setAutoSpeakFor] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [followUpsOpen, setFollowUpsOpen] = useState(false);
@@ -234,6 +277,8 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
     (next: RunResult, runId: string) => {
       setResult(next);
       setPrevRunId(runId);
+      // A run that came back ran every stage; a run served from a cache is a replay of that work.
+      engine.setPipeline(pipelineDone(), isCache(next.provider || ""));
       engine.setCites(next.citations || [], next.edges || [], {
         question: next.question || "",
         answer: next.answer || "",
@@ -242,17 +287,44 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
     [engine],
   );
 
+  /**
+   * Opening a saved run on the map speaks its summary and then walks the memo, unless the reader has
+   * already taken the map in hand or silenced the voice.
+   */
+  useEffect(() => {
+    if (!autoSpeakFor) return;
+    let done = false;
+    const startedAt = Date.now();
+    const timer = window.setInterval(() => {
+      if (done) return;
+      if (!engine.ready && Date.now() - startedAt < 8000) return;
+      done = true;
+      window.clearInterval(timer);
+      if (engine.interacted || engine.narrating || engine.muted) return;
+      // The walk opens at the top of the memo, so the summary is its first stop rather than a
+      // separate announcement before it.
+      engine.startTour(0, { prologue: true });
+    }, 250);
+    return () => {
+      done = true;
+      window.clearInterval(timer);
+    };
+  }, [autoSpeakFor, engine]);
+
   useEffect(() => {
     if (!runParam) return;
     let cancelled = false;
     setStatus("loading");
     setNotice(null);
+    setFollowUpTo(null);
     setProgress({ stage: "Opening the run", detail: "", draft: "" });
+    engine.setPipeline([], false);
     loadRun(
       runParam,
       (tick) => {
         if (cancelled) return;
         setProgress({ ...stageOf(tick.events), draft: tick.partial || "" });
+        engine.setPipeline(pipelineFrom(tick.events), false);
       },
       { quietMeansEmpty: true },
     )
@@ -264,6 +336,8 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
         }
         applyResult(payload, runParam);
         setStatus("idle");
+        // A saved run opened on the map is read aloud: the summary first, then the walk.
+        if (initialPane === "map") setAutoSpeakFor(runParam);
       })
       .catch(() => {
         if (!cancelled) setStatus("error");
@@ -274,26 +348,33 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
     return () => {
       cancelled = true;
     };
-  }, [runParam, applyResult]);
+  }, [runParam, applyResult, engine, initialPane]);
 
-  const ask = async (event: React.FormEvent) => {
-    event.preventDefault();
-    const text = question.trim();
-    if (!text) {
+  /**
+   * Ask one question. With a run open the question is a follow-up and carries that run as its
+   * context, so the answer knows what it is following on from.
+   */
+  const askQuestion = async (text: string) => {
+    const asked = text.trim();
+    if (!asked) {
       setNeedsQuestion(true);
       return;
     }
-    setNeedsQuestion(false);
     if (asking) return;
+    const context = prevRunId;
+    const followed = context ? result?.question || "" : "";
+    setNeedsQuestion(false);
     setAsking(true);
     setStatus("loading");
     setNotice(null);
+    setFollowUpsOpen(false);
     setProgress({ stage: STAGES.planner, detail: "", draft: "" });
+    engine.setPipeline([], false);
     try {
       const response = await fetch("/api/ask", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(prevRunId ? { question: text, prev_run_id: prevRunId } : { question: text }),
+        body: JSON.stringify(context ? { question: asked, prev_run_id: context } : { question: asked }),
       });
       const data = await response.json().catch(() => null);
       if (!response.ok || !data || !data.run_id) {
@@ -305,6 +386,7 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
       }
       const payload = await loadRun(data.run_id, (tick) => {
         setProgress({ ...stageOf(tick.events), draft: tick.partial || "" });
+        engine.setPipeline(pipelineFrom(tick.events), false);
       });
       if (!payload) {
         setNotice("That run is taking longer than expected. Please try again.");
@@ -312,6 +394,7 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
         return;
       }
       applyResult(payload, data.run_id);
+      setFollowUpTo(context ? followed : null);
       setStatus("idle");
       engine.listen();
     } catch {
@@ -320,6 +403,11 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
       setAsking(false);
       setProgress(null);
     }
+  };
+
+  const ask = (event: React.FormEvent) => {
+    event.preventDefault();
+    void askQuestion(question);
   };
 
   const dismissCue = () => {
@@ -367,8 +455,20 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
     {
       label: "New question",
       run: () => {
+        // A new question starts from nothing: no run to follow on from, and no memo to read.
+        engine.stopAll();
+        engine.setCites([], [], {});
+        engine.setPipeline([], false);
+        setResult(null);
         setPrevRunId(null);
+        setFollowUpTo(null);
         setQuestion("");
+        setNotice(null);
+        setNeedsQuestion(false);
+        setStatus("idle");
+        const next = new URLSearchParams(searchParams);
+        next.delete("run");
+        setSearchParams(next, { replace: true });
         inputRef.current?.focus();
       },
     },
@@ -483,6 +583,16 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
 
           {memo ? (
             <>
+              {followUpTo !== null && (
+                <p
+                  role="note"
+                  aria-label="Answered a follow-up"
+                  className="mb-3 max-w-[70ch] rounded-md border border-border bg-card/60 px-3 py-2 text-xs text-muted-foreground"
+                >
+                  Answered a follow-up{followUpTo ? ` to “${followUpTo}”` : ""} — this run carries the
+                  previous answer as its context.
+                </p>
+              )}
               <div
                 role="note"
                 aria-label="Answer status"
@@ -543,7 +653,15 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
               {followUps.length ? (
                 <ul className="mt-2 space-y-1 text-sm">
                   {followUps.map((item) => (
-                    <li key={item}>{item}</li>
+                    <li key={item}>
+                      <button
+                        type="button"
+                        className="flex min-h-[44px] w-full items-center rounded-md border border-border px-3 py-2 text-left text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                        onClick={() => void askQuestion(item)}
+                      >
+                        {item}
+                      </button>
+                    </li>
                   ))}
                 </ul>
               ) : (
@@ -556,7 +674,7 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
             <section className="mt-4 max-w-[70ch] rounded-md border border-border p-3 text-sm">
               <h2 className="text-sm font-semibold text-muted-foreground">Run info</h2>
               <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-                <dt className="text-muted-foreground">Run</dt>
+                <dt className="text-muted-foreground">Run being read</dt>
                 <dd className="font-mono text-xs">{prevRunId || "—"}</dd>
                 <dt className="text-muted-foreground">Question</dt>
                 <dd>{result?.question || "—"}</dd>
@@ -622,6 +740,8 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
           view={view}
           pane={pane}
           citations={citations}
+          source={facts.source}
+          working={status === "loading"}
           onShowMemo={() => setPane("memo")}
         />
 
@@ -637,7 +757,7 @@ export default function Index({ initialPane = "memo" }: { initialPane?: Pane }) 
               setQuestion(event.target.value);
               if (event.target.value.trim()) setNeedsQuestion(false);
             }}
-            placeholder="Ask a legal question"
+            placeholder={memo ? "Ask a follow-up question" : "Ask a legal question"}
             className="h-11 min-w-0 flex-1 rounded-md border border-input bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground"
           />
           <button

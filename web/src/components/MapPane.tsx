@@ -33,8 +33,28 @@ type Props = {
   view: MapView;
   pane: "memo" | "map";
   citations: Citation[];
+  /** Where the answer came from, as the memo states it, so the map says the same thing. */
+  source: string;
+  /** A run is being worked on: the pipeline has something to show. */
+  working: boolean;
   onShowMemo: () => void;
 };
+
+/** How a pipeline stage reads on the map. */
+const STAGE_WORDS: Record<string, string> = {
+  waiting: "waiting",
+  running: "running",
+  done: "done",
+};
+
+/** What the speaker is doing, in the page's own words. */
+function speakerStatus(status: string): string {
+  if (status === "loading") return "Audio loading…";
+  if (status === "speaking") return "Speaking";
+  if (status === "unavailable") return "Audio unavailable — the transcript carries on";
+  if (status === "silent") return "Silent";
+  return "Not speaking";
+}
 
 /** A passage as an excerpt: whitespace collapsed, cut at a word, so its opening reads intact. */
 function excerpt(text: string, max = 220): string {
@@ -45,7 +65,7 @@ function excerpt(text: string, max = 220): string {
   return clean.slice(0, max).replace(/[,;:.\s]+\S*$/, "") + "…";
 }
 
-export default function MapPane({ engine, view, pane, citations, onShowMemo }: Props) {
+export default function MapPane({ engine, view, pane, citations, source, working, onShowMemo }: Props) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const controlsRef = useRef<HTMLDivElement | null>(null);
@@ -155,9 +175,21 @@ export default function MapPane({ engine, view, pane, citations, onShowMemo }: P
 
   const tour = view.tour;
   const position = tour.count ? Math.min(tour.index + 1, tour.count) : 1;
+  /**
+   * The voice is going, so the transcript is live. When it stops, the transcript goes with it — but
+   * a voice that could not be heard leaves the transcript standing, because that is all the reader has.
+   */
+  const speaking = tour.active || view.narrating || view.speaker.status === "unavailable";
+  const pipelineMessage =
+    view.pipeline.stages
+      .slice()
+      .reverse()
+      .find((stage) => !!stage.message)?.message || "";
 
   return (
     <section
+      role="region"
+      aria-label="Citation map"
       className={cn(
         "col-start-1 row-start-2 flex min-h-0 min-w-0 flex-col border-border lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:border-l",
         pane !== "map" && "invisible lg:visible",
@@ -165,8 +197,17 @@ export default function MapPane({ engine, view, pane, citations, onShowMemo }: P
     >
       <div className="flex shrink-0 items-center gap-2 border-b border-border px-2 py-1 text-xs">
         <span className="shrink-0 font-semibold">Citation map</span>
-        <span className="min-w-0 truncate text-muted-foreground">{view.summary}</span>
-        {view.label && <span className="ml-auto min-w-0 truncate font-medium">{view.label}</span>}
+        <span className="min-w-0 flex-1 truncate text-muted-foreground">{view.summary}</span>
+        {view.answer && (
+          <span
+            role="status"
+            aria-label="Answer source"
+            className="max-w-[9rem] shrink-0 truncate rounded border border-border px-1.5 py-0.5 font-medium text-card-foreground"
+          >
+            {source}
+          </span>
+        )}
+        {view.label && <span className="hidden min-w-0 truncate font-medium sm:inline">{view.label}</span>}
         <button
           type="button"
           onClick={onShowMemo}
@@ -223,12 +264,12 @@ export default function MapPane({ engine, view, pane, citations, onShowMemo }: P
           <div
             key={label.key}
             className={cn(
-              "pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded px-1 text-xs leading-tight",
+              "pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 overflow-hidden text-center text-xs leading-tight whitespace-nowrap",
               label.strong
-                ? "bg-card/90 font-semibold text-card-foreground shadow-sm"
-                : "bg-card/60 text-muted-foreground",
+                ? "rounded bg-card/90 font-semibold text-card-foreground shadow-sm"
+                : "rounded bg-card/60 text-muted-foreground",
             )}
-            style={{ left: label.x, top: label.y }}
+            style={{ left: label.x, top: label.y, width: label.w, height: label.h, lineHeight: `${label.h}px` }}
           >
             {label.text}
           </div>
@@ -236,12 +277,14 @@ export default function MapPane({ engine, view, pane, citations, onShowMemo }: P
 
         {view.pins.map((pin) => {
           const size = Math.min(22, 10 + pin.count * 3);
+          const dot = Math.max(2, Math.round(size * pin.scale));
           const colour = PIN_COLORS[pin.cat] || "#94a3b8";
           return (
             <button
               key={pin.key}
               type="button"
               aria-label={pin.titles.join("; ")}
+              aria-current={pin.active ? "true" : undefined}
               className="absolute grid h-11 w-11 place-items-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
               style={{ left: pin.x, top: pin.y, transform: "translate(-50%, -50%)" }}
               onMouseEnter={() => engine.hoverPin(pin.key)}
@@ -271,8 +314,13 @@ export default function MapPane({ engine, view, pane, citations, onShowMemo }: P
               }}
             >
               <span
-                className="block rounded-full ring-2 ring-white/70"
-                style={{ width: size, height: size, background: colour }}
+                className="block rounded-full ring-2 ring-white/70 transition-transform"
+                style={{
+                  width: dot,
+                  height: dot,
+                  background: colour,
+                  boxShadow: pin.active ? "0 0 0 3px rgba(255,255,255,0.4)" : undefined,
+                }}
               />
               <span
                 aria-hidden="true"
@@ -408,14 +456,53 @@ export default function MapPane({ engine, view, pane, citations, onShowMemo }: P
         )}
       </div>
 
-      {tour.active && (
-        <div
-          role="log"
-          aria-label="Tour transcript"
-          className="max-h-24 shrink-0 overflow-y-auto border-t border-border px-3 py-2 text-xs leading-relaxed text-muted-foreground"
-        >
-          {engine.spokenTextAt(tour.index)}
-        </div>
+      {view.answer && (
+        <section aria-label="Speaker" className="shrink-0 border-t border-border px-3 py-1.5 text-xs">
+          <div className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className={cn(
+                "h-2 w-2 shrink-0 rounded-full",
+                view.speaker.active ? "animate-pulse bg-emerald-400 motion-reduce:animate-none" : "bg-muted-foreground/40",
+              )}
+            />
+            <span className="shrink-0 font-medium">{view.speaker.name}</span>
+            <span className="min-w-0 truncate text-muted-foreground">{speakerStatus(view.speaker.status)}</span>
+          </div>
+          {speaking && (
+            <div
+              role="log"
+              aria-label="Tour transcript"
+              className="mt-1 max-h-20 overflow-y-auto leading-relaxed text-muted-foreground"
+            >
+              <span className="font-medium text-foreground">{view.caption.section}</span>
+              <span aria-hidden="true"> · </span>
+              {view.captionText.slice(0, view.caption.shown)}
+            </div>
+          )}
+        </section>
+      )}
+
+      {(working || view.pipeline.replay || view.pipeline.stages.length > 0) && (
+        <section aria-label="Pipeline" className="shrink-0 border-t border-border px-3 py-1.5 text-xs">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
+            {view.pipeline.plan.map((name) => {
+              const stage = view.pipeline.stages.find((entry) => entry.name === name);
+              return (
+                <span key={name} className={stage?.state === "done" ? "font-medium text-foreground" : "text-muted-foreground"}>
+                  {name}
+                  <span className="text-muted-foreground"> {stage ? STAGE_WORDS[stage.state] || stage.state : "not started"}</span>
+                </span>
+              );
+            })}
+            {view.pipeline.replay && (
+              <span className="rounded border border-border px-1.5 py-0.5 font-medium text-card-foreground">
+                Replay of a cached answer
+              </span>
+            )}
+          </div>
+          {pipelineMessage && <p className="mt-0.5 truncate text-muted-foreground">{pipelineMessage}</p>}
+        </section>
       )}
 
       <div className="flex shrink-0 flex-wrap items-center gap-1.5 border-t border-border px-2 py-1.5">
