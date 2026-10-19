@@ -51,7 +51,7 @@ def _ask_page(browser, base, status=200, hold=False):
     map_ready(page)
     page.get_by_role("textbox", name="Ask a question").fill(RUN["question"])
     page.get_by_role("button", name="Ask", exact=True).click()
-    page.get_by_text(SHORT, exact=False).wait_for(timeout=30000)
+    page.get_by_text(SHORT, exact=False).first.wait_for(timeout=30000)
     return ctx, page
 
 

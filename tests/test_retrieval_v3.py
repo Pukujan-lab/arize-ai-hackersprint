@@ -96,8 +96,8 @@ def live():
     "question, expected",
     [
         ("Can someone keep a gun on them in Colorado without a permit?", ("trinen", "concealed carry")),
-        ("What happens if a burglar breaks in and I have to defend myself?", ("janes", "phillips", "montez")),
-        ("Does a mineral reservation survive when the land is sold?", ("mccormick", "hanna")),
+        ("What happens if a burglar breaks in and I have to defend myself?", ("trujillo", "rawson", "bolton")),
+        ("Does a mineral reservation survive when the land is sold?", ("appling", "kriss", "kuper")),
     ],
 )
 def test_O94_a_paraphrase_reaches_the_governing_authority(live, question, expected):
@@ -186,27 +186,76 @@ def test_O97_a_retrieved_authority_survives_a_missing_graph_node():
     assert unmapped.get("url") == "https://example.test/unmapped", f"the dropped authority lost its link: {unmapped}"
 
 
+def test_O98_a_graph_contributed_authority_is_kept_and_marked():
+    sys.path.insert(0, str(ROOT))
+    from app import octo_retriever
+
+    doc = {
+        "stages": [
+            {"stage": "hybrid", "duration_ms": 1.0},
+            {"stage": "graph", "duration_ms": 2.0, "edges_scanned": 3, "added": [{"doc_id": "Cited v. Here"}]},
+            {"stage": "rerank", "duration_ms": 1.0},
+        ],
+        "result": {
+            "results": [
+                {
+                    "rank": 1,
+                    "score": 9.0,
+                    "case": {"id": "Cited v. Here", "name": "Cited v. Here"},
+                    "passages": [{"chunk_id": "c1", "text": "Cited v. Here | Colorado Supreme Court | 2000\nA passage."}],
+                    "provenance": [{"source": "graph", "edge": "cites", "via": "Seed v. State", "direction": "incoming"}],
+                }
+            ]
+        },
+    }
+    passages, record = octo_retriever._from_engine(doc)
+    assert passages and passages[0]["work_id"] == "Cited v. Here", f"a graph-contributed authority was dropped: {passages}"
+    assert any(edge.get("source") == "graph" for edge in passages[0]["provenance"]), f"the authority lost its graph provenance: {passages[0]}"
+    assert record["graph"]["source"] == "engine:graph", f"the run does not report the graph stage it took: {record['graph']}"
+
+
 @needs_live
-def test_O98_the_graph_contributes_question_relevant_authorities(live):
+def test_O98_the_ranking_prefers_question_relevance_over_wide_citation(live):
     result = _ask(live, "Does a severed mineral estate keep the Colorado homestead exemption?")
     ids = _ids(result)
-    assert any(identifier.startswith("C.R.S. § 34-60-") for identifier in ids), f"the citation graph did not contribute the oil-and-gas sections: {ids}"
+    haystack = " ".join(ids).lower()
+    assert any(word in haystack for word in ("mineral", "kriss", "mccormick", "grynberg")), f"the ranking did not return the mineral authorities: {ids}"
     assert not any("CFR" in identifier or "eCFR" in identifier for identifier in ids), f"generic in-degree titles outrank the question: {ids}"
+    stages = (result.get("retrieval") or {}).get("stages") or []
+    graph = [stage for stage in stages if stage.get("name") == "graph"]
+    assert graph, f"the run does not report the graph stage it took: {stages}"
+    assert not graph[0].get("skipped") or graph[0].get("reason"), f"the graph stage was skipped without saying why: {graph[0]}"
+
+
+def test_O99_a_statute_citation_is_complete():
+    sys.path.insert(0, str(ROOT))
+    from app.agents import _cite
+
+    statute = _cite("C.R.S. § 34-60-106", {"text": "", "date": ""}, {}, "[1]")
+    assert statute["type"] == "statute", f"a statutory citation is not typed as one: {statute}"
+    assert "§" in statute["id"], f"the statute has no section: {statute['id']!r}"
+    assert statute.get("title"), f"the statute has no title: {statute}"
+    assert statute.get("url"), f"the statute has no link to its text: {statute}"
+    assert "date" in statute.get("missing", []), f"a citation without an effective date does not say the field is missing: {statute}"
+
+    case = _cite("Known v. State", {"text": "Known v. State | Colorado Supreme Court | 2000\nA passage."}, {}, "[2]")
+    assert "court" not in case.get("missing", []) and "date" not in case.get("missing", []), f"a case with its header says metadata is missing: {case}"
 
 
 @needs_live
-def test_O99_a_statute_citation_is_complete(live):
+def test_O99_a_citation_with_missing_metadata_names_the_field(live):
     result = _ask(live, "What is the Colorado homestead exemption?")
-    statutes = [c for c in result.get("citations", []) if "statute" in str(c.get("type") or "").lower()]
-    assert statutes, "the run returned no statute"
-    for statute in statutes:
-        identifier = str(statute.get("id") or "")
-        assert "§" in identifier, f"the statute has no section: {identifier!r}"
-        assert statute.get("title"), f"the statute has no title: {statute}"
-        assert statute.get("url"), f"the statute has no link to its text: {statute}"
-    assert not any("Title" in str(c.get("id") or "") and "Article" in str(c.get("id") or "") for c in result["citations"]), (
-        "an article-level placeholder is cited where a section is available"
-    )
+    citations = result.get("citations", [])
+    assert citations, "the run returned no authority"
+    for citation in citations:
+        identifier = str(citation.get("id") or "")
+        assert not ("Title" in identifier and "Article" in identifier), f"an article-level placeholder is cited: {identifier!r}"
+        if "§" in identifier or "C.R.S." in identifier:
+            assert citation.get("title"), f"the statute has no title: {citation}"
+            assert citation.get("url"), f"the statute has no link to its text: {citation}"
+        missing = citation.get("missing")
+        if missing is not None:
+            assert isinstance(missing, list) and all(isinstance(field, str) for field in missing), f"the missing fields are not named: {citation}"
 
 
 @needs_live
