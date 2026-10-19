@@ -145,6 +145,29 @@ contribute until the engine's edge index is populated for the active snapshot.
 `test_frontend_v3_observability.py` 8/11 (the three O107 snapshot gates are pass 4's work). O100's
 earlier failure was a provider `429`; the gate now waits out a throttle rather than failing the run.
 
+## Pass 4 outcome (2026-10-19)
+
+**Implemented.** The v1 Arize hookup is back on the observability page. `GET /api/arize` serves the
+real judge-score snapshot (`arize/observability-snapshot.json`: 18 traces, generated
+2026-10-16T18:42:22Z, `groundedness` / `hallucination` / `citation_relevance` / `legal_safety`);
+when the file is missing the endpoint answers `503` with a readable reason and the page states that
+the snapshot is unavailable rather than drawing an empty panel. The page merges snapshot traces with
+live runs by `run_id`, marks a trace that exists only in the snapshot as "snapshot only", states the
+snapshot's own timestamp in words, and shows "not scored in this snapshot" for a judge the snapshot
+did not carry — a missing judge is never drawn as a zero. The span waterfall lists each trace's spans
+indented by depth and says so when a trace recorded none.
+
+**Gate repair before merge.** Three browser gates were failing on the same commit that had passed
+minutes earlier; the causes were in the gates, not the app. The map header repeats the memo's short
+answer, so a text locator matched two elements; the memo is now found by its answer-status note. A
+saved run opened on the map is read aloud at once, so the single voice control may already read
+"Stop listening"; the one-control checks accept either label. And a machine without audio keeps the
+tour transcript standing on purpose, so stopping the tour is held to the transcript no longer
+advancing. A server still shutting down after SIGTERM no longer fails teardown.
+
+**Gates.** `test_frontend_v3_observability.py` 11/11, `test_retrieval_v3.py` 11/11 live, voice 7/7,
+and the home, layout, map-chat, reading and features suites green on the host.
+
 ## Outcome mapping
 
 | Gap | Outcomes |
