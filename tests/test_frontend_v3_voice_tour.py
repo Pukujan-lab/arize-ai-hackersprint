@@ -89,9 +89,7 @@ def test_O88_a_slow_clip_says_audio_loading(base, browser):
 
 def test_O88_a_failed_clip_says_audio_is_unavailable_and_continues(base, browser):
     ctx, page = _ask_page(browser, base, status=500)
-    page.wait_for_function(
-        "() => ['unavailable', 'failed'].includes(window.__precedentMap.v1.state().speaker.status)", timeout=8000
-    )
+    page.wait_for_function("() => ['unavailable', 'failed'].includes(window.__precedentMap.v1.state().speaker.status)", timeout=8000)
     map_text = page.get_by_role("region", name="Citation map").inner_text().lower()
     assert "audio unavailable" in map_text, f"the map does not say the voice is unavailable: {map_text[:300]!r}"
     assert page.get_by_role("log", name="Tour transcript").count() == 1, "the transcript disappeared with the voice"

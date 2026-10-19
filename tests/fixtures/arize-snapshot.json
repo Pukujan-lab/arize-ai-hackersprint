@@ -1,0 +1,91 @@
+{
+  "generated_at": "2026-10-16T18:42:22+00:00",
+  "project": "precedent-legal-graphrag",
+  "evaluator": "deepseek-v4.1-flash via InferHub",
+  "traces": [
+    {
+      "trace_id": "c4b25ec34d8bbb63185860b4d2439569",
+      "run_id": "obs-run",
+      "question": "Does a mineral reservation survive when the land is sold?",
+      "start_time": "2026-10-16 18:19:41.755426914",
+      "latency_ms": 5202.6,
+      "model": "inferhub",
+      "tokens": 769,
+      "safeguard": true,
+      "evals": {
+        "groundedness": {
+          "score": 0.82,
+          "label": "grounded",
+          "explanation": "The answer follows the severed-estate rule stated in the cited section."
+        },
+        "hallucination": {
+          "score": 0.12,
+          "label": "not hallucinated",
+          "explanation": "No rule is stated that the passages do not support."
+        },
+        "citation_relevance": {
+          "score": 0.9,
+          "label": "relevant",
+          "explanation": "The cited section governs severance of the mineral estate."
+        },
+        "legal_safety": {
+          "score": 1.0,
+          "label": "safe",
+          "explanation": "Informational, no personalized advice."
+        }
+      },
+      "spans": [
+        {"name": "pipeline", "kind": "CHAIN", "start_ms": 0.0, "dur_ms": 5202.6, "model": "", "tokens": null, "parent": null, "id": "16e5a508309fd1b2"},
+        {"name": "retriever", "kind": "RETRIEVER", "start_ms": 0.5, "dur_ms": 2199.2, "model": "", "tokens": null, "parent": "16e5a508309fd1b2", "id": "3dca6ae6a21fb073"},
+        {"name": "answer", "kind": "LLM", "start_ms": 2201.0, "dur_ms": 2800.1, "model": "inferhub", "tokens": 769, "parent": "16e5a508309fd1b2", "id": "8a1f0c9d2e4b6a70"}
+      ]
+    },
+    {
+      "trace_id": "9f3a71c2b8e04d55a6c1f0e2d7b39488",
+      "question": "Water rights priority dispute between ranchers",
+      "start_time": "2026-10-16 18:18:02.101204356",
+      "latency_ms": 1300.0,
+      "model": "inferhub",
+      "tokens": 512,
+      "safeguard": false,
+      "evals": {
+        "groundedness": {
+          "score": 0.57,
+          "label": "partly grounded",
+          "explanation": "Priority by appropriation is supported; the notice period is not."
+        },
+        "hallucination": {
+          "score": 0.31,
+          "label": "not hallucinated",
+          "explanation": "One procedural detail is unsupported but not invented."
+        },
+        "citation_relevance": {
+          "score": 0.44,
+          "label": "weakly relevant",
+          "explanation": "The cited cases concern water districts rather than priority between ranchers."
+        },
+        "legal_safety": {
+          "score": 1.0,
+          "label": "safe",
+          "explanation": "Informational."
+        }
+      },
+      "spans": [
+        {"name": "pipeline", "kind": "CHAIN", "start_ms": 0.0, "dur_ms": 1300.0, "model": "", "tokens": null, "parent": null, "id": "a1b2c3d4e5f60718"},
+        {"name": "retriever", "kind": "RETRIEVER", "start_ms": 0.3, "dur_ms": 410.5, "model": "", "tokens": null, "parent": "a1b2c3d4e5f60718", "id": "b2c3d4e5f6071829"},
+        {"name": "safeguard", "kind": "GUARDRAIL", "start_ms": 900.0, "dur_ms": 380.0, "model": "", "tokens": null, "parent": "a1b2c3d4e5f60718", "id": "c3d4e5f60718293a"}
+      ]
+    }
+  ],
+  "dataset": {
+    "name": "precedent-demo-questions-1016-1344",
+    "rows": 10,
+    "columns": ["id", "question", "expected_citations", "reference_answer"]
+  },
+  "experiment": {
+    "name": "cached-haiku-graphrag-v1",
+    "examples": 20,
+    "metric": "citation_recall",
+    "by_setting": {"seeds_only_k6": 0.058, "graph_expansion": 0.075}
+  }
+}

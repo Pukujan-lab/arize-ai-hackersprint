@@ -46,15 +46,16 @@ RESULT = {
 
 STACK = load_fixture("stack-observability.json")
 RUN = load_fixture("run-observability.json")
+SNAPSHOT = load_fixture("arize-snapshot.json")
 RUN_ID = RUN["run_id"]
-OBSERVED_RUNS = [
-    {"run_id": RUN_ID, "question": RUN["question"], "n": len(RUN["citations"]), "ts": "2026-10-19T12:00:00Z"}
-]
+OBSERVED_RUNS = [{"run_id": RUN_ID, "question": RUN["question"], "n": len(RUN["citations"]), "ts": "2026-10-19T12:00:00Z"}]
+
 
 @pytest.fixture(scope="module")
 def base():
     with app_server() as url:
         yield url
+
 
 @pytest.fixture(scope="module")
 def browser():
@@ -62,6 +63,7 @@ def browser():
         b = p.chromium.launch()
         yield b
         b.close()
+
 
 def _stub(page, runs=RUNS, runs_status=200):
     def handle(route):
@@ -78,16 +80,19 @@ def _stub(page, runs=RUNS, runs_status=200):
 
     page.route("**/*", handle)
 
+
 def _open(browser, base, **kw):
     ctx, page = open_page(browser, base, "/observability", DESKTOP, setup=lambda p: _stub(p, **kw))
     page.wait_for_timeout(1500)
     return ctx, page
+
 
 def test_O39_saved_runs_are_listed_and_selectable(base, browser):
     ctx, page = _open(browser, base)
     for run in RUNS:
         assert page.get_by_role("button", name=run["question"]).count() == 1, f"{run['run_id']} is not listed by its question"
     ctx.close()
+
 
 def test_O40_the_selected_run_shows_its_summary_steps_and_timings(base, browser):
     ctx, page = _open(browser, base)
@@ -101,6 +106,7 @@ def test_O40_the_selected_run_shows_its_summary_steps_and_timings(base, browser)
     assert "4.2" in text or "4.2s" in text, "the step timings are not shown"
     ctx.close()
 
+
 def test_O41_a_step_opens_its_raw_details(base, browser):
     ctx, page = _open(browser, base)
     control = page.get_by_role("button", name="Raw details").first
@@ -110,6 +116,7 @@ def test_O41_a_step_opens_its_raw_details(base, browser):
     shown = page.inner_text("body")
     assert "agent" in shown and "kind" in shown, "the raw details do not show the step's record"
     ctx.close()
+
 
 def test_O42_an_unavailable_source_is_stated_not_blank(base, browser):
     ctx, page = _open(browser, base, runs_status=503)
@@ -122,13 +129,17 @@ def test_O42_an_unavailable_source_is_stated_not_blank(base, browser):
     ctx.close()
 
 
-def _stub_observability(page, stack):
+def _stub_observability(page, stack, snapshot=SNAPSHOT, snapshot_status=200):
     def handle(route):
         url = route.request.url
         if "/api/runs" in url:
             return route.fulfill(json=OBSERVED_RUNS)
         if "/api/stack" in url:
             return route.fulfill(json=stack)
+        if "/api/arize" in url:
+            if snapshot_status != 200:
+                return route.fulfill(status=snapshot_status, content_type="application/json", body="{}")
+            return route.fulfill(json=snapshot)
         if f"/api/run/{RUN_ID}" in url:
             return route.fulfill(json={"result": RUN})
         route.continue_()
@@ -136,11 +147,9 @@ def _stub_observability(page, stack):
     page.route("**/*", handle)
 
 
-def _open_observability(browser, base, stack=None):
+def _open_observability(browser, base, stack=None, **snapshot):
     stack = stack if stack is not None else STACK
-    ctx, page = open_page(
-        browser, base, "/observability", DESKTOP, setup=lambda p: _stub_observability(p, stack)
-    )
+    ctx, page = open_page(browser, base, "/observability", DESKTOP, setup=lambda p: _stub_observability(p, stack, **snapshot))
     page.wait_for_timeout(1500)
     return ctx, page
 
@@ -173,9 +182,7 @@ def test_O105_tracing_reports_failure_and_counts(base, browser):
     text = _panel(page, "Tracing")
 
     assert "arize" in text, f"the tracing panel does not name where spans go: {text!r}"
-    assert "permission_denied" in text or "permission denied" in text, (
-        f"the tracing panel hides why export failed: {text!r}"
-    )
+    assert "permission_denied" in text or "permission denied" in text, f"the tracing panel hides why export failed: {text!r}"
     assert "not connected" in text or "failed" in text, f"the tracing panel does not say export is failing: {text!r}"
     assert re.search(r"\b0\b", text), f"the tracing panel does not report how many spans were sent: {text!r}"
     assert re.search(r"\b4\b", text), f"the tracing panel does not report how many spans were dropped: {text!r}"
@@ -200,9 +207,42 @@ def test_O106_saved_runs_and_the_trace_queue_are_bounded_fifo(base, browser):
     text = _panel(page, "Retention")
 
     assert re.search(r"\b200\b", text), f"the retention panel does not report the saved-run cap: {text!r}"
-    assert re.search(r"\b2000\b", text) or re.search(r"\b2,000\b", text), (
-        f"the retention panel does not report the trace-queue cap: {text!r}"
-    )
+    assert re.search(r"\b2000\b", text) or re.search(r"\b2,000\b", text), f"the retention panel does not report the trace-queue cap: {text!r}"
     assert re.search(r"\b4\b", text), f"the retention panel does not report how many spans were dropped: {text!r}"
     assert "oldest" in text, f"the retention panel does not say the oldest entry is dropped first: {text!r}"
+    ctx.close()
+
+
+def test_O107_the_page_merges_the_arize_snapshot_with_live_runs(base, browser):
+    ctx, page = _open_observability(browser, base)
+    text = _panel(page, "Arize evals")
+
+    assert RUN["question"].lower() in text, f"the live run is missing from the Arize table: {text!r}"
+    assert "water rights priority dispute" in text, f"a snapshot trace with no live run is not listed: {text!r}"
+    for judge in ("groundedness", "hallucination", "citation relevance", "legal safety"):
+        assert judge in text or judge.replace(" ", "_") in text, f"the Arize table does not show {judge!r}: {text!r}"
+    assert "grounded" in text and "weakly relevant" in text, f"the judge labels are not shown: {text!r}"
+    assert "snapshot" in text, f"the table does not say the judge scores are a snapshot: {text!r}"
+    assert "oct 16" in text or "2026-10-16" in text, f"the snapshot time is not stated: {text!r}"
+    ctx.close()
+
+
+def test_O107_a_trace_opens_its_waterfall(base, browser):
+    ctx, page = _open_observability(browser, base)
+    text = _panel(page, "Trace waterfall")
+
+    for span in ("pipeline", "retriever", "answer"):
+        assert span in text, f"the trace waterfall does not show the {span!r} span: {text!r}"
+    ctx.close()
+
+
+def test_O107_a_missing_snapshot_is_stated_and_live_runs_survive(base, browser):
+    ctx, page = _open_observability(browser, base, snapshot_status=503)
+    body = page.inner_text("body").lower()
+
+    assert RUN["question"].lower() in body, "a missing Arize snapshot hides the live runs"
+    assert "snapshot" in body, "the page does not mention the Arize snapshot at all"
+    assert any(word in body for word in ("unavailable", "couldn't", "could not", "not available", "failed")), (
+        f"the page does not say the Arize snapshot is unavailable: {body[:400]!r}"
+    )
     ctx.close()

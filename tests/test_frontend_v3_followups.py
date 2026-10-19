@@ -102,15 +102,11 @@ def test_O102_a_followup_asks_with_the_run_as_context(base, browser):
 def test_O103_the_composer_names_the_kind_of_question(base, browser):
     ctx, page = _open(browser, base)
     box = page.get_by_role("textbox", name="Ask a question")
-    assert "follow" in (box.get_attribute("placeholder") or "").lower(), (
-        "the composer does not say it will ask a follow-up while a run is open"
-    )
+    assert "follow" in (box.get_attribute("placeholder") or "").lower(), "the composer does not say it will ask a follow-up while a run is open"
 
     page.get_by_role("button", name="Memo menu", exact=True).click()
     page.wait_for_timeout(200)
-    assert page.get_by_role("button", name="New question", exact=True).count() == 1, (
-        "the memo has no single control that starts a new question"
-    )
+    assert page.get_by_role("button", name="New question", exact=True).count() == 1, "the memo has no single control that starts a new question"
     page.get_by_role("button", name="Run info", exact=True).click()
     page.wait_for_timeout(300)
     info = page.locator("section", has_text="Run info").first.inner_text()
@@ -121,7 +117,5 @@ def test_O103_the_composer_names_the_kind_of_question(base, browser):
     page.get_by_role("button", name="New question", exact=True).click()
     page.wait_for_timeout(300)
     assert box.input_value() == "", "the new question control leaves the previous text in the composer"
-    assert "follow" not in (box.get_attribute("placeholder") or "").lower(), (
-        "the composer still promises a follow-up after a new question was started"
-    )
+    assert "follow" not in (box.get_attribute("placeholder") or "").lower(), "the composer still promises a follow-up after a new question was started"
     ctx.close()
