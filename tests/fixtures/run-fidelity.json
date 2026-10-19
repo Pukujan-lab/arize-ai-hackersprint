@@ -1,0 +1,123 @@
+{
+  "run_id": "run-fidelity",
+  "question": "Does a severed mineral estate keep the Colorado homestead exemption?",
+  "answer": "**Short answer:** Likely no. A severed mineral estate is a distinct fee simple interest in real estate [1][2], and the homestead exemption's scope turns on the statutory definition rather than on severance alone [5][6].\n\n### Key authorities\n- **Union Pacific Railroad v. Hanna** [1] - a mineral reservation is an interest in land, and is real estate by the terms of the statute.\n- **McCormick v. Union Pacific Railroad** [2] - severance by reservation creates a fee simple estate in the interest reserved.\n- **Gerrity Oil & Gas Corp. v. Magness** [4] - a severed mineral owner may use the surface as reasonably necessary to develop the interest.\n- **C.R.S. § 38-41-201** [5] - the homestead exemption and the estates it reaches.\n\n### Opinion\nNo Colorado authority squarely applies the homestead exemption to a severed mineral estate. The exemption is written around the debtor's residence and the land it occupies; a mineral estate carries no residence. The safer reading is that severance removes the mineral interest from the exempt homestead, but the statute should be read in full before relying on that conclusion.\n\n### Caveat\nColorado only. Confirm the current text of C.R.S. §§ 38-41-201 to 38-41-202 and the treatment of mineral reservations under C.R.S. § 34-60-102 before acting.",
+  "citations": [
+    {
+      "id": "Union Pacific Railroad v. Hanna, 73 Colo. 162",
+      "ref": "[1]",
+      "title": "Union Pacific Railroad v. Hanna",
+      "type": "caselaw",
+      "court": "Colorado Supreme Court",
+      "date": "1923-04-02",
+      "citation": "73 Colo. 162",
+      "url": "https://www.courtlistener.com/opinion/6689479/union-pacific-railroad-v-hanna/",
+      "origin_text": "Error to the District Court of Weld County.",
+      "passage": "Union Pacific Railroad v. Hanna | Supreme Court of Colorado | 1923\nThe term 'real estate' includes, first, all land or interests in lands within the state. A mineral reservation is an interest in land, and is 'real estate' by the very terms of our statute."
+    },
+    {
+      "id": "McCormick v. Union Pacific Railroad, 983 P.2d 84",
+      "ref": "[2]",
+      "title": "McCormick v. Union Pacific Railroad",
+      "type": "caselaw",
+      "court": "Colorado Court of Appeals",
+      "date": "1998-12-10",
+      "citation": "983 P.2d 84",
+      "url": "https://www.courtlistener.com/opinion/5335985/mccormick-v-union-pacific-railroad/",
+      "origin_text": null,
+      "passage": "McCormick v. Union Pacific Railroad | Colorado Court of Appeals | 1998\nThe severance of a property by reservation in a deed creates a fee simple estate in the interest reserved."
+    },
+    {
+      "id": "Kriss v. Mineral Rights, Inc., 911 P.2d 711",
+      "ref": "[3]",
+      "title": "Kriss v. Mineral Rights, Inc.",
+      "type": "caselaw",
+      "court": "Colorado Court of Appeals",
+      "date": "1996-01-25",
+      "citation": "911 P.2d 711",
+      "url": "https://www.courtlistener.com/opinion/1456069/kriss-v-mineral-rights-inc/",
+      "origin_text": "Appeal from the District Court of La Plata County.",
+      "passage": "Kriss v. Mineral Rights, Inc. | Colorado Court of Appeals | 1996\nIt remains necessary to establish actual adverse possession of the mineral estate separate from any proof of adverse possession of the surface estate."
+    },
+    {
+      "id": "Gerrity Oil & Gas Corp. v. Magness, 946 P.2d 913",
+      "ref": "[4]",
+      "title": "Gerrity Oil & Gas Corp. v. Magness",
+      "type": "caselaw",
+      "court": "Colorado Supreme Court",
+      "date": "1997-09-15",
+      "citation": "946 P.2d 913",
+      "url": "https://www.courtlistener.com/opinion/5335448/gerrity-oil-gas-corp-v-magness/",
+      "origin_text": "Certiorari to the Colorado Court of Appeals.",
+      "passage": "Gerrity Oil & Gas Corp. v. Magness | Supreme Court of Colorado | 1997\nSevered mineral rights lack value unless they can be developed. The owner of a severed mineral estate is privileged to use that portion of the surface estate reasonably necessary to develop the interest."
+    },
+    {
+      "id": "C.R.S. § 38-41-201",
+      "ref": "[5]",
+      "title": "Homestead exemption",
+      "type": "statute",
+      "court": "",
+      "date": "2025",
+      "citation": "C.R.S. § 38-41-201",
+      "url": "https://law.justia.com/codes/colorado/title-38/article-41/section-38-41-201/",
+      "origin_text": null,
+      "passage": "Every homestead, and the house and buildings appurtenant thereto, and the land used in connection therewith, not exceeding in value seventy-five thousand dollars, shall be exempt from execution and attachment."
+    },
+    {
+      "id": "C.R.S. § 38-41-202",
+      "ref": "[6]",
+      "title": "Limitations on exemption",
+      "type": "statute",
+      "court": "",
+      "date": "2025",
+      "citation": "C.R.S. § 38-41-202",
+      "url": "https://law.justia.com/codes/colorado/title-38/article-41/section-38-41-202/",
+      "origin_text": null,
+      "passage": "No property shall be exempt under section 38-41-201 unless a notice of homestead exemption has been recorded."
+    },
+    {
+      "id": "C.R.S. § 34-60-102",
+      "ref": "[7]",
+      "title": "Legislative declaration",
+      "type": "statute",
+      "court": "",
+      "date": "2025",
+      "citation": "C.R.S. § 34-60-102",
+      "url": "https://law.justia.com/codes/colorado/title-34/article-60/section-34-60-102/",
+      "origin_text": null,
+      "passage": "It is declared to be in the public interest to foster, encourage, and promote the development, production, and utilization of the natural resources of oil and gas in the state of Colorado."
+    },
+    {
+      "id": "C.R.S. § 34-60-106",
+      "ref": "[8]",
+      "title": "Commission - rules and orders",
+      "type": "statute",
+      "court": "",
+      "date": "2025",
+      "citation": "C.R.S. § 34-60-106",
+      "url": "https://law.justia.com/codes/colorado/title-34/article-60/section-34-60-106/",
+      "origin_text": null,
+      "passage": "The commission has jurisdiction over all persons and property necessary to enforce the provisions of this article."
+    }
+  ],
+  "edges": [
+    { "src": "Gerrity Oil & Gas Corp. v. Magness, 946 P.2d 913", "dst": "C.R.S. § 34-60-102" },
+    { "src": "Gerrity Oil & Gas Corp. v. Magness, 946 P.2d 913", "dst": "C.R.S. § 34-60-106" },
+    { "src": "Union Pacific Railroad v. Hanna, 73 Colo. 162", "dst": "C.R.S. § 38-41-201" },
+    { "src": "McCormick v. Union Pacific Railroad, 983 P.2d 84", "dst": "C.R.S. § 38-41-202" }
+  ],
+  "provider": "inferhub/cb/deepseek-v4.1-flash",
+  "elapsed_s": 4.2,
+  "safeguard": {
+    "pass": true,
+    "used": ["[1]", "[2]", "[4]", "[5]", "[6]", "[7]", "[8]"],
+    "invalid": [],
+    "unknown_authorities": [],
+    "unsupported_claims": []
+  },
+  "followups": [
+    "Does a mineral reservation in a deed sever the homestead right at the moment of recording?",
+    "How does C.R.S. § 38-41-202 change the analysis when no notice of homestead exemption was recorded?",
+    "Can a severed mineral owner claim the surface owner's homestead exemption for access rights?"
+  ]
+}
