@@ -1,13 +1,19 @@
 // Narration: one clip per line of text, fetched from /api/tts_ts and played in step with the tour.
-// The clip is the authority on when a line ends; the character start times it returns are the
-// fallback that keeps the tour moving if a browser never reports the clip's end.
+// The clip is the authority on when a line ends. Its own length bounds the line, so a browser that
+// never reports the clip's end cannot stall the tour; the timings it returns are only a fallback for
+// the rare clip whose length is unknown.
 
 type Clip = { audio_b64?: string; starts?: number[] } | null;
 
 const CLIP_CHARS = 400;
-/** How long a stop waits before advancing when its clip never arrives. */
-export const SILENT_ADVANCE_MS = 2500;
-const SECONDS_PER_CHAR = 0.06;
+/** How long a line waits before advancing when its clip never arrives, or cannot be measured. */
+const SILENT_ADVANCE_MS = 2500;
+/** Grace after the clip's own length for the end event to arrive. */
+const END_MARGIN_MS = 400;
+/** How far the clip's clock must move before a line may be extended. */
+const PROGRESS_SECONDS = 0.05;
+/** A cap on extensions so a misreported length cannot hold a line open indefinitely. */
+const MAX_EXTENSIONS = 3;
 
 const cache = new Map<string, Promise<Clip>>();
 
@@ -33,12 +39,15 @@ export function prefetchClip(text: string): void {
 
 export type Narration = { stop: () => void };
 
-/** The clip's length in milliseconds, from its character start times. */
-function clipLengthMs(starts: number[], chars: number): number {
-  if (!starts.length) return chars * SECONDS_PER_CHAR * 1000;
-  const last = starts[starts.length - 1];
-  const perChar = starts.length > 1 ? (last - starts[0]) / Math.max(1, starts.length - 1) : SECONDS_PER_CHAR;
-  return (last + (chars - starts.length) * perChar) * 1000;
+/** The clip's length in milliseconds as it reports it, else as its timings imply, else null. */
+function clipLengthMs(el: HTMLAudioElement, starts: number[], chars: number): number | null {
+  if (Number.isFinite(el.duration) && el.duration > 0) return el.duration * 1000;
+  if (starts.length > 1) {
+    const last = starts[starts.length - 1];
+    const perChar = (last - starts[0]) / (starts.length - 1);
+    if (perChar > 0) return (last + Math.max(0, chars - starts.length) * perChar) * 1000;
+  }
+  return null;
 }
 
 /** Speak a line, calling onEnd when the clip finishes or when no clip can be played. */
@@ -46,18 +55,28 @@ export function narrate(text: string, onEnd: () => void): Narration {
   let finished = false;
   let audio: HTMLAudioElement | null = null;
   let timer: number | null = null;
-  let safety: number | null = null;
+  let bound: number | null = null;
   let objectUrl: string | null = null;
+  let detach: () => void = () => {};
 
-  const cleanup = () => {
+  const clearTimer = () => {
     if (timer !== null) {
       window.clearTimeout(timer);
       timer = null;
     }
-    if (safety !== null) {
-      window.clearTimeout(safety);
-      safety = null;
+  };
+  const clearBound = () => {
+    if (bound !== null) {
+      window.clearTimeout(bound);
+      bound = null;
     }
+  };
+
+  const cleanup = () => {
+    clearTimer();
+    clearBound();
+    detach();
+    detach = () => {};
     if (audio) {
       audio.onended = null;
       audio.onerror = null;
@@ -82,17 +101,28 @@ export function narrate(text: string, onEnd: () => void): Narration {
     timer = window.setTimeout(finish, SILENT_ADVANCE_MS);
   };
 
-  // A clip that never reports its end still cannot stall the tour: the timings bound it.
-  const armSafety = (ms: number) => {
-    if (safety !== null) window.clearTimeout(safety);
-    safety = window.setTimeout(() => {
-      safety = null;
-      if (audio && !audio.paused && !audio.ended) {
-        armSafety(1000);
-        return;
-      }
-      finish();
-    }, ms);
+  // The clip's length bounds the line. The timer fires once and ends the line; it is extended only
+  // when the clip's clock has actually moved on, never merely because the element is not paused.
+  const armBound = (el: HTMLAudioElement, lengthMs: number) => {
+    clearBound();
+    let lastTime = el.currentTime;
+    let extensions = 0;
+    const arm = (ms: number) => {
+      bound = window.setTimeout(() => {
+        bound = null;
+        const now = el.currentTime;
+        const progressed = now - lastTime > PROGRESS_SECONDS;
+        lastTime = now;
+        const known = Number.isFinite(el.duration) && el.duration > 0;
+        if (progressed && known && now < el.duration && extensions < MAX_EXTENSIONS) {
+          extensions += 1;
+          arm(Math.max(200, (el.duration - now) * 1000));
+          return;
+        }
+        finish();
+      }, Math.max(0, ms) + END_MARGIN_MS);
+    };
+    arm(lengthMs);
   };
 
   void request(text).then((clip) => {
@@ -107,13 +137,36 @@ export function narrate(text: string, onEnd: () => void): Narration {
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
       const url = URL.createObjectURL(new Blob([bytes], { type: "audio/mpeg" }));
       objectUrl = url;
-      const clipAudio = new Audio(url);
-      audio = clipAudio;
-      clipAudio.onended = finish;
-      clipAudio.onerror = silently;
+      const el = new Audio(url);
+      audio = el;
+      const starts = Array.isArray(clip.starts) ? clip.starts : [];
       const chars = Math.min(text.length, CLIP_CHARS);
-      armSafety(clipLengthMs(clip.starts || [], chars) + 2000);
-      void clipAudio.play().catch(silently);
+
+      // Metadata can arrive after playback starts, so measure again once the length is known.
+      let measured = false;
+      const measure = () => {
+        if (finished || measured) return;
+        const ms = clipLengthMs(el, starts, chars);
+        if (ms === null) return;
+        measured = Number.isFinite(el.duration) && el.duration > 0;
+        armBound(el, ms);
+      };
+      el.addEventListener("loadedmetadata", measure);
+      el.addEventListener("durationchange", measure);
+      detach = () => {
+        el.removeEventListener("loadedmetadata", measure);
+        el.removeEventListener("durationchange", measure);
+      };
+
+      el.onended = finish;
+      el.onerror = silently;
+
+      const length = clipLengthMs(el, starts, chars);
+      if (length === null) armBound(el, SILENT_ADVANCE_MS);
+      else armBound(el, length);
+      measured = Number.isFinite(el.duration) && el.duration > 0;
+
+      void el.play().catch(silently);
     } catch {
       silently();
     }
