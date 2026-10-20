@@ -390,3 +390,108 @@ grouped as:
 
 Each outcome gets one failing acceptance test before the builder is asked to implement it. The spec and the
 tests land first; no application code changes until they do.
+
+---
+
+## Post-cutover defect (2026-10-19)
+
+### 24. A page with no authorities claims a first stop
+
+**Observed.** The map's tour bar reads `Stop 1 of 0`, and its `Previous stop`, `Next stop`, `Play` and
+`Stop tour` controls are all usable. This appears on a page with no run at all and on a run that refused
+because the corpus had nothing on point.
+
+**Evidence.** Live, on `https://arize.design-bakery.com/` with no run:
+`tour = {active: false, index: 0, count: 0}` while the page text contains `Stop 1 of 0` and every tour
+control reports `disabled: false`. Live, on run `190842-a5aeac` (the greeting `hello`, provider
+`scope:no-authority`, 0 citations), the same figures: `count: 0`, `Stop 1 of 0`, all four controls
+enabled. The position is computed as `Math.min(tour.index + 1, tour.count) || 1` and the bar renders
+whether or not the tour has stops.
+
+**Must instead.** A page or run with no authorities never claims a stop: no `N of 0` position and no
+usable previous, next, play or stop-tour control. Hiding the bar and disabling its controls are both
+acceptable; claiming a first stop is not.
+
+**Gate.** `test_frontend_v3_tour.py::test_O108_a_page_with_no_authorities_claims_no_stop` fails on the
+current build for both cases.
+
+---
+
+## Voice latency and retry (2026-10-20)
+
+The owner reported that audio loading is very long, that the voice is buggy, and that Listen does not
+work properly. The measurements below were taken on the deployed host.
+
+**How long a line takes.** Through the live app, a line that is not already cached:
+
+| Line | Provider | Cold | Warm |
+| --- | --- | --- | --- |
+| 94 characters | fish | 3.7 s | 0.01 s |
+| 83 characters | fish | 4.9 s | — |
+| 91 characters | fish | 4.0 s | — |
+| 220 characters | fish | 7.1 s | 0.01 s |
+| 225 characters (a real memo line) | fish | 8.3 s | — |
+
+Kokoro alone, on the same host, produces 42 characters in 0.8 s, 72 in 1.2 s and 347 in 7.0 s. The
+provider chain tries Fish first, so every cold line pays Fish's latency before any fallback.
+
+### 25. The page gives up on a clip before the server finishes it
+
+**Observed.** Long memo lines never play. The speaker reads "Audio unavailable — the transcript carries
+on" while the server is still producing the clip.
+
+**Evidence.** The page stops waiting for a clip after 7,000 ms (`REQUEST_GIVE_UP_MS` in
+`web/src/map/narrator.ts`). The memo's first line of run `001956-d11620` is 225 characters and takes
+8.3 s cold. The clip arrives, is cached, and is thrown away.
+
+**Must instead.** A clip the server is still making is never abandoned. A line may only be reported
+unavailable when the server has actually failed to produce one.
+
+**Gate.** `test_frontend_v3_voice_tour.py::test_O109_a_slow_clip_is_played_not_abandoned` serves an
+8.5 s clip and fails on the current build.
+
+### 26. A line that failed once is never tried again
+
+**Observed.** After one failure the voice stays broken for the rest of the session. Reloading the page is
+the only cure.
+
+**Evidence.** `request()` stores the pending request in a module-level `cache` map and never removes it;
+the entry resolves to `null` after the give-up, so every later request for the same text returns the same
+`null` without asking the server. The prefetch path shares that map, so a prefetch that times out poisons
+the line too.
+
+**Must instead.** A failed line is asked for again the next time it is to be spoken, and a line that was
+prefetched too early is retried when the reader reaches it.
+
+**Gate.** `test_frontend_v3_voice_tour.py::test_O110_a_failed_clip_is_asked_for_again` fails on the
+current build: the second attempt never reaches the server.
+
+### 27. Nothing is warmed before the reader presses Listen
+
+**Observed.** The first line always pays the full cold cost, which is exactly the line the reader is
+waiting for.
+
+**Evidence.** The page only prefetches the line *after* the current one (`prefetchClip` is called from
+the narration step), and only once narration is already running. A run opened on the home page asks for
+no audio at all until Listen is pressed.
+
+**Must instead.** When a run is opened, its first narrated line is already being made before any voice
+control is pressed.
+
+**Gate.** `test_frontend_v3_voice_tour.py::test_O111_an_opened_run_warms_its_first_line` fails on the
+current build.
+
+### 28. A cold line takes too long to be ready
+
+**Observed.** A 225-character cold line takes 8.3 s on this host, against a page that waits 7 s.
+
+**Must instead.** A cold line of the memo's length is ready in under 6 s on this host.
+
+**Gate.** `test_tts_chain.py::test_O112_a_cold_memo_line_is_ready_quickly` (live) fails on the current
+build.
+
+### Cache size, measured
+
+The shared store holds 251 clips totalling 77 MB, an average of 307 KB per clip. A pre-built library of
+10,000 clips would therefore be about 3 GB of audio, or about 4 GB stored as base64 in the shared
+database. That is the real cost of the pre-cache idea; it is not small.
