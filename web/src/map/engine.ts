@@ -26,6 +26,8 @@ import {
   type World,
 } from "@/lib/geo";
 import {
+  MAX_TILT,
+  MIN_TILT,
   SURFACE_Y,
   SceneRenderer,
   buildCamera,
@@ -49,6 +51,24 @@ export type TourState = {
   section: string;
 };
 export type Level = "national" | "state" | "county" | "court";
+
+/** Which parts of the scene the reader has switched on. */
+export type MapLayers = {
+  basemap: boolean;
+  heat: boolean;
+  links: boolean;
+  pins: boolean;
+  labels: boolean;
+};
+
+/** Where the camera stands: how far it looks down (degrees) and which way it faces (degrees). */
+export type Orbit = { tilt: number; yaw: number };
+
+const DEG = 180 / Math.PI;
+const RAD = Math.PI / 180;
+/** The tilt the camera opens at, and the range the reader may move it through. */
+export const DEFAULT_TILT = 58;
+export const TILT_RANGE = { min: Math.round(MIN_TILT * DEG), max: Math.round(MAX_TILT * DEG) };
 
 /** One stop of the walk: a section of the memo, or one authority. */
 export type PlanStop = { section: string; text: string; cite: number | null };
@@ -108,6 +128,10 @@ export type MapView = {
   muted: boolean;
   loading: boolean;
   basemapReady: boolean;
+  /** Where the camera stands, so a panel can show the tilt and the bearing it is at. */
+  orbit: Orbit;
+  /** Which parts of the scene are switched on. */
+  layers: MapLayers;
 };
 
 type Group = Location & { items: number[]; pinKey: string };
@@ -283,7 +307,11 @@ export class MapEngine {
   private staticLayer: HTMLCanvasElement | null = null;
   private flat: CanvasRenderingContext2D | null = null;
   private basemapImage: HTMLCanvasElement | null = null;
-  private basemapOn = true;
+
+  /** Which parts of the scene the reader has switched on. */
+  layers: MapLayers = { basemap: true, heat: true, links: true, pins: true, labels: true };
+  /** Where the camera stands. The default tilt is the angle the map has always opened at. */
+  orbit: Orbit = { tilt: DEFAULT_TILT, yaw: 0 };
 
   private width = 0;
   private height = 0;
@@ -627,6 +655,8 @@ export class MapEngine {
       level: this.level,
       focusCounty: this.focusCounty,
       label: this.label,
+      orbit: { ...this.orbit },
+      layers: { ...this.layers },
       scene: this.scene(),
       summary: this.summaryText,
       shortAnswer: this.answerText,
@@ -679,6 +709,8 @@ export class MapEngine {
       muted: this.muted,
       loading: this.loading,
       basemapReady: !!this.basemapImage,
+      orbit: { ...this.orbit },
+      layers: { ...this.layers },
     };
   }
 
@@ -861,12 +893,26 @@ export class MapEngine {
     this.refresh();
   }
 
-  /** Drag the map: the point under the pointer follows it, so the camera moves the other way. */
+  /**
+   * Drag the map: the ground under the pointer follows it, so the camera moves the other way. Under a
+   * tilt the pane's pixels are not a uniform grid on the ground, so the travel is read off the ground
+   * itself — the point at the centre and the point the pointer has moved to.
+   */
   panBy(dx: number, dy: number): void {
     if (!this.width || !this.height || (dx === 0 && dy === 0)) return;
     this.touch();
-    const k = this.scale();
     this.animating = false;
+    if (this.renderer) {
+      const from = this.screenToPlane(this.width / 2, this.height / 2);
+      const to = this.screenToPlane(this.width / 2 + dx, this.height / 2 + dy);
+      if (from && to) {
+        this.cam = { x: this.cam.x - (to[0] - from[0]), y: this.cam.y - (to[1] - from[1]), zoom: this.cam.zoom };
+        this.camTarget = { ...this.cam };
+        this.refresh();
+        return;
+      }
+    }
+    const k = this.scale();
     this.cam = { x: this.cam.x - dx / k, y: this.cam.y - dy / k, zoom: this.cam.zoom };
     this.camTarget = { ...this.cam };
     this.refresh();
@@ -1354,10 +1400,40 @@ export class MapEngine {
   // ---------------------------------------------------------------- basemap
 
   setBasemap(on: boolean): void {
-    this.basemapOn = on;
+    this.setLayers({ basemap: on });
+  }
+
+  /** Switch parts of the scene on or off. A change redraws the scene and re-places the pins. */
+  setLayers(next: Partial<MapLayers>): void {
+    const merged: MapLayers = { ...this.layers, ...next };
+    const same = (Object.keys(merged) as (keyof MapLayers)[]).every((key) => merged[key] === this.layers[key]);
+    if (same) return;
+    this.layers = merged;
     this.rebuild();
     this.render();
-    this.emit();
+    this.refresh();
+  }
+
+  /**
+   * Set how the camera stands. Tilt is clamped to the range the projection can draw, and the bearing
+   * wraps, so a drag past due north keeps turning rather than stopping.
+   */
+  setOrbit(next: Partial<Orbit>): void {
+    const tilt = next.tilt === undefined ? this.orbit.tilt : clamp(next.tilt, TILT_RANGE.min, TILT_RANGE.max);
+    const yaw = next.yaw === undefined ? this.orbit.yaw : ((next.yaw % 360) + 360) % 360;
+    if (tilt === this.orbit.tilt && yaw === this.orbit.yaw) return;
+    this.orbit = { tilt, yaw };
+    this.refresh();
+  }
+
+  /** Nudge the camera by a drag: the delta is in degrees, so a pointer's travel is not the map's. */
+  orbitBy(dTilt: number, dYaw: number): void {
+    this.setOrbit({ tilt: this.orbit.tilt + dTilt, yaw: this.orbit.yaw + dYaw });
+  }
+
+  /** Back to the angle the map opens at. */
+  resetOrbit(): void {
+    this.setOrbit({ tilt: DEFAULT_TILT, yaw: 0 });
   }
 
   private async loadBasemap(): Promise<void> {
@@ -1473,10 +1549,13 @@ export class MapEngine {
         counties: this.world.counties.map((c) => ({
           name: c.name,
           polys: c.polys,
-          fill: this.countyFill(c),
-          outline: this.countyOutline(c),
+          // With the heat layer off every county is drawn plain, so the boundaries still read as a map.
+          fill: this.layers.heat ? this.countyFill(c) : p.countyTop,
+          outline: this.layers.heat ? this.countyOutline(c) : p.countyLine,
         })),
-        arcs: this.arcs.map((a) => ({ from: a.from, to: a.to, colour: ARC_COLORS[a.type] })),
+        arcs: this.layers.links
+          ? this.arcs.map((a) => ({ from: a.from, to: a.to, colour: ARC_COLORS[a.type] }))
+          : [],
         palette: {
           stateTop: p.stateTop,
           stateWall: p.stateWall,
@@ -1487,7 +1566,7 @@ export class MapEngine {
         },
       });
       this.renderer.setScene(this.buffers);
-      this.renderer.setBasemap(this.basemapOn ? this.basemapImage : null);
+      this.renderer.setBasemap(this.layers.basemap ? this.basemapImage : null);
       return;
     }
     this.buildFlatLayer();
@@ -1506,7 +1585,7 @@ export class MapEngine {
 
     g.fillStyle = p.ocean;
     g.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
-    if (this.basemapOn && this.basemapImage) g.drawImage(this.basemapImage, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    if (this.layers.basemap && this.basemapImage) g.drawImage(this.basemapImage, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
     g.fillStyle = p.stateWall;
     for (const state of this.world.states) for (const ring of state.polys) this.flatWall(g, ring, 3);
@@ -1522,8 +1601,8 @@ export class MapEngine {
       }
     }
     for (const county of this.world.counties) {
-      const n = this.heat["c:" + county.name.toLowerCase()] || 0;
-      g.fillStyle = this.countyFill(county);
+      const n = this.layers.heat ? this.heat["c:" + county.name.toLowerCase()] || 0 : 0;
+      g.fillStyle = n > 0 ? this.countyFill(county) : p.countyTop;
       g.strokeStyle = n > 0 ? p.countyLineHeld : p.countyLine;
       g.lineWidth = n > 0 ? 0.55 : 0.3;
       for (const ring of county.polys) {
@@ -1589,6 +1668,8 @@ export class MapEngine {
         this.cam.zoom,
         this.width,
         this.height,
+        this.orbit.tilt * RAD,
+        this.orbit.yaw * RAD,
       );
     } else {
       this.cam3 = null;
@@ -1601,7 +1682,7 @@ export class MapEngine {
     const progress = clamp(this.motion.arcProgress, 0, 1);
     if (this.renderer) {
       this.renderer.resize(this.width, this.height);
-      this.renderer.render(this.cam3 as Camera3, this.basemapOn && !!this.basemapImage, progress);
+      this.renderer.render(this.cam3 as Camera3, this.layers.basemap && !!this.basemapImage, progress);
       return;
     }
     this.renderFlat(progress);
@@ -1630,7 +1711,7 @@ export class MapEngine {
     g.translate(-this.cam.x, -this.cam.y);
     if (this.staticLayer) g.drawImage(this.staticLayer, 0, 0, WORLD_WIDTH, WORLD_HEIGHT);
     g.lineWidth = 1.7 / k;
-    for (const arc of this.arcs) {
+    for (const arc of this.layers.links ? this.arcs : []) {
       if (progress <= 0.02) break;
       const [x1, y1] = arc.from;
       const [x2, y2] = arc.to;
@@ -1686,7 +1767,7 @@ export class MapEngine {
     this.ensureCamera();
     const W = this.width;
     const H = this.height;
-    if (!W || !H || !this.cites.length) {
+    if (!W || !H || !this.cites.length || !this.layers.pins) {
       this.pins = [];
       this.labels = [];
       return;
@@ -1758,7 +1839,7 @@ export class MapEngine {
     const out: LabelView[] = [];
     const W = this.width;
     const H = this.height;
-    if (!W || !H) {
+    if (!W || !H || !this.layers.labels) {
       this.labels = out;
       return;
     }

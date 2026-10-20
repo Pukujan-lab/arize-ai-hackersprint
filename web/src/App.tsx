@@ -1,18 +1,27 @@
 import { BrowserRouter, Route, Routes } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
-import Observability from "./pages/Observability";
-import Slides from "./pages/Slides";
+import AppShell from "@/components/AppShell";
+import Chat from "@/pages/Chat";
+import Dashboard from "@/pages/Dashboard";
+import Explore from "@/pages/Explore";
+import NotFound from "@/pages/NotFound";
+import Observability from "@/pages/Observability";
+import Search from "@/pages/Search";
+import Slides from "@/pages/Slides";
 
 const App = () => (
   <BrowserRouter>
     <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/map" element={<Index initialPane="map" />} />
-      <Route path="/observability" element={<Observability />} />
-      <Route path="/slides" element={<Slides />} />
-      {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-      <Route path="*" element={<NotFound />} />
+      {/* Every page sits inside the one shell, so the navigation never moves between them. */}
+      <Route element={<AppShell />}>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/chat" element={<Chat />} />
+        <Route path="/search" element={<Search />} />
+        <Route path="/explore" element={<Explore />} />
+        <Route path="/observability" element={<Observability />} />
+        <Route path="/slides" element={<Slides />} />
+        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+        <Route path="*" element={<NotFound />} />
+      </Route>
     </Routes>
   </BrowserRouter>
 );

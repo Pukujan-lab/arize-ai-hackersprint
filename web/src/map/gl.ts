@@ -34,8 +34,11 @@ export const SURFACE_Y = COLORADO_DEPTH + COUNTY_LIP;
 export const ARC_Y = SURFACE_Y + 1.4;
 
 const FOV = (40 * Math.PI) / 180;
-/** The camera looks down at this angle, so the extruded walls are visible. */
+/** The camera looks down at this angle by default, so the extruded walls are visible. */
 const ELEVATION = (58 * Math.PI) / 180;
+/** How far the reader may tilt the camera: never flat on the ground, never straight down. */
+export const MIN_TILT = (16 * Math.PI) / 180;
+export const MAX_TILT = (86 * Math.PI) / 180;
 /** A little margin around the plane at the national view. */
 const FIT = 1.18;
 /** What the camera centres on vertically: the middle of the raised block. */
@@ -88,17 +91,32 @@ function mul(a: Float32Array, b: Float32Array): Float32Array {
 }
 
 /**
- * The camera for a zoom factor: it looks at the projected point (cx, cz) from above and to the south,
- * and its distance shrinks as the zoom grows, so a higher zoom is a closer camera, not a scaled picture.
+ * The camera for a zoom factor: it looks at the projected point (cx, cz) from a distance that shrinks
+ * as the zoom grows, so a higher zoom is a closer camera, not a scaled picture. `tilt` is how far it
+ * looks down and `yaw` which way it faces, so the reader can walk around the scene.
  */
-export function buildCamera(cx: number, cz: number, zoom: number, W: number, H: number): Camera3 {
+export function buildCamera(
+  cx: number,
+  cz: number,
+  zoom: number,
+  W: number,
+  H: number,
+  tilt: number = ELEVATION,
+  yaw = 0,
+): Camera3 {
   const width = Math.max(1, W);
   const height = Math.max(1, H);
   const aspect = Math.max(0.2, width / height);
   const viewH = Math.max(WORLD_HEIGHT, WORLD_WIDTH / aspect) / Math.max(0.2, zoom);
   const distance = (viewH * FIT) / (2 * Math.tan(FOV / 2));
+  const angle = Math.max(MIN_TILT, Math.min(MAX_TILT, tilt));
+  const reach = distance * Math.cos(angle);
   const target: Vec3 = [cx, TARGET_Y, cz];
-  const eye: Vec3 = [cx, TARGET_Y + distance * Math.sin(ELEVATION), cz + distance * Math.cos(ELEVATION)];
+  const eye: Vec3 = [
+    cx + reach * Math.sin(yaw),
+    TARGET_Y + distance * Math.sin(angle),
+    cz + reach * Math.cos(yaw),
+  ];
   const forward = norm(sub(target, eye));
   const right = norm(cross(forward, [0, 1, 0]));
   const up = cross(right, forward);

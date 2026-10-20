@@ -38,6 +38,8 @@ export type RunResult = {
   elapsed_s?: number;
   safeguard?: Safeguard;
   followups?: string[];
+  /** The retrieval record as the run wrote it; `toRetrieval` in `lib/runs` reads it. */
+  retrieval?: unknown;
 };
 
 export type Category = "county" | "state" | "statute" | "federal";

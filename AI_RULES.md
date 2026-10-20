@@ -44,15 +44,16 @@ and library rules.
   Colours come from the theme tokens (`bg-card`, `text-muted-foreground`, `border-border`), never raw
   hex, so light and dark both work.
 - **Routes** → `react-router-dom` (`BrowserRouter`, `Routes`, `Route`, `useSearchParams`), declared in
-  `web/src/App.tsx`. The default page is `web/src/pages/Index.tsx`. Keep all custom routes above the
-  catch-all `*` route.
-- **HTTP** → plain `fetch` through `readJson()` in `web/src/lib/runs.ts` (and `loadRun()` in
-  `Index.tsx` for polling a run). `@tanstack/react-query` is installed but the app does not use it —
-  do not introduce a second data layer; match the existing `useState` + effect pattern.
+  `web/src/App.tsx`, every page nested inside the one `AppShell` layout route. The default page is
+  `web/src/pages/Dashboard.tsx`. Keep all custom routes above the catch-all `*` route.
+- **HTTP** → plain `fetch` through `readJson()` in `web/src/lib/runs.ts`, behind the loaders in
+  `web/src/lib/api.ts` (which fall back to `web/src/lib/demo.ts` and report `source: "sample"`).
+  `@tanstack/react-query` is installed but the app does not use it — do not introduce a second data
+  layer; match the existing `useState` + effect pattern.
 - **Response shapes** → parse unknown JSON with the `to*` helpers and `num`/`text`/`show` in
   `web/src/lib/runs.ts`. A field the server did not send stays `null` and renders "No data yet" —
   never invent a `0` or a placeholder value.
-- **Forms/validation** → controlled inputs plus `useState` (see the ask form in `Index.tsx`).
+- **Forms/validation** → controlled inputs plus `useState` (see the ask form in `Dashboard.tsx`).
   `react-hook-form` + `zod` exist only as shadcn dependencies; only reach for them if a form genuinely
   needs schema validation.
 - **Toasts** → `sonner` via `web/src/utils/toast.ts`. No `alert()`, no bespoke toast component.
@@ -93,7 +94,8 @@ and library rules.
 
 - `app/` — FastAPI backend package (`server.py`, `agents.py`, `llm.py`, `graph_store.py`,
   `octo_retriever.py`, `ttschain.py`, `coord.py`, `contracts.py`).
-- `web/src/pages/` — one file per route (`Index.tsx` is `/`), `web/src/components/` — app components,
+- `web/src/pages/` — one file per route (`Dashboard.tsx` is `/`, then `Chat`, `Search`, `Explore`,
+  `Observability`, `Slides`), `web/src/components/` — app components (the shell is `AppShell.tsx`),
   `web/src/components/ui/` — shadcn primitives (do not edit), `web/src/lib/` — pure helpers,
   `web/src/map/` — the map engine, `web/src/hooks/` — hooks.
 - `schema/`, `migrations/` — the versioned Octo data model. `contracts/` — API, agent and storage

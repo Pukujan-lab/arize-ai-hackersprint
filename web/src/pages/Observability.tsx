@@ -1,6 +1,5 @@
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import BarChart, { type Bar } from "@/components/BarChart";
-import SiteHeader from "@/components/SiteHeader";
 import {
   NO_DATA,
   count,
@@ -392,11 +391,9 @@ export default function Observability() {
   }, [snapshot]);
 
   return (
-    <div className="flex min-h-[100dvh] flex-col bg-background text-foreground">
-      <SiteHeader />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6">
-        <h1 className="text-xl font-semibold tracking-tight">Observability</h1>
-        <p className="mt-2 max-w-3xl text-sm leading-relaxed text-muted-foreground">
+    <div className="h-full overflow-y-auto bg-background text-foreground">
+      <main className="mx-auto w-full max-w-6xl px-4 py-6">
+        <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
           Every question runs through four agents: planner, retriever, writer and safeguard. The figures below are read
           from this server's saved runs; narrow them, then pick a run to see what it did, how long each step took, and
           the record behind each step.

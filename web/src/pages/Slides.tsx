@@ -18,7 +18,6 @@ import {
 } from "lucide-react";
 import DeckMap from "@/components/DeckMap";
 import FlowDiagram from "@/components/FlowDiagram";
-import SiteHeader from "@/components/SiteHeader";
 import StatRow, { type Stat } from "@/components/StatRow";
 import { NO_DATA, count, isCache, readJson, readRun, shortAnswer, toRuns, toStack, type RunDetail } from "@/lib/runs";
 import { cn } from "@/lib/utils";
@@ -335,7 +334,7 @@ export default function Slides() {
       title: "Ask, then follow up",
       body: exchange.fromSavedRun
         ? `Read back from saved run ${exchange.runId}. The follow-up is its own run, so it carries its own answer and its own check.`
-        : "The product's demo exchange. Ask your own question on Home and this slide fills with your run.",
+        : "The product's demo exchange. Ask your own question from the dashboard and this slide fills with your run.",
       visual: (
         <>
           <StatRow columns="grid-cols-3" stats={runFigures} />
@@ -358,7 +357,7 @@ export default function Slides() {
                 <p className="mt-1 break-words text-sm leading-relaxed text-muted-foreground">
                   No saved run answers this follow-up yet.{" "}
                   <Link to="/" onClick={(event) => event.stopPropagation()} className="underline underline-offset-2">
-                    Ask it on Home
+                    Ask it from the dashboard
                   </Link>
                   .
                 </p>
@@ -450,8 +449,7 @@ export default function Slides() {
   const slide = slides[Math.min(index, total - 1)];
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-background text-foreground">
-      <SiteHeader />
+    <div className="flex h-full flex-col overflow-hidden bg-background text-foreground">
       <main className="flex min-h-0 flex-1 flex-col">
         <div onClick={() => go(1)} className="min-h-0 min-w-0 flex-1 cursor-pointer overflow-y-auto">
           <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col justify-center px-4 py-6 sm:px-6 sm:py-8">

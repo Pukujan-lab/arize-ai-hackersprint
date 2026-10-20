@@ -1499,9 +1499,9 @@
         "summary": "Tts Ts"
       }
     },
-    "/map": {
+    "/chat": {
       "get": {
-        "operationId": "map_page_map_get",
+        "operationId": "chat_page_chat_get",
         "responses": {
           "200": {
             "content": {
@@ -1514,7 +1514,25 @@
             "description": "Successful Response"
           }
         },
-        "summary": "Map Page"
+        "summary": "Chat Page"
+      }
+    },
+    "/explore": {
+      "get": {
+        "operationId": "explore_page_explore_get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Explore Page"
       }
     },
     "/observability": {
@@ -1533,6 +1551,24 @@
           }
         },
         "summary": "Observability Page"
+      }
+    },
+    "/search": {
+      "get": {
+        "operationId": "search_page_search_get",
+        "responses": {
+          "200": {
+            "content": {
+              "text/html": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Search Page"
       }
     },
     "/slides": {

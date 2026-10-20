@@ -29,9 +29,17 @@ _V3_PAGES = {
         "title": "Precedent · Ask, read the memo, tour the map",
         "description": "Ask a legal question and read the memo it returns, then tour the citation map behind every authority the answer relies on.",
     },
-    "/map": {
+    "/chat": {
+        "title": "Precedent · Ask a question, read the memo",
+        "description": "Ask a legal question and watch four agents plan, retrieve, write and check it, then read the memo beside every authority behind it.",
+    },
+    "/search": {
+        "title": "Precedent · Retrieve the authorities behind a question",
+        "description": "Field-weighted search over every authority the saved runs cite, with the passage that matched and the run it came from.",
+    },
+    "/explore": {
         "title": "Precedent · The citation map behind the memo",
-        "description": "The citation map opened on its own pane: every authority in the memo pinned at the court that decided it, over the extruded United States.",
+        "description": "The citation map: every authority in the memo pinned at the court that decided it, over the extruded United States, tilted and walked.",
     },
     "/observability": {
         "title": "Precedent · How a run was made",
@@ -662,9 +670,25 @@ def sponsor():
     }
 
 
-@app.get("/map", response_class=HTMLResponse)
+@app.get("/chat", response_class=HTMLResponse)
+def chat_page():
+    return _v3_page("/chat")
+
+
+@app.get("/search", response_class=HTMLResponse)
+def search_page():
+    return _v3_page("/search")
+
+
+@app.get("/explore", response_class=HTMLResponse)
+def explore_page():
+    return _v3_page("/explore")
+
+
+# The map pane kept its own address until the workspace grew a navigation; it now points at Explore.
+@app.get("/map", status_code=308, include_in_schema=False)
 def map_page():
-    return _v3_page("/map")
+    return RedirectResponse("/explore", status_code=308)
 
 
 @app.get("/observability", response_class=HTMLResponse)
