@@ -20,11 +20,10 @@ rules; this file holds the stack and library rules.
   `/api/tts_ts`) fetched with `fetch`; a device id is attached to `/api/*` calls by
   `web/src/lib/session.ts`.
 - **Map:** **MapLibre GL JS** (`maplibre-gl`) in `web/src/components/CitationMap.tsx`, drawing
-  **CARTO**'s Voyager raster tiles (`@2x` on retina screens) and falling back to an inline OpenStreetMap
-  raster style when those cannot be fetched. Both are keyless. The page has one theme, so the map is
-  light; CARTO's `dark_all` is the twin to use if a dark theme is ever added. Pins are DOM markers and
-  links are a GeoJSON line layer. Colours the canvas paints with are constants in
-  `web/src/map/palette.ts`.
+  **OpenFreeMap**'s Positron vector style and falling back to an inline OpenStreetMap raster style when
+  it cannot be fetched. Both are keyless. The page has one theme, so the map is light; OpenFreeMap also
+  publishes a `dark` style for the day the app grows one. Pins are DOM markers and links are a GeoJSON
+  line layer. Colours the canvas paints with are constants in `web/src/map/palette.ts`.
 - **Voice:** server TTS chain (Fish Audio → ElevenLabs → local Kokoro) behind `/api/tts_ts`, with the
   browser's own `speechSynthesis` as the last resort. All narration goes through
   `web/src/map/narrator.ts`: the read-aloud button via `hooks/use-narration.ts`, the map tour via
@@ -73,8 +72,9 @@ rules; this file holds the stack and library rules.
 - **The map** → extend `web/src/components/CitationMap.tsx` and `web/src/map/palette.ts`. MapLibre is
   the map; do not add a second mapping or 3D library (no deck.gl, three.js, Mapbox, Leaflet). Keep the
   tile source keyless, keep pins as DOM markers so they survive a tile outage, and keep the legend
-  reading the same constants the canvas paints with. Basemaps are CARTO's raster tiles with the
-  OpenStreetMap raster style as the fallback; do not add a basemap that needs an API key or a token.
+  reading the same constants the canvas paints with. The basemap is OpenFreeMap's Positron style with
+  the OpenStreetMap raster style as the fallback; do not add a basemap that needs an API key or a token,
+  and do not use a "free" tier that is licensed for non-commercial use only.
 - **Animation** → CSS transitions/Tailwind animation utilities, or MapLibre's own camera easing. Any
   motion must honour `prefers-reduced-motion` (see `CitationMap.tsx` and `map/narrator.ts`).
 - **New npm dependency** → last resort. Check `web/package.json` first (it already ships Radix,

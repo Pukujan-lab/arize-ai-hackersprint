@@ -26,12 +26,12 @@ any saved run opens from that list or from `?run=` on the address.
   `session.ts` (the device session id), `utils.ts` (`cn`).
 - `web/public/` — assets served as-is: `logo.svg`, `og.png`, `robots.txt`.
 
-The map is MapLibre GL JS over CARTO's Voyager raster tiles, `@2x` on retina screens, so the basemap
-carries its own labels and its warm paper tone leaves the pins to carry the meaning. If the tiles stop
-arriving the map falls back to an inline OpenStreetMap raster style rather than showing an empty pane.
-Neither source needs an account or an API key. Pins are DOM markers, so they stay readable and clickable
-even when the tiles do not arrive; a browser without WebGL gets a sentence saying so, and the
-authorities stay listed in the Sources drawer.
+The map is MapLibre GL JS over OpenFreeMap's Positron vector style, so labels stay sharp at every zoom
+and the muted basemap leaves the coloured pins to carry the meaning. If the style cannot be fetched the
+map falls back to an inline OpenStreetMap raster style rather than showing an empty pane. Neither source
+needs an account or an API key. Pins are DOM markers, so they stay readable and clickable even when the
+tiles do not arrive; a browser without WebGL gets a sentence saying so, and the authorities stay listed
+in the Sources drawer.
 
 ## Shared
 

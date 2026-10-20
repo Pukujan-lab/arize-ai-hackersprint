@@ -1,7 +1,7 @@
-// The map: MapLibre GL JS over CARTO's raster tiles, with one pin per place an answer's authorities sit
-// in and one line per link between them. The tiles are keyless; if they cannot be reached the map falls
-// back to OpenStreetMap's own raster tiles rather than showing nothing. The pins are DOM markers, so
-// they stay readable and clickable whatever the tiles do.
+// The map: MapLibre GL JS over OpenFreeMap's Positron vector tiles, with one pin per place an answer's
+// authorities sit in and one line per link between them. The style is keyless; if it cannot be reached
+// the map falls back to OpenStreetMap's own raster tiles rather than showing nothing. The pins are DOM
+// markers, so they stay readable and clickable whatever the tiles do.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
@@ -26,36 +26,19 @@ type Pin = {
 const CENTER: [number, number] = [-98.583, 39.833];
 
 /**
- * The basemap: CARTO's Voyager raster tiles. They ask for no account and no key, they carry their own
- * labels, and their warm paper tone sits under the pins instead of competing with them. Retina screens
- * get the @2x images, which is what keeps the type crisp rather than furry.
+ * The basemap: OpenFreeMap's Positron vector style. It is open source and self-hostable, it asks for no
+ * account, no key and no quota, and Positron's muted greys leave the coloured pins as the only thing
+ * competing for attention. Vector labels stay sharp at every zoom, which raster tiles do not.
  *
- * The page has one theme — the light one — so the map does not chase the system's. CARTO publishes
- * `dark_all` as Voyager's twin for the day the app grows a dark theme.
+ * Raster providers were tried and dropped: the keyless-looking ones either want an API key from some
+ * networks or licence themselves for non-commercial use only.
  */
-const RETINA = typeof window !== "undefined" && (window.devicePixelRatio || 1) > 1.25;
+const VECTOR = "https://tiles.openfreemap.org/styles/positron";
 
-const CARTO: maplibregl.StyleSpecification = {
-  version: 8,
-  sources: {
-    carto: {
-      type: "raster",
-      tiles: [`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${RETINA ? "@2x" : ""}.png`],
-      tileSize: 256,
-      maxzoom: 19,
-      attribution:
-        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
-        '© <a href="https://carto.com/attributions">CARTO</a>',
-    },
-  },
-  layers: [
-    // Painted under the tiles so the pane is the basemap's colour while they arrive, not white.
-    { id: "ground", type: "background", paint: { "background-color": "#f7f5f2" } },
-    { id: "carto", type: "raster", source: "carto", paint: { "raster-fade-duration": 150 } },
-  ],
-};
-
-/** The fallback: OpenStreetMap's own raster tiles, styled inline, also with no account and no key. */
+/**
+ * The fallback: OpenStreetMap's own raster tiles, styled inline, also with no account and no key. It is
+ * plainer than Positron, but a plainer map beats an empty pane.
+ */
 const RASTER: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
@@ -67,7 +50,11 @@ const RASTER: maplibregl.StyleSpecification = {
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     },
   },
-  layers: [{ id: "osm", type: "raster", source: "osm" }],
+  layers: [
+    // Painted under the tiles so the pane is paper-coloured while they arrive, not white.
+    { id: "ground", type: "background", paint: { "background-color": "#f7f5f2" } },
+    { id: "osm", type: "raster", source: "osm" },
+  ],
 };
 
 /** One pin per place: the authorities that resolve to the same court share it. */
@@ -141,7 +128,7 @@ export default function CitationMap({
     try {
       map = new maplibregl.Map({
         container: element,
-        style: CARTO,
+        style: VECTOR,
         center: CENTER,
         zoom: 3.4,
         attributionControl: { compact: true },
@@ -154,29 +141,32 @@ export default function CitationMap({
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "imperial", maxWidth: 96 }), "bottom-left");
 
-    // Tiles that never arrive would leave an empty pane, so the map falls back to OpenStreetMap's own.
+    // A style document that never arrives would leave an empty pane, so the map falls back to the
+    // OpenStreetMap tiles, which need nothing from the network but the tiles themselves.
     let fellBack = false;
     const fallBack = () => {
       if (fellBack) return;
       fellBack = true;
       map.setStyle(RASTER);
     };
+    const giveUp = window.setTimeout(() => {
+      if (!map.isStyleLoaded()) fallBack();
+    }, 6000);
 
     const onStyleLoad = () => {
+      window.clearTimeout(giveUp);
       setReady(true);
       setEpoch((count) => count + 1);
     };
     map.on("style.load", onStyleLoad);
-    // One refused tile is a blip; a run of them means the tile host is not answering this page at all.
-    let refused = 0;
-    const onError = (event: { error?: { message?: string }; sourceId?: string }) => {
-      if (event?.sourceId !== "carto" && !/cartocdn/i.test(String(event?.error?.message || ""))) return;
-      refused += 1;
-      if (refused >= 3) fallBack();
+    // A tile that 404s is not a failed basemap; only a style document that cannot be fetched is.
+    const onError = (event: { error?: { message?: string } }) => {
+      if (/style/i.test(String(event?.error?.message || ""))) fallBack();
     };
     map.on("error", onError);
 
     return () => {
+      window.clearTimeout(giveUp);
       map.off("style.load", onStyleLoad);
       map.off("error", onError);
       for (const marker of markers.current) marker.remove();
