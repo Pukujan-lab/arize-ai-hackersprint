@@ -16,10 +16,12 @@ import {
   Loader2,
   MapPin,
   MessagesSquare,
+  PanelRight,
   Plus,
   Sparkles,
   Volume2,
   VolumeX,
+  type LucideIcon,
 } from "lucide-react";
 import type { ShellContext } from "@/components/AppShell";
 import AuthorityDetail from "@/components/AuthorityDetail";
@@ -85,6 +87,36 @@ function StageRow({ stage }: { stage: StageTick }) {
   );
 }
 
+/** One thing the reader can do with an answer, in the drawer that now holds them all. */
+function ToolRow({
+  icon: Icon,
+  label,
+  hint,
+  onClick,
+  disabled,
+}: {
+  icon: LucideIcon;
+  label: string;
+  hint: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex w-full items-start gap-2.5 rounded-lg border border-border bg-card px-2.5 py-2 text-left text-sm transition-colors hover:bg-accent/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring disabled:opacity-50 disabled:hover:bg-card"
+    >
+      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+      <span className="min-w-0 flex-1">
+        <span className="block font-medium">{label}</span>
+        <span className="mt-0.5 block text-xs leading-relaxed text-muted-foreground">{hint}</span>
+      </span>
+    </button>
+  );
+}
+
 export default function Chat() {
   const { refreshRuns, resetToken } = useOutletContext<ShellContext>();
   const [params, setParams] = useSearchParams();
@@ -102,6 +134,8 @@ export default function Chat() {
   const [place, setPlace] = useState<MapPlace | null>(null);
   const [details, setDetails] = useState<AssistantTurn | null>(null);
   const [followUps, setFollowUps] = useState<string[] | null>(null);
+  /** The answer whose tools are open in the drawer: sources, follow-ups, the figures, the voice, the map. */
+  const [actions, setActions] = useState<AssistantTurn | null>(null);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -128,6 +162,7 @@ export default function Chat() {
     setPlace(null);
     setDetails(null);
     setFollowUps(null);
+    setActions(null);
     setParams(new URLSearchParams(), { replace: true });
     inputRef.current?.focus();
   }, [stopNarration, setParams]);
@@ -447,7 +482,6 @@ export default function Chat() {
                   const citations = turn.result.citations || [];
                   const pass = turn.result.safeguard?.pass ?? null;
                   const elapsed = typeof turn.result.elapsed_s === "number" ? turn.result.elapsed_s : null;
-                  const suggestions = turn.result.followups || [];
 
                   return (
                     <article key={turn.id} className="min-w-0">
@@ -486,60 +520,20 @@ export default function Chat() {
                         <p className="mt-2 text-sm text-muted-foreground">The run recorded no answer.</p>
                       )}
 
-                      <p className="mt-3 text-xs text-muted-foreground">
-                        {turn.result.safeguard?.disclaimer || "AI-generated research summary, not legal advice."}
-                      </p>
-
-                      <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-border pt-2">
+                      {/* The disclaimer stays on the answer; everything the reader might do with it lives
+                          behind one button, so the answer ends in a line rather than a toolbar. */}
+                      <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-border pt-2">
+                        <p className="min-w-0 flex-1 text-xs text-muted-foreground">
+                          {turn.result.safeguard?.disclaimer || "AI-generated research summary, not legal advice."}
+                        </p>
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="gap-1.5"
-                          onClick={() => setSources(citations)}
-                          disabled={!citations.length}
+                          className="shrink-0 gap-1.5"
+                          onClick={() => setActions(turn)}
                         >
-                          <BookOpen className="h-4 w-4" />
-                          Sources ({citations.length})
-                        </Button>
-                        {!!suggestions.length && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="gap-1.5"
-                            onClick={() => setFollowUps(suggestions)}
-                          >
-                            <CornerDownRight className="h-4 w-4" />
-                            Follow-ups ({suggestions.length})
-                          </Button>
-                        )}
-                        <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setDetails(turn)}>
-                          <Gauge className="h-4 w-4" />
-                          Details
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="gap-1.5"
-                          onClick={() => {
-                            if (narrating) {
-                              stopNarration();
-                              return;
-                            }
-                            tour.stop();
-                            // Markdown read aloud would be "asterisk asterisk" and "[1]"; say the prose.
-                            speak(plainText(answer));
-                          }}
-                        >
-                          {narrating ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
-                          {narrating ? "Stop" : "Read aloud"}
-                        </Button>
-                        <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => void copyAnswer(answer)}>
-                          <Copy className="h-4 w-4" />
-                          Copy
-                        </Button>
-                        <Button variant="ghost" size="sm" className="ml-auto gap-1.5" onClick={() => openMap(turn)}>
-                          <MapPin className="h-4 w-4" />
-                          Show on the map
+                          <PanelRight className="h-4 w-4" />
+                          Answer tools
                         </Button>
                       </div>
                     </article>
@@ -566,7 +560,7 @@ export default function Chat() {
                       <div className="mt-3 border-t border-border pt-2.5">
                         <p className="text-xs text-muted-foreground">Draft, as it is written</p>
                         <div className="mt-1 max-h-64 overflow-hidden">
-                          <Memo answer={progress.draft} citations={[]} />
+                          <Memo answer={progress.draft} citations={[]} collapsible={false} />
                         </div>
                       </div>
                     )}
@@ -706,6 +700,88 @@ export default function Chat() {
               openMap(turn);
             }}
           />
+        )}
+      </DetailDrawer>
+
+      {/* Everything the answer can be turned into, in one drawer: the sources behind it, the questions it
+          invites, the run's own figures, its voice, its text, and the map of where it sits. */}
+      <DetailDrawer
+        open={actions !== null}
+        onOpenChange={(open) => {
+          if (!open) setActions(null);
+        }}
+        title="Answer tools"
+        description={actions ? `Run ${actions.runId}` : undefined}
+      >
+        {actions && (
+          <div className="space-y-1.5">
+            <ToolRow
+              icon={BookOpen}
+              label={`Sources (${(actions.result.citations || []).length})`}
+              hint="Every authority this answer cites, with the passage it rests on"
+              disabled={!(actions.result.citations || []).length}
+              onClick={() => {
+                const turn = actions;
+                setActions(null);
+                setSources(turn.result.citations || []);
+              }}
+            />
+            <ToolRow
+              icon={CornerDownRight}
+              label={`Follow-ups (${(actions.result.followups || []).length})`}
+              hint="Asked with this answer as the previous run, so the agents keep its context"
+              disabled={!(actions.result.followups || []).length}
+              onClick={() => {
+                const turn = actions;
+                setActions(null);
+                setFollowUps(turn.result.followups || []);
+              }}
+            />
+            <ToolRow
+              icon={Gauge}
+              label="Details"
+              hint="The run's figures, the places it found and the stages it went through"
+              onClick={() => {
+                const turn = actions;
+                setActions(null);
+                setDetails(turn);
+              }}
+            />
+            <ToolRow
+              icon={narrating ? VolumeX : Volume2}
+              label={narrating ? "Stop reading" : "Read aloud"}
+              hint={narrating ? "The voice is running now" : "Speak the memo in the browser's own voice"}
+              onClick={() => {
+                setActions(null);
+                if (narrating) {
+                  stopNarration();
+                  return;
+                }
+                tour.stop();
+                // Markdown read aloud would be "asterisk asterisk" and "[1]"; say the prose.
+                speak(plainText(actions.result.answer || ""));
+              }}
+            />
+            <ToolRow
+              icon={Copy}
+              label="Copy"
+              hint="The memo as markdown, ready to paste"
+              onClick={() => {
+                setActions(null);
+                void copyAnswer(actions.result.answer || "");
+              }}
+            />
+            <ToolRow
+              icon={MapPin}
+              label="Show on the map"
+              hint="Place every authority at the court that decided it, and walk them"
+              onClick={() => {
+                const turn = actions;
+                setActions(null);
+                openMap(turn);
+              }}
+            />
+          </div>
         )}
       </DetailDrawer>
     </div>

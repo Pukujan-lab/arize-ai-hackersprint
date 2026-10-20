@@ -91,6 +91,11 @@ rules; this file holds the stack and library rules.
   and do not use a "free" tier that is licensed for non-commercial use only.
 - **Animation** → CSS transitions/Tailwind animation utilities, or MapLibre's own camera easing. Any
   motion must honour `prefers-reduced-motion` (see `CitationMap.tsx` and `map/narrator.ts`).
+- **An answer** → `components/Memo.tsx` renders the memo and nothing else, with each of the memo's own
+  headings as a shadcn `Accordion` dropdown (the writer's text above the first heading stays open). Every
+  other thing a reader can do with an answer — sources, follow-ups, details, the voice, copy, and the map
+  — lives behind the one `Answer tools` button in `pages/Chat.tsx`, which opens a `DetailDrawer` of
+  `ToolRow`s. Do not put a toolbar of buttons back under a memo.
 - **New npm dependency** → last resort. Check `web/package.json` first (it already ships Radix,
   recharts, cmdk, vaul, embla, sonner, zod, date-fns, lucide). If you add one, justify it in the PR
   and keep it out of the bundle when it is only used on one route.

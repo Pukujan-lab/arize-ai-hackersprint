@@ -1,8 +1,12 @@
 // The memo as formatted text: headings, bold, lists, quotes and paragraphs, with every citation
-// reference and every bolded authority name linked to the document behind it.
+// reference and every bolded authority name linked to the document behind it. Each of the memo's own
+// headings is a dropdown, so a long answer opens as its short answer plus a row of section titles and
+// the reader unfolds only what they came for.
 
 import { Fragment, useMemo, type ReactNode } from "react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import type { Citation } from "@/lib/citations";
+import { cn } from "@/lib/utils";
 
 const SOURCE_SEARCH = "https://www.courtlistener.com/?q=";
 
@@ -103,6 +107,39 @@ function parse(answer: string): Block[] {
   return blocks;
 }
 
+/** One dropdown: the heading that opens it, and the blocks the writer put under that heading. */
+type Section = { key: string; title: string | null; blocks: Block[] };
+
+/**
+ * The memo cut at its own top-level headings. Whatever the writer put above the first heading stays
+ * outside the dropdowns — that is the short answer, and it should be read without a click. A heading
+ * nested below the top level stays inside its section, so sub-headings do not become siblings of it.
+ */
+function split(blocks: Block[]): Section[] {
+  let top = 0;
+  for (const block of blocks) {
+    if (block.kind === "h") top = top ? Math.min(top, block.level) : block.level;
+  }
+  const sections: Section[] = [{ key: "s0", title: null, blocks: [] }];
+  for (const block of blocks) {
+    if (top && block.kind === "h" && block.level === top) {
+      sections.push({ key: `s${sections.length}`, title: block.text, blocks: [] });
+      continue;
+    }
+    sections[sections.length - 1].blocks.push(block);
+  }
+  return sections;
+}
+
+/** A section title is a button, so its text cannot hold links: the marks come off, the words stay. */
+function headingText(text: string): string {
+  return text
+    .replace(/\*\*|__|[*_`]/g, "")
+    .replace(/\[(\d{1,3})\]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const linkClass =
   "rounded-sm underline decoration-border underline-offset-2 hover:decoration-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
@@ -193,53 +230,91 @@ const headingClass: Record<number, string> = {
   3: "pt-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground",
 };
 
+function renderBlock(block: Block, key: string, citations: Citation[], cursor: { n: number }): ReactNode {
+  if (block.kind === "h") {
+    const Tag = `h${Math.max(2, block.level)}` as "h2" | "h3";
+    return (
+      <Tag key={key} className={headingClass[block.level]}>
+        {inlineNodes(block.text, citations, cursor)}
+      </Tag>
+    );
+  }
+  if (block.kind === "ul") {
+    return (
+      <ul key={key} className="list-disc space-y-1 pl-5">
+        {block.items.map((item, i) => (
+          <li key={`i${i}`}>{inlineNodes(item, citations, cursor)}</li>
+        ))}
+      </ul>
+    );
+  }
+  if (block.kind === "ol") {
+    return (
+      <ol key={key} className="list-decimal space-y-1 pl-5">
+        {block.items.map((item, i) => (
+          <li key={`i${i}`}>{inlineNodes(item, citations, cursor)}</li>
+        ))}
+      </ol>
+    );
+  }
+  if (block.kind === "quote") {
+    return (
+      <blockquote key={key} className="border-l-2 border-border pl-3 italic text-muted-foreground">
+        {inlineNodes(block.text, citations, cursor)}
+      </blockquote>
+    );
+  }
+  return <p key={key}>{inlineNodes(block.text, citations, cursor)}</p>;
+}
+
 /**
  * The memo as formatted text and nothing else. The list of authorities it cites is not repeated under
  * the prose: `[n]` already links to the document, and the Sources drawer holds the full list, so the
  * answer stays the answer instead of becoming a bibliography with a memo on top.
+ *
+ * `collapsible` is off for the draft as it streams in, because a heading that folded away the words
+ * arriving underneath it would hide the writing rather than help the reader.
  */
-export default function Memo({ answer, citations }: { answer: string; citations: Citation[] }) {
+export default function Memo({
+  answer,
+  citations,
+  collapsible = true,
+}: {
+  answer: string;
+  citations: Citation[];
+  collapsible?: boolean;
+}) {
   const blocks = useMemo(() => parse(answer), [answer]);
+  const sections = useMemo(() => split(blocks), [blocks]);
   const cursor = { n: 0 };
 
+  const plain = (list: Block[], prefix: string) => (
+    <div className="space-y-3">{list.map((block, i) => renderBlock(block, `${prefix}b${i}`, citations, cursor))}</div>
+  );
+
+  const lead = sections[0];
+  const titled = sections.slice(1);
+  if (!collapsible || !titled.length) {
+    return <div className="max-w-[70ch] text-sm leading-relaxed text-foreground">{plain(blocks, "")}</div>;
+  }
+
   return (
-    <div className="max-w-[70ch] space-y-3 text-sm leading-relaxed text-foreground">
-      {blocks.map((block, index) => {
-        if (block.kind === "h") {
-          const Tag = (`h${Math.max(2, block.level)}`) as "h2" | "h3";
-          return (
-            <Tag key={`b${index}`} className={headingClass[block.level]}>
-              {inlineNodes(block.text, citations, cursor)}
-            </Tag>
-          );
-        }
-        if (block.kind === "ul") {
-          return (
-            <ul key={`b${index}`} className="list-disc space-y-1 pl-5">
-              {block.items.map((item, i) => (
-                <li key={`i${i}`}>{inlineNodes(item, citations, cursor)}</li>
-              ))}
-            </ul>
-          );
-        }
-        if (block.kind === "ol") {
-          return (
-            <ol key={`b${index}`} className="list-decimal space-y-1 pl-5">
-              {block.items.map((item, i) => (
-                <li key={`i${i}`}>{inlineNodes(item, citations, cursor)}</li>
-              ))}
-            </ol>
-          );
-        }
-        if (block.kind === "quote") {
-          return (
-            <blockquote key={`b${index}`} className="border-l-2 border-border pl-3 italic text-muted-foreground">
-              {inlineNodes(block.text, citations, cursor)}
-            </blockquote>
-          );
-        }
-        return <p key={`b${index}`}>{inlineNodes(block.text, citations, cursor)}</p>;
-      })}
+    <div className="max-w-[70ch] text-sm leading-relaxed text-foreground">
+      {!!lead.blocks.length && plain(lead.blocks, "lead")}
+
+      {/* The first section is open, so an answer still leads with its substance; the rest are one click away. */}
+      <Accordion type="multiple" defaultValue={[titled[0].key]} className={cn(lead.blocks.length > 0 && "mt-2")}>
+        {titled.map((section) => (
+          <AccordionItem key={section.key} value={section.key} className="border-border/70">
+            <AccordionTrigger className="rounded-md py-1.5 text-sm font-semibold hover:bg-accent/60 hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+              {headingText(section.title ?? "")}
+            </AccordionTrigger>
+            <AccordionContent className="pb-2 motion-reduce:animate-none">
+              <div className="space-y-2">{section.blocks.map((block, i) => renderBlock(block, `${section.key}b${i}`, citations, cursor))}</div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
     </div>
   );
 }

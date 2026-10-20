@@ -94,12 +94,14 @@ place — opens in a drawer, so the page never grows a second column of dashboar
 | Send | `Send question` | `Chat.tsx` | `POST /api/ask`, then `GET /api/run/{id}` |
 | An example question, asked on the spot | the question text | `Chat.tsx` | `POST /api/ask` |
 | The stage the run has reached, with the draft as it is written | `Run progress` | `Chat.tsx` | `GET /api/run/{id}` (`events`, `partial`) |
+| Everything the reader can do with one answer, gathered in one drawer | `Answer tools` | `Chat.tsx` | none |
 | Everything behind one answer: the figures, the places, the retrieval stages | `Details` | `Chat.tsx`, `TurnDetails.tsx` | `GET /api/run/{id}` |
 | The authorities behind one answer | `Sources (n)` | `Chat.tsx`, `EvidenceList.tsx` | none |
-| Read the memo aloud, and stop it | `Read aloud`, `Stop` | `Chat.tsx`, `map/narrator.ts` | none (the browser's own voice; `POST /api/tts_ts` only if it cannot speak) |
+| Read the memo aloud, and stop it | `Read aloud`, `Stop reading` | `Chat.tsx`, `map/narrator.ts` | none (the browser's own voice; `POST /api/tts_ts` only if it cannot speak) |
 | Copy the memo | `Copy` | `Chat.tsx` | none |
 | Open this answer on the map | `Show on the map` | `Chat.tsx` | none |
 | Follow-up questions, asked with the previous run in context, held in a drawer | `Follow-ups (n)` | `Chat.tsx` | `POST /api/ask` with `prev_run_id` |
+| One section of the memo, unfolded and folded again | the section's own heading | `Memo.tsx` | none |
 | One authority: kind, court, date, citation, passage and link | `Authority` | `AuthorityDetail.tsx` | none |
 | The authorities at one place, from a pin — a small card over the map, each authority opening in place | the place label | `PlaceCard.tsx` | none |
 | Walk the answer: the short answer, the retrieval path, the opinion, the rest of the memo, then each authority in turn, the camera flying to each authority at the county scale | `Play the tour`, `Stop the tour` | `Chat.tsx`, `TourBar.tsx`, `map/tour.ts`, `hooks/use-tour.ts`, `CitationMap.tsx` | none (the browser's own voice; `POST /api/tts_ts` only if it cannot speak) |
@@ -124,8 +126,14 @@ Behaviour notes:
 - The memo is the answer and nothing else: its headings, prose, lists and quotes, with each `[n]` and
   each bolded authority name linking to the document. The list of authorities it cites is not repeated
   under the prose — that list is the `Sources` drawer. Everything else about an answer (sources,
-  follow-ups, the figures, the retrieval record) is reachable from the answer's own row of buttons and
-  opens in a drawer, so the thread stays a thread.
+  follow-ups, the figures, the retrieval record, the voice, the map) is reachable from one `Answer tools`
+  button and opens in a drawer, so the thread stays a thread and an answer ends in a line rather than a
+  toolbar.
+- Each of the memo's own headings is a dropdown: whatever the writer put above the first heading — the
+  short answer — reads without a click, the first section is open, and the rest unfold one at a time. A
+  heading nested below the top level stays inside its section instead of becoming a sibling of it. The
+  draft as it streams in is never folded, because a heading that hid the words arriving under it would
+  hide the writing rather than help the reader.
 - A refused or failed question appears as its own message and leaves the earlier answers in place; it
   never shows a blank pane.
 - Escape stops the voice, whether it is the read-aloud button or the tour. One thing is spoken at a
