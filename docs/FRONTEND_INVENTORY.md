@@ -26,27 +26,28 @@ any saved run opens from that list or from `?run=` on the address.
   `session.ts` (the device session id), `utils.ts` (`cn`).
 - `web/public/` — assets served as-is: `logo.svg`, `og.png`, `robots.txt`.
 
-The map is MapLibre GL JS over OpenFreeMap's Positron vector style, so labels stay sharp at every zoom
-and the muted basemap leaves the coloured pins to carry the meaning. If the style cannot be fetched the
-map falls back to an inline OpenStreetMap raster style rather than showing an empty pane. Neither source
-needs an account or an API key. Pins are DOM markers, so they stay readable and clickable even when the
-tiles do not arrive; a browser without WebGL gets a sentence saying so, and the authorities stay listed
-in the Sources drawer.
+The map is MapLibre GL JS over OpenStreetMap's own raster tiles, with the style written inline in
+`CitationMap.tsx` rather than fetched. That matters more than it looks: a fetched style document that is
+slow or unreachable leaves the whole pane blank, pins and all, and no amount of retrying fixes it from
+the page's side. The tiles need no account and no key, and they carry county boundaries, place names,
+neighbourhood names and historic sites at every zoom. The `raster-*` paint properties mute them to a
+grey ground so the coloured pins carry the meaning. Pins are DOM markers, so they stay readable and
+clickable even when the tiles do not arrive; a browser without WebGL gets a sentence saying so, and the
+authorities stay listed in the Sources drawer. Rotation is disabled, so the map cannot be twisted out of
+true by accident.
 
-The ground under the pins is mostly the basemap's own tiles. Positron ships the country and state
-outlines, neighbourhood names and points of interest but paints almost none of them, so
-`CitationMap.tsx` adds those layers back: the country and state outlines, suburb and neighbourhood
-names once the camera is close enough to mean them, and historic landmarks — monuments, memorials,
-battlefields, forts, ruins, archaeological sites — as a dot with its name. Those layers are optional by
-construction: a style that does not carry the source-layer draws nothing.
+The county mesh is drawn on top from the Census's own county boundaries — a public-domain GeoJSON served
+keyless over a CDN, filtered to Colorado so one download serves every zoom. A raster tile is a picture
+and cannot be asked for a crisp line, so the mesh is drawn as a dashed division of land with the
+county's name in small caps, and the state outline falls out of it for free. Each pin also carries the
+name of its court under the dot, shown once the camera is past the state view so the names do not pile
+up.
 
-The counties are the exception. OpenMapTiles, which Positron is styled over, stops at state level, so
-the county lines and the county names come from the Census's own county boundaries — a public-domain
-GeoJSON served keyless over a CDN, filtered to Colorado in the layer so one download serves every zoom.
-They are drawn whatever the style is, as a dashed division of land with the county's name in small
-caps. Each pin also carries the name of its court under the dot, shown once the camera is past the
-state view so the names do not pile up. The legend names the county lines and the historic sites
-whenever they were drawn.
+The links between authorities are bowed arcs, coloured by the kind of link, so the citation graph reads
+as a graph rather than as a set of roads. While the tour runs it inks the path it has walked — a white
+casing, a dark line, arrowheads drawn from a canvas image — and steps the untouched links back, so the
+traversal is the thing you see. The legend names the county lines and the walked path whenever they are
+drawn.
 
 ## Shared
 
@@ -100,7 +101,9 @@ place — opens in a drawer, so the page never grows a second column of dashboar
 | Fit the camera to every authority | `Fit to the authorities` | `CitationMap.tsx` | none |
 | Zoom and the map's own scale | `Zoom in`, `Zoom out`, the scale bar | `CitationMap.tsx` | none |
 | Each pin, named on the map and by the titles it stands for | the court's name; the citation titles, joined by `; ` | `CitationMap.tsx` | none |
-| The legend, naming each kind of authority, each kind of citation link, the county lines and the historic sites | the legend | `CitationMap.tsx` | none |
+| The citation links, bowed and coloured by kind, and the path the tour has walked inked over them with arrowheads | the arcs; the inked trail | `CitationMap.tsx` | none |
+| The county mesh and its names, drawn from the Census boundaries | the dashed county lines; the county names | `CitationMap.tsx` | none |
+| The legend, naming each kind of authority, each kind of citation link, the county lines and the walked path | the legend | `CitationMap.tsx` | none |
 | A saved run read back into the conversation | `?run=<id>` on the address | `Chat.tsx` | `GET /api/run/{id}` |
 
 Behaviour notes:

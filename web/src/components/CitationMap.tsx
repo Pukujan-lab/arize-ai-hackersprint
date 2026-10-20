@@ -1,9 +1,16 @@
-// The map: MapLibre GL JS over OpenFreeMap's Positron vector tiles, with one pin per place an answer's
-// authorities sit in and one line per link between them. The country, the state, the counties and the
-// historic landmarks under those pins come from the same tiles, so the map shows where in the country
-// and the county a court is, not just a dot. The style is keyless; if it cannot be reached the map
-// falls back to OpenStreetMap's own raster tiles rather than showing nothing. The pins are DOM markers,
-// so they stay readable and clickable whatever the tiles do.
+// The map: MapLibre GL JS over OpenStreetMap's own raster tiles, muted to a grey so the authorities
+// stay the only colour on the page, with one pin per place an answer's authorities sit in and one curved
+// arc per link between them.
+//
+// Two things here are deliberate. The style is written out in this file rather than fetched, so the map
+// has a valid style the instant it is created and never sits blank waiting for a style document from
+// somebody else's server; and the pins are DOM markers, so they are there whatever the tiles do. The
+// raster tiles carry the county lines, the place names, the neighbourhood names and the historic sites
+// at every zoom without an account or a key; the counties are also drawn from the Census's public-domain
+// boundaries, because a raster tile is a picture and cannot be asked for a crisp line.
+//
+// The links are curved arcs with arrowheads and the tour inks the path it has walked, so the citation
+// graph reads as a graph rather than as a set of roads.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
@@ -25,28 +32,26 @@ type Pin = {
   citations: Citation[];
 };
 
-const CENTER: [number, number] = [-98.583, 39.833];
+/** Colorado, low enough that the state sits in the middle of the pane before the pins are fitted. */
+const CENTER: [number, number] = [-105.55, 39.0];
+
+/** The font server the county names are drawn with: keyless, and only text ever asks it for anything. */
+const GLYPHS = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
 
 /**
- * The basemap: OpenFreeMap's Positron vector style. It is open source and self-hostable, it asks for no
- * account, no key and no quota, and Positron's muted greys leave the coloured pins as the only thing
- * competing for attention. Vector labels stay sharp at every zoom, which raster tiles do not.
- *
- * Raster providers were tried and dropped: the keyless-looking ones either want an API key from some
- * networks or licence themselves for non-commercial use only.
+ * The basemap, written here rather than fetched. OpenStreetMap's own raster tiles are the one keyless
+ * source that carries county boundaries, place names, neighbourhood names and historic sites at every
+ * zoom, and a raster layer needs no style document and no glyph server to start drawing. The raster
+ * paint properties then mute them, so the map is a grey ground with legible names and the pins carry
+ * the meaning.
  */
-const VECTOR = "https://tiles.openfreemap.org/styles/positron";
-
-/**
- * The fallback: OpenStreetMap's own raster tiles, styled inline, also with no account and no key. It is
- * plainer than Positron, but a plainer map beats an empty pane.
- */
-const RASTER: maplibregl.StyleSpecification = {
+const basemap = (): maplibregl.StyleSpecification => ({
   version: 8,
+  glyphs: GLYPHS,
   sources: {
     osm: {
       type: "raster",
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tiles: ["a", "b", "c"].map((sub) => `https://${sub}.tile.openstreetmap.org/{z}/{x}/{y}.png`),
       tileSize: 256,
       maxzoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -54,228 +59,93 @@ const RASTER: maplibregl.StyleSpecification = {
   },
   layers: [
     // Painted under the tiles so the pane is paper-coloured while they arrive, not white.
-    { id: "ground", type: "background", paint: { "background-color": "#f7f5f2" } },
-    { id: "osm", type: "raster", source: "osm" },
+    { id: "ground", type: "background", paint: { "background-color": "#eeece7" } },
+    {
+      id: "osm",
+      type: "raster",
+      source: "osm",
+      paint: {
+        "raster-saturation": -0.62,
+        "raster-contrast": 0.06,
+        "raster-brightness-min": 0.03,
+        "raster-brightness-max": 0.99,
+      },
+    },
   ],
-};
-
-/**
- * The historic landmarks worth naming: the things that make an area a place rather than a parcel —
- * monuments, memorials, battlefields, forts, ruins, archaeological sites. The tiles carry them, so no
- * extra data source is needed.
- */
-const HISTORIC: maplibregl.FilterSpecification = [
-  "any",
-  ["==", ["get", "class"], "historic"],
-  [
-    "in",
-    ["get", "subclass"],
-    [
-      "literal",
-      [
-        "monument",
-        "memorial",
-        "castle",
-        "ruins",
-        "archaeological_site",
-        "battlefield",
-        "fort",
-        "city_gate",
-        "wayside_cross",
-        "wayside_shrine",
-      ],
-    ],
-  ],
-];
-
-/**
- * The counties. The basemap's tiles stop at state level — they carry country and state borders but no
- * county of any state — so the county lines and the county names come from the Census's own boundaries,
- * which are public domain, keyless, and served over a CDN. The layer filters to Colorado, so one
- * download serves every zoom and the map is still Colorado's map.
- */
-const COUNTY_DATA = "https://cdn.jsdelivr.net/gh/plotly/datasets@master/geojson-counties-fips.json";
-const COUNTY_SOURCE = "co-counties";
-
-/**
- * Where the context layers go: the style's vector source, the font its glyph server already has, and
- * the layer to sit under. All three are read from the style rather than assumed, so a different style
- * (or the raster fallback) cannot point them at something that is not there.
- */
-function contextBase(map: maplibregl.Map): { vector: string | null; font?: string[]; before?: string } {
-  const style = map.getStyle();
-  const sources = (style.sources || {}) as Record<string, { type?: string }>;
-  const vector = Object.keys(sources).find((id) => sources[id]?.type === "vector") ?? null;
-
-  const layers = (style.layers || []) as {
-    id: string;
-    type: string;
-    layout?: Record<string, unknown>;
-  }[];
-  // Boundaries belong under the basemap's own names, and the names of counties and neighbourhoods
-  // belong with them, so both are inserted beneath the first label the style draws.
-  const before = layers.find((layer) => layer.type === "symbol")?.id;
-  // Whatever font the style already uses is the only one its glyph server is guaranteed to have.
-  const font = layers.find((layer) => layer.type === "symbol" && layer.layout?.["text-font"])?.layout?.[
-    "text-font"
-  ] as string[] | undefined;
-  return { vector, font, before };
-}
-
-/** The type for a county name: small caps, wide spacing, the way an atlas sets a county. */
-const countyNameLayout = (font?: string[]): maplibregl.SymbolLayerSpecification["layout"] => ({
-  ...(font ? { "text-font": font } : {}),
-  "text-field": ["coalesce", ["get", "NAME"], ["get", "name"]],
-  "text-size": ["interpolate", ["linear"], ["zoom"], 6, 10, 12, 12.5],
-  "text-letter-spacing": 0.1,
-  "text-transform": "uppercase",
-  "text-max-width": 8,
-  "text-padding": 8,
 });
 
-const countyNamePaint: maplibregl.SymbolLayerSpecification["paint"] = {
-  "text-color": CONTEXT_COLORS.countyLabel,
-  "text-halo-color": "#ffffff",
-  "text-halo-width": 1.5,
-  "text-halo-blur": 0.4,
-};
+/**
+ * The counties. The tiles draw their own county boundaries but faintly, and a raster tile cannot be
+ * asked for a line, so the county mesh and its names come from the Census's own boundaries: public
+ * domain, keyless, and served over a CDN. Only Colorado is kept, so the map is Colorado's map.
+ */
+const COUNTY_URL = "https://cdn.jsdelivr.net/gh/plotly/datasets@master/geojson-counties-fips.json";
+const COUNTY_SOURCE = "co-counties";
+const COUNTY_LINE = "co-county-line";
+const COUNTY_NAME = "co-county-name";
+
+/** One download for the whole page: every mount, and every style reload, reads the same promise. */
+let counties: Promise<GeoJSON.FeatureCollection | null> | null = null;
+
+function coloradoCounties(): Promise<GeoJSON.FeatureCollection | null> {
+  if (counties) return counties;
+  counties = fetch(COUNTY_URL)
+    .then((response) => (response.ok ? (response.json() as Promise<GeoJSON.FeatureCollection>) : null))
+    .then((all) => {
+      if (!all?.features) return null;
+      const features = all.features.filter(
+        (feature) => String((feature.properties as { STATE?: string } | null)?.STATE) === "08",
+      );
+      return features.length ? ({ type: "FeatureCollection", features } as GeoJSON.FeatureCollection) : null;
+    })
+    .catch(() => null);
+  return counties;
+}
+
+const TRAIL = "trail";
+const ARROW = "trail-arrow";
 
 /**
- * The ground under the pins: the country and state outlines, the counties, the neighbourhood names and
- * the historic landmarks, so the map says where in the country, the state and the county a court sits
- * rather than showing a dot in a void.
- *
- * The outlines, the neighbourhood names and the landmarks come from the basemap's own source-layers,
- * which the style ships but paints almost none of; the counties come from their own file, because the
- * tiles have none. Every tile-derived layer is optional by construction — a style without that
- * source-layer simply draws nothing — and the function reports whether it found vector tiles at all.
+ * A quadratic arc between two places. It is bowed to the left of a→b, so the two directions of one link
+ * never lie on top of each other, and it is measured in locally scaled degrees so a long link does not
+ * bow further off the page than a short one.
  */
-function addContextLayers(map: maplibregl.Map): boolean {
-  const base = contextBase(map);
-  const { vector, before } = base;
-
-  const add = (layer: maplibregl.LayerSpecification) => {
-    if (map.getLayer(layer.id)) return;
-    try {
-      map.addLayer(layer, before);
-    } catch {
-      // A style without this source-layer draws nothing; that is not a reason to lose the map.
-    }
-  };
-
-  // The counties are added whatever the style is, because they come from their own source rather than
-  // from the tiles. They are what makes the map answer "which county" at a glance.
-  try {
-    if (!map.getSource(COUNTY_SOURCE)) map.addSource(COUNTY_SOURCE, { type: "geojson", data: COUNTY_DATA });
-  } catch {
-    // No county file: the state outline below still stands.
+function curve(a: [number, number], b: [number, number]): [number, number][] {
+  const k = Math.cos((((a[1] + b[1]) / 2) * Math.PI) / 180) || 1;
+  const ax = a[0] * k;
+  const ay = a[1];
+  const bx = b[0] * k;
+  const by = b[1];
+  const dx = bx - ax;
+  const dy = by - ay;
+  const cx = (ax + bx) / 2 - dy * 0.14;
+  const cy = (ay + by) / 2 + dx * 0.14;
+  const points: [number, number][] = [];
+  for (let i = 0; i <= 24; i += 1) {
+    const t = i / 24;
+    const u = 1 - t;
+    points.push([(u * u * ax + 2 * u * t * cx + t * t * bx) / k, u * u * ay + 2 * u * t * cy + t * t * by]);
   }
+  return points;
+}
 
-  add({
-    id: "co-county-line",
-    type: "line",
-    source: COUNTY_SOURCE,
-    filter: ["==", ["get", "STATE"], "08"],
-    paint: {
-      "line-color": CONTEXT_COLORS.county,
-      "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.6, 9, 1.2, 14, 1.8],
-      "line-dasharray": [2, 1.4],
-      "line-opacity": ["interpolate", ["linear"], ["zoom"], 4, 0, 5.5, 0.95],
-    },
-  });
-
-  // Text needs the style's glyph server; the raster fallback has none, so it gets the lines only.
-  if (map.getStyle().glyphs) {
-    add({
-      id: "co-county-name",
-      type: "symbol",
-      source: COUNTY_SOURCE,
-      filter: ["==", ["get", "STATE"], "08"],
-      minzoom: 5.5,
-      layout: countyNameLayout(base.font),
-      paint: countyNamePaint,
-    });
-  }
-
-  if (!vector) return Boolean(map.getSource(COUNTY_SOURCE));
-
-  add({
-    id: "ctx-country",
-    type: "line",
-    source: vector,
-    "source-layer": "boundary",
-    filter: ["all", ["<=", ["get", "admin_level"], 4], ["!=", ["get", "maritime"], 1]],
-    paint: {
-      "line-color": CONTEXT_COLORS.state,
-      "line-width": ["interpolate", ["linear"], ["zoom"], 2, 0.7, 6, 1.3, 11, 2],
-      "line-opacity": 0.9,
-    },
-  });
-
-  add({
-    id: "ctx-area-name",
-    type: "symbol",
-    source: vector,
-    "source-layer": "place",
-    filter: ["in", ["get", "class"], ["literal", ["suburb", "quarter", "neighbourhood"]]],
-    minzoom: 11,
-    layout: {
-      ...(base.font ? { "text-font": base.font } : {}),
-      "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]],
-      "text-size": ["interpolate", ["linear"], ["zoom"], 11, 9.5, 15, 11.5],
-      "text-letter-spacing": 0.14,
-      "text-transform": "uppercase",
-      "text-max-width": 8,
-      "text-padding": 6,
-    },
-    paint: {
-      "text-color": CONTEXT_COLORS.areaLabel,
-      "text-halo-color": "#ffffff",
-      "text-halo-width": 1.2,
-      "text-opacity": 0.95,
-    },
-  });
-
-  add({
-    id: "ctx-historic-dot",
-    type: "circle",
-    source: vector,
-    "source-layer": "poi",
-    filter: HISTORIC,
-    minzoom: 7,
-    paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 7, 1.4, 11, 2.4, 14, 3.2],
-      "circle-color": CONTEXT_COLORS.historic,
-      "circle-opacity": 0.9,
-      "circle-stroke-color": "#ffffff",
-      "circle-stroke-width": 0.8,
-    },
-  });
-
-  add({
-    id: "ctx-historic-name",
-    type: "symbol",
-    source: vector,
-    "source-layer": "poi",
-    filter: HISTORIC,
-    minzoom: 11,
-    layout: {
-      ...(base.font ? { "text-font": base.font } : {}),
-      "text-field": ["coalesce", ["get", "name:en"], ["get", "name"]],
-      "text-size": 10,
-      "text-anchor": "top",
-      "text-offset": [0, 0.7],
-      "text-max-width": 7,
-      "text-padding": 4,
-    },
-    paint: {
-      "text-color": CONTEXT_COLORS.historicLabel,
-      "text-halo-color": "#ffffff",
-      "text-halo-width": 1.3,
-    },
-  });
-
-  return true;
+/** An arrowhead pointing right, drawn once on a canvas so the trail needs no sprite sheet or network. */
+function addArrow(map: maplibregl.Map, color: string) {
+  if (map.hasImage(ARROW)) return;
+  const size = 32;
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext("2d");
+  if (!context) return;
+  context.fillStyle = color;
+  context.beginPath();
+  context.moveTo(3, 5);
+  context.lineTo(size - 3, size / 2);
+  context.lineTo(3, size - 5);
+  context.closePath();
+  context.fill();
+  map.addImage(ARROW, context.getImageData(0, 0, size, size), { pixelRatio: 2 });
 }
 
 /** One pin per place: the authorities that resolve to the same court share it. */
@@ -308,6 +178,7 @@ export default function CitationMap({
   citations = NONE,
   edges = NONE,
   focus = null,
+  trail = NONE,
   onSelect,
   className,
 }: {
@@ -315,6 +186,8 @@ export default function CitationMap({
   edges?: Edge[];
   /** The place the tour is on, so the camera follows the voice. Null fits every authority. */
   focus?: string | null;
+  /** The places the tour has walked so far, in order, so the graph shows its own traversal. */
+  trail?: string[];
   onSelect: (place: MapPlace) => void;
   className?: string;
 }) {
@@ -323,10 +196,8 @@ export default function CitationMap({
   const markers = useRef<maplibregl.Marker[]>([]);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  /** Whether the basemap's vector tiles are there, so the legend only names what is actually drawn. */
-  const [context, setContext] = useState(false);
-  /** Bumped when a style finishes loading, because a new style drops the links layer along with it. */
-  const [epoch, setEpoch] = useState(0);
+  /** Whether the county mesh is drawn, so the legend only names what is actually there. */
+  const [county, setCounty] = useState(false);
 
   const pins = useMemo(() => buildPins(citations), [citations]);
 
@@ -335,15 +206,16 @@ export default function CitationMap({
     if (!map || !pins.length) return;
     const duration = reducedMotion() ? 0 : 700;
     if (pins.length === 1) {
-      map.easeTo({ center: pins[0].lngLat, zoom: 6.5, duration });
+      map.easeTo({ center: pins[0].lngLat, zoom: 8, duration });
       return;
     }
     const bounds = new maplibregl.LngLatBounds();
     for (const pin of pins) bounds.extend(pin.lngLat);
-    map.fitBounds(bounds, { padding: 72, maxZoom: 9, duration });
+    map.fitBounds(bounds, { padding: 80, maxZoom: 10, duration });
   }, [pins]);
 
-  // The map is created once; everything after this only updates its data.
+  // The map is created once; everything after this only updates its data. Rotation is off: a map that
+  // can be twisted by accident is a map that is hard to get back.
   useEffect(() => {
     const element = container.current;
     if (!element) return;
@@ -351,9 +223,15 @@ export default function CitationMap({
     try {
       map = new maplibregl.Map({
         container: element,
-        style: VECTOR,
+        style: basemap(),
         center: CENTER,
-        zoom: 3.4,
+        zoom: 6,
+        minZoom: 3,
+        maxZoom: 16,
+        maxPitch: 0,
+        dragRotate: false,
+        pitchWithRotate: false,
+        renderWorldCopies: false,
         attributionControl: { compact: true },
       });
     } catch {
@@ -361,46 +239,89 @@ export default function CitationMap({
       return;
     }
     mapRef.current = map;
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    map.touchZoomRotate.disableRotation();
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "imperial", maxWidth: 96 }), "bottom-left");
 
-    // A style document that never arrives would leave an empty pane, so the map falls back to the
-    // OpenStreetMap tiles, which need nothing from the network but the tiles themselves.
-    let fellBack = false;
-    const fallBack = () => {
-      if (fellBack) return;
-      fellBack = true;
-      map.setStyle(RASTER);
-    };
-    const giveUp = window.setTimeout(() => {
-      if (!map.isStyleLoaded()) fallBack();
-    }, 6000);
-
-    const onStyleLoad = () => {
-      window.clearTimeout(giveUp);
-      // A new style drops every layer added to the old one, so the country, the counties and their
-      // names are put back here rather than once at startup.
-      setContext(addContextLayers(map));
-      setReady(true);
-      setEpoch((count) => count + 1);
-    };
+    const onStyleLoad = () => setReady(true);
     map.on("style.load", onStyleLoad);
-    // A tile that 404s is not a failed basemap; only a style document that cannot be fetched is.
-    const onError = (event: { error?: { message?: string } }) => {
-      if (/style/i.test(String(event?.error?.message || ""))) fallBack();
-    };
-    map.on("error", onError);
+
+    // A map created before its pane has a height draws into nothing and stays blank until something
+    // else resizes the window, so the pane is watched rather than assumed.
+    const resize = new ResizeObserver(() => map.resize());
+    resize.observe(element);
 
     return () => {
-      window.clearTimeout(giveUp);
+      resize.disconnect();
       map.off("style.load", onStyleLoad);
-      map.off("error", onError);
       for (const marker of markers.current) marker.remove();
       markers.current = [];
       map.remove();
       mapRef.current = null;
     };
   }, []);
+
+  // The county mesh: the state outline falls out of it for free, because the outer edges of every
+  // Colorado county together are the state.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    let live = true;
+    void coloradoCounties().then((data) => {
+      if (!live || !data || !mapRef.current) return;
+      if (!map.getSource(COUNTY_SOURCE)) map.addSource(COUNTY_SOURCE, { type: "geojson", data });
+      // The counties belong under the citation links and the walked path, not over them, so they are
+      // inserted beneath the links layer rather than simply appended.
+      const before = map.getLayer("links") ? "links" : undefined;
+      if (!map.getLayer(COUNTY_LINE)) {
+        map.addLayer(
+          {
+            id: COUNTY_LINE,
+            type: "line",
+            source: COUNTY_SOURCE,
+            paint: {
+              "line-color": CONTEXT_COLORS.county,
+              "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.6, 9, 1.2, 14, 1.8],
+              "line-dasharray": [2, 1.4],
+              "line-opacity": ["interpolate", ["linear"], ["zoom"], 4.5, 0, 6, 0.95],
+            },
+          },
+          before,
+        );
+      }
+      if (!map.getLayer(COUNTY_NAME)) {
+        map.addLayer(
+          {
+            id: COUNTY_NAME,
+            type: "symbol",
+            source: COUNTY_SOURCE,
+            minzoom: 6.5,
+            layout: {
+              "text-font": ["Noto Sans Regular"],
+              "text-field": ["get", "NAME"],
+              "text-size": ["interpolate", ["linear"], ["zoom"], 6.5, 9.5, 12, 11.5],
+              "text-letter-spacing": 0.12,
+              "text-transform": "uppercase",
+              "text-max-width": 8,
+              "text-padding": 10,
+            },
+            paint: {
+              "text-color": CONTEXT_COLORS.countyLabel,
+              "text-halo-color": "#ffffff",
+              "text-halo-width": 1.4,
+              "text-halo-blur": 0.4,
+              "text-opacity": 0.85,
+            },
+          },
+          before,
+        );
+      }
+      setCounty(true);
+    });
+    return () => {
+      live = false;
+    };
+  }, [ready]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -417,7 +338,7 @@ export default function CitationMap({
       features.push({
         type: "Feature",
         properties: { arc: arcType(from.loc, to.loc) },
-        geometry: { type: "LineString", coordinates: [from.lngLat, to.lngLat] },
+        geometry: { type: "LineString", coordinates: curve(from.lngLat, to.lngLat) },
       });
     }
     const data: GeoJSON.FeatureCollection<GeoJSON.LineString> = { type: "FeatureCollection", features };
@@ -431,7 +352,7 @@ export default function CitationMap({
         id: "links",
         type: "line",
         source: "links",
-        layout: { "line-cap": "round" },
+        layout: { "line-cap": "round", "line-join": "round" },
         paint: {
           "line-color": [
             "match",
@@ -446,8 +367,8 @@ export default function CitationMap({
             ARC_COLORS.fed,
             ARC_COLORS.other,
           ],
-          "line-width": 1.6,
-          "line-opacity": 0.6,
+          "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.2, 8, 1.8],
+          "line-opacity": 0.55,
         },
       });
     }
@@ -464,7 +385,7 @@ export default function CitationMap({
       dot.type = "button";
       dot.dataset.dot = "";
       dot.className =
-        "flex h-7 w-7 items-center justify-center rounded-full border-2 border-background text-[11px] font-semibold text-white shadow-md transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+        "flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background text-[11px] font-semibold text-white shadow-md transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
       dot.style.backgroundColor = CATEGORY_COLORS[pin.loc.cat];
       dot.textContent = pin.citations.length > 1 ? String(pin.citations.length) : "";
       const names = pin.citations.map((citation) => citation.title || citation.citation || "Authority").join("; ");
@@ -487,7 +408,68 @@ export default function CitationMap({
     });
 
     fit();
-  }, [ready, epoch, pins, edges, onSelect, fit]);
+  }, [ready, pins, edges, onSelect, fit]);
+
+  // The traversal: the places the tour has already walked, joined in order, inked over the pale links.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const pinOf = new Map(pins.map((pin) => [pin.key, pin] as const));
+    const stops = trail.map((key) => pinOf.get(key)).filter((pin): pin is Pin => !!pin);
+    const features: GeoJSON.Feature<GeoJSON.LineString>[] = [];
+    for (let index = 1; index < stops.length; index += 1) {
+      const from = stops[index - 1];
+      const to = stops[index];
+      if (from.key === to.key) continue;
+      features.push({
+        type: "Feature",
+        properties: {},
+        geometry: { type: "LineString", coordinates: curve(from.lngLat, to.lngLat) },
+      });
+    }
+    const data: GeoJSON.FeatureCollection<GeoJSON.LineString> = { type: "FeatureCollection", features };
+
+    const source = map.getSource(TRAIL) as maplibregl.GeoJSONSource | undefined;
+    if (source) {
+      source.setData(data);
+    } else {
+      map.addSource(TRAIL, { type: "geojson", data });
+      addArrow(map, CONTEXT_COLORS.trail);
+      // A white casing under the ink, so the walked path stays legible over county lines and names.
+      map.addLayer({
+        id: `${TRAIL}-casing`,
+        type: "line",
+        source: TRAIL,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": "#ffffff", "line-width": 6, "line-opacity": 0.85 },
+      });
+      map.addLayer({
+        id: TRAIL,
+        type: "line",
+        source: TRAIL,
+        layout: { "line-cap": "round", "line-join": "round" },
+        paint: { "line-color": CONTEXT_COLORS.trail, "line-width": 2.6 },
+      });
+      map.addLayer({
+        id: `${TRAIL}-arrow`,
+        type: "symbol",
+        source: TRAIL,
+        layout: {
+          "symbol-placement": "line",
+          "symbol-spacing": 48,
+          "icon-image": ARROW,
+          "icon-size": 0.7,
+          "icon-rotation-alignment": "map",
+          "icon-allow-overlap": true,
+          "icon-ignore-placement": true,
+        },
+      });
+    }
+    // While the walk is running the untouched links step back, so the traversal is the thing you see.
+    if (map.getLayer("links")) {
+      map.setPaintProperty("links", "line-opacity", features.length ? 0.15 : 0.55);
+    }
+  }, [ready, trail, pins]);
 
   // At the scale of a state the pins are close enough that their names would pile up, so the names
   // arrive once the camera is close enough for them to mean something.
@@ -495,7 +477,7 @@ export default function CitationMap({
     const map = mapRef.current;
     if (!map || !ready) return;
     const apply = () => {
-      const show = map.getZoom() >= 4.5;
+      const show = map.getZoom() >= 5.5;
       for (const marker of markers.current) {
         const label = marker.getElement().querySelector<HTMLElement>("[data-label]");
         label?.classList.toggle("hidden", !show);
@@ -506,7 +488,7 @@ export default function CitationMap({
     return () => {
       map.off("zoom", apply);
     };
-  }, [ready, epoch, pins]);
+  }, [ready, pins]);
 
   // The tour marks the place it is speaking about, so the pin and the voice agree.
   useEffect(() => {
@@ -529,9 +511,11 @@ export default function CitationMap({
     if (!map || !ready) return;
     const pin = focus === null ? undefined : pins.find((candidate) => candidate.key === focus);
     if (!pin) return;
+    // The camera centres on the place but never dives in past the scale the graph was fitted at, so the
+    // other authorities and the walked path stay in view.
     map.easeTo({
       center: pin.lngLat,
-      zoom: Math.max(map.getZoom(), 7.5),
+      zoom: Math.min(Math.max(map.getZoom(), 5.5), 8),
       duration: reducedMotion() ? 0 : 900,
     });
   }, [focus, ready, pins]);
@@ -598,24 +582,28 @@ export default function CitationMap({
             </li>
           ))}
         </ul>
-        {context && (
+        {(county || trail.length > 1) && (
           <ul className="flex flex-wrap gap-x-3 gap-y-1 border-t border-border pt-1">
-            <li className="flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="w-3 shrink-0 border-t border-dashed"
-                style={{ borderColor: CONTEXT_COLORS.county }}
-              />
-              County boundary
-            </li>
-            <li className="flex items-center gap-1.5">
-              <span
-                aria-hidden="true"
-                className="h-1.5 w-1.5 shrink-0 rounded-full"
-                style={{ backgroundColor: CONTEXT_COLORS.historic }}
-              />
-              Historic site
-            </li>
+            {county && (
+              <li className="flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="w-3 shrink-0 border-t border-dashed"
+                  style={{ borderColor: CONTEXT_COLORS.county }}
+                />
+                County boundary
+              </li>
+            )}
+            {trail.length > 1 && (
+              <li className="flex items-center gap-1.5">
+                <span
+                  aria-hidden="true"
+                  className="h-0.5 w-3 shrink-0 rounded-full"
+                  style={{ backgroundColor: CONTEXT_COLORS.trail }}
+                />
+                Path walked
+              </li>
+            )}
           </ul>
         )}
       </div>

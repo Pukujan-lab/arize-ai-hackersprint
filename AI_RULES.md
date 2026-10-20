@@ -20,13 +20,16 @@ rules; this file holds the stack and library rules.
   `/api/tts_ts`) fetched with `fetch`; a device id is attached to `/api/*` calls by
   `web/src/lib/session.ts`.
 - **Map:** **MapLibre GL JS** (`maplibre-gl`) in `web/src/components/CitationMap.tsx`, drawing
-  **OpenFreeMap**'s Positron vector style and falling back to an inline OpenStreetMap raster style when
-  it cannot be fetched. Both are keyless. The page has one theme, so the map is light; OpenFreeMap also
-  publishes a `dark` style for the day the app grows one. Pins are DOM markers and links are a GeoJSON
-  line layer. The country and state outlines, the neighbourhood names and the historic landmarks are
-  drawn from the style's own vector source-layers; the counties are the one exception, because the
-  tiles have none — they come from a public-domain Census county GeoJSON, filtered to Colorado in the
-  layer. Colours the canvas paints with are constants in `web/src/map/palette.ts`.
+  **OpenStreetMap**'s own raster tiles through a style written inline in that file — no style document
+  to fetch, no glyph server to wait on, no key — muted with the `raster-*` paint properties so the pins
+  carry the meaning. A fetched vector style was tried and dropped: when the style document is slow or
+  unreachable the whole pane stays blank, pins included. The tiles carry county boundaries, place names,
+  neighbourhood names and historic sites; the county mesh and its names are additionally drawn from a
+  public-domain Census county GeoJSON filtered to Colorado, because a raster tile cannot be asked for a
+  crisp line. Pins are DOM markers and links are GeoJSON line layers, so both survive the tiles failing.
+  Rotation is disabled. Citation links are bowed arcs; the tour inks the path it has walked over them,
+  with arrowheads drawn from a canvas image, so the graph reads as a graph. Colours the canvas paints
+  with are constants in `web/src/map/palette.ts`.
 - **Voice:** the browser's own `speechSynthesis` speaks first — it needs no key, no network and no clip,
   so it starts on the click that asked for it, and on Edge/Windows it is the Microsoft natural voices.
   The server chain (Fish Audio → ElevenLabs → local Kokoro) behind `/api/tts_ts` is the fallback for a
@@ -78,8 +81,9 @@ rules; this file holds the stack and library rules.
 - **The map** → extend `web/src/components/CitationMap.tsx` and `web/src/map/palette.ts`. MapLibre is
   the map; do not add a second mapping or 3D library (no deck.gl, three.js, Mapbox, Leaflet). Keep the
   tile source keyless, keep pins as DOM markers so they survive a tile outage, and keep the legend
-  reading the same constants the canvas paints with. The basemap is OpenFreeMap's Positron style with
-  the OpenStreetMap raster style as the fallback; do not add a basemap that needs an API key or a token,
+  reading the same constants the canvas paints with. The basemap is OpenStreetMap's raster tiles through
+  a style written inline in `CitationMap.tsx` — keep it inline, because a fetched style document that is
+  slow or unreachable leaves the whole pane blank; do not add a basemap that needs an API key or a token,
   and do not use a "free" tier that is licensed for non-commercial use only.
 - **Animation** → CSS transitions/Tailwind animation utilities, or MapLibre's own camera easing. Any
   motion must honour `prefers-reduced-motion` (see `CitationMap.tsx` and `map/narrator.ts`).

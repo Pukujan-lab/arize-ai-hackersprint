@@ -247,6 +247,17 @@ export default function Chat() {
     return `${pathLine(mapTurn.result)} ${drawn}`;
   }, [mapTurn]);
 
+  // The places the walk has reached, in order, so the map can ink the traversal as it happens.
+  const trail = useMemo(() => {
+    if (!tour.active) return [];
+    const out: string[] = [];
+    for (const step of tourSteps.slice(0, tour.index + 1)) {
+      if (!step.place || out[out.length - 1] === step.place) continue;
+      out.push(step.place);
+    }
+    return out;
+  }, [tour.active, tour.index, tourSteps]);
+
   // The walk belongs to the map: leaving the map leaves the walk.
   useEffect(() => {
     if (mode !== "map") tour.stop();
@@ -332,6 +343,7 @@ export default function Chat() {
                   citations={mapTurn.result.citations}
                   edges={mapTurn.result.edges}
                   focus={tour.active ? tour.current?.place ?? null : null}
+                  trail={trail}
                   onSelect={selectPlace}
                   className="h-full"
                 />
