@@ -1,6 +1,7 @@
-// The map: MapLibre GL JS over OpenStreetMap raster tiles, with one pin per place an answer's
-// authorities sit in and one line per link between them. The pins are DOM markers, so they stay
-// readable and clickable even when the tile provider cannot be reached.
+// The map: MapLibre GL JS over OpenFreeMap vector tiles, with one pin per place an answer's
+// authorities sit in and one line per link between them. The vector styles are keyless; if one cannot
+// be reached the map falls back to OpenStreetMap raster tiles rather than showing nothing. The pins are
+// DOM markers, so they stay readable and clickable whatever the tiles do.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
@@ -22,18 +23,32 @@ type Pin = {
   citations: Citation[];
 };
 
-const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
-const ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
 const CENTER: [number, number] = [-98.583, 39.833];
 
-/** The style is inline: one raster source over OpenStreetMap, no account and no API key. */
-const STYLE: maplibregl.StyleSpecification = {
+/**
+ * The basemap: OpenFreeMap's published vector styles. Vector tiles stay sharp at every zoom and carry
+ * their own labels, and the project asks for no account, no API key and no tile quota.
+ */
+const VECTOR_LIGHT = "https://tiles.openfreemap.org/styles/positron";
+const VECTOR_DARK = "https://tiles.openfreemap.org/styles/dark";
+
+/** The fallback: OpenStreetMap's own raster tiles, styled inline, also with no account and no key. */
+const RASTER: maplibregl.StyleSpecification = {
   version: 8,
   sources: {
-    osm: { type: "raster", tiles: [TILES], tileSize: 256, maxzoom: 19, attribution: ATTRIBUTION },
+    osm: {
+      type: "raster",
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+    },
   },
   layers: [{ id: "osm", type: "raster", source: "osm" }],
 };
+
+const prefersDark = () => !!window.matchMedia?.("(prefers-color-scheme: dark)").matches;
+const vectorStyle = (dark: boolean) => (dark ? VECTOR_DARK : VECTOR_LIGHT);
 
 /** One pin per place: the authorities that resolve to the same court share it. */
 function buildPins(citations: Citation[]): Pin[] {
@@ -80,6 +95,10 @@ export default function CitationMap({
   const markers = useRef<maplibregl.Marker[]>([]);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
+  /** Which basemap is drawn: the vector style, or the raster fallback once the vector one fails. */
+  const [basemap, setBasemap] = useState<"vector" | "raster">("vector");
+  /** Bumped when a style finishes loading, because a new style drops the links layer along with it. */
+  const [epoch, setEpoch] = useState(0);
 
   const pins = useMemo(() => buildPins(citations), [citations]);
 
@@ -104,7 +123,7 @@ export default function CitationMap({
     try {
       map = new maplibregl.Map({
         container: element,
-        style: STYLE,
+        style: vectorStyle(prefersDark()),
         center: CENTER,
         zoom: 3.4,
         attributionControl: { compact: true },
@@ -116,10 +135,35 @@ export default function CitationMap({
     mapRef.current = map;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "imperial", maxWidth: 96 }), "bottom-left");
-    const onLoad = () => setReady(true);
-    map.on("load", onLoad);
+
+    // A style that never arrives would leave an empty pane, so the map falls back to the raster tiles.
+    let fellBack = false;
+    const fallBack = () => {
+      if (fellBack) return;
+      fellBack = true;
+      setBasemap("raster");
+      map.setStyle(RASTER);
+    };
+    const giveUp = window.setTimeout(() => {
+      if (!map.isStyleLoaded()) fallBack();
+    }, 6000);
+
+    const onStyleLoad = () => {
+      window.clearTimeout(giveUp);
+      setReady(true);
+      setEpoch((count) => count + 1);
+    };
+    map.on("style.load", onStyleLoad);
+    // A tile that 404s is not a failed basemap; only a style document that cannot be fetched is.
+    const onError = (event: { error?: { message?: string } }) => {
+      if (/style/i.test(String(event?.error?.message || ""))) fallBack();
+    };
+    map.on("error", onError);
+
     return () => {
-      map.off("load", onLoad);
+      window.clearTimeout(giveUp);
+      map.off("style.load", onStyleLoad);
+      map.off("error", onError);
       for (const marker of markers.current) marker.remove();
       markers.current = [];
       map.remove();
@@ -127,20 +171,26 @@ export default function CitationMap({
     };
   }, []);
 
-  // Paper tiles at night: the raster is dimmed rather than swapped, so there is one tile source.
+  // Light and dark are two published styles, so the basemap follows the system setting. The raster
+  // fallback has no dark twin, so it is dimmed instead of swapped.
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !ready) return;
     const query = window.matchMedia("(prefers-color-scheme: dark)");
     const paint = () => {
-      if (!map.getLayer("osm")) return;
-      map.setPaintProperty("osm", "raster-brightness-max", query.matches ? 0.6 : 1);
-      map.setPaintProperty("osm", "raster-saturation", query.matches ? -0.4 : 0);
+      if (basemap === "raster") {
+        if (!map.getLayer("osm")) return;
+        map.setPaintProperty("osm", "raster-brightness-max", query.matches ? 0.6 : 1);
+        map.setPaintProperty("osm", "raster-saturation", query.matches ? -0.4 : 0);
+        return;
+      }
+      map.setStyle(vectorStyle(query.matches));
     };
-    paint();
+    // Only a change needs handling: the first style was chosen when the map was created.
+    if (basemap === "raster") paint();
     query.addEventListener("change", paint);
     return () => query.removeEventListener("change", paint);
-  }, [ready]);
+  }, [ready, basemap]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -213,7 +263,7 @@ export default function CitationMap({
     });
 
     fit();
-  }, [ready, pins, edges, onSelect, fit]);
+  }, [ready, epoch, pins, edges, onSelect, fit]);
 
   // The tour marks the place it is speaking about, so the pin and the voice agree.
   useEffect(() => {

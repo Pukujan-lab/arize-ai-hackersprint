@@ -19,10 +19,11 @@ rules; this file holds the stack and library rules.
 - **Data:** JSON routes on the same origin (`/api/ask`, `/api/run/<id>`, `/api/runs`, `/api/stack`,
   `/api/tts_ts`) fetched with `fetch`; a device id is attached to `/api/*` calls by
   `web/src/lib/session.ts`.
-- **Map:** **MapLibre GL JS** (`maplibre-gl`) over OpenStreetMap raster tiles, in
-  `web/src/components/CitationMap.tsx`. The style is inline (one raster source, no account, no API
-  key); pins are DOM markers and links are a GeoJSON line layer. Colours the canvas paints with are
-  constants in `web/src/map/palette.ts`.
+- **Map:** **MapLibre GL JS** (`maplibre-gl`) in `web/src/components/CitationMap.tsx`, drawing
+  **OpenFreeMap** vector styles (`positron` by day, `dark` by night) and falling back to an inline
+  OpenStreetMap raster style when those cannot be fetched. Both are keyless. Pins are DOM markers and
+  links are a GeoJSON line layer. Colours the canvas paints with are constants in
+  `web/src/map/palette.ts`.
 - **Voice:** server TTS chain (Fish Audio → ElevenLabs → local Kokoro) behind `/api/tts_ts`, with the
   browser's own `speechSynthesis` as the last resort. All narration goes through
   `web/src/map/narrator.ts`: the read-aloud button via `hooks/use-narration.ts`, the map tour via
@@ -71,7 +72,8 @@ rules; this file holds the stack and library rules.
 - **The map** → extend `web/src/components/CitationMap.tsx` and `web/src/map/palette.ts`. MapLibre is
   the map; do not add a second mapping or 3D library (no deck.gl, three.js, Mapbox, Leaflet). Keep the
   tile source keyless, keep pins as DOM markers so they survive a tile outage, and keep the legend
-  reading the same constants the canvas paints with.
+  reading the same constants the canvas paints with. Basemaps are OpenFreeMap vector styles with the
+  OpenStreetMap raster style as the fallback; do not add a basemap that needs an API key or a token.
 - **Animation** → CSS transitions/Tailwind animation utilities, or MapLibre's own camera easing. Any
   motion must honour `prefers-reduced-motion` (see `CitationMap.tsx` and `map/narrator.ts`).
 - **New npm dependency** → last resort. Check `web/package.json` first (it already ships Radix,

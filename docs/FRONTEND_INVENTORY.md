@@ -26,10 +26,12 @@ any saved run opens from that list or from `?run=` on the address.
   `session.ts` (the device session id), `utils.ts` (`cn`).
 - `web/public/` — assets served as-is: `logo.svg`, `og.png`, `robots.txt`.
 
-The map is MapLibre GL JS over OpenStreetMap raster tiles, styled inline in `CitationMap.tsx` so no
-account or API key is needed. Pins are DOM markers, so they stay readable and clickable even when the
-tile provider cannot be reached; a browser without WebGL gets a sentence saying so, and the authorities
-stay listed in the Sources drawer.
+The map is MapLibre GL JS over OpenFreeMap's published vector styles — `positron` in light, `dark` in
+dark — so labels stay sharp at every zoom and the basemap follows the system setting. If those cannot be
+fetched the map falls back to an inline OpenStreetMap raster style, dimmed in dark mode, rather than
+showing an empty pane. Neither source needs an account or an API key. Pins are DOM markers, so they stay
+readable and clickable even when the tiles do not arrive; a browser without WebGL gets a sentence saying
+so, and the authorities stay listed in the Sources drawer.
 
 ## Shared
 
