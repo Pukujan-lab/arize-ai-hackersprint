@@ -19,7 +19,7 @@ any saved run opens from that list or from `?run=` on the address.
   `Memo.tsx` (the memo as formatted text, with its citation links), `StatRow.tsx`, and the UI
   primitives under `ui/`.
 - `web/src/map/` — `palette.ts` (the colours and labels the map paints with), `narrator.ts` (speech,
-  clip fetching and timing).
+  clip fetching and timing), `tour.ts` (the stops the narrated walk takes, built from the run itself).
 - `web/src/lib/` — `api.ts` (every read: the server's routes, with the sample corpus behind them),
   `demo.ts` (the bundled sample corpus and the notice that labels it), `citations.ts` (where a citation
   sits on the map and how it is labelled), `runs.ts` (the shapes of the run data the server returns),
@@ -77,10 +77,13 @@ place — opens in a drawer, so the page never grows a second column of dashboar
 | Follow-up questions, asked with the previous run in context | the follow-up text | `Chat.tsx` | `POST /api/ask` with `prev_run_id` |
 | One authority: kind, court, date, citation, passage and link | `Authority` | `AuthorityDetail.tsx` | none |
 | The authorities at one place, from a pin | the place label | `Chat.tsx`, `EvidenceList.tsx` | none |
+| Walk the answer: the memo, the retrieval path, then each authority in turn | `Play the tour`, `Stop the tour` | `Chat.tsx`, `TourPanel.tsx`, `map/tour.ts`, `hooks/use-tour.ts` | `POST /api/tts_ts` |
+| The stop being spoken, and the transcript of every stop so far | `Tour` (region), `Tour transcript` | `TourPanel.tsx` | none |
+| The path the retriever took and how many citation links join the authorities | the line above the tour | `Chat.tsx`, `map/tour.ts` | `GET /api/run/{id}` (`retrieval`, `edges`) |
 | Fit the camera to every authority | `Fit to the authorities` | `CitationMap.tsx` | none |
 | Zoom and the map's own scale | `Zoom in`, `Zoom out`, the scale bar | `CitationMap.tsx` | none |
 | Each pin, named by the titles it stands for | the citation titles, joined by `; ` | `CitationMap.tsx` | none |
-| The legend, naming each kind of authority | the legend | `CitationMap.tsx` | none |
+| The legend, naming each kind of authority and each kind of citation link | the legend | `CitationMap.tsx` | none |
 | A saved run read back into the conversation | `?run=<id>` on the address | `Chat.tsx` | `GET /api/run/{id}` |
 
 Behaviour notes:
@@ -92,7 +95,13 @@ Behaviour notes:
   disclaimer when it carried one).
 - A refused or failed question appears as its own message and leaves the earlier answers in place; it
   never shows a blank pane.
-- Escape stops the voice. One answer is read at a time.
+- Escape stops the voice, whether it is the read-aloud button or the tour. One thing is spoken at a
+  time: starting the tour stops the read-aloud, and starting the read-aloud stops the tour.
+- The tour is built from the run, not from a script: the question, the memo's own paragraphs under its
+  own headings, the path the retriever recorded, then one stop per authority. A stop that names an
+  authority moves the camera to its pin and marks it. It never starts on its own; leaving the map, or
+  asking a new question, stops it. When no clip can be played the walk continues in text and the panel
+  says the voice is unavailable, so the transcript is never lost with the audio.
 - A pin is one place: the authorities that resolve to the same place share it, and the pin's label says
   how many it stands for. A link is drawn between the pins its two authorities sit on; a link inside one
   place is not drawn.

@@ -8,7 +8,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { LocateFixed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { arcType, locate, type Citation, type Edge, type Location } from "@/lib/citations";
-import { ARC_COLORS, CATEGORY_COLORS, CATEGORY_LABELS } from "@/map/palette";
+import { ARC_COLORS, ARC_LABELS, CATEGORY_COLORS, CATEGORY_LABELS } from "@/map/palette";
 import { cn } from "@/lib/utils";
 
 /** The authorities that resolve to one place on the map. */
@@ -64,11 +64,14 @@ const NONE: never[] = [];
 export default function CitationMap({
   citations = NONE,
   edges = NONE,
+  focus = null,
   onSelect,
   className,
 }: {
   citations?: Citation[];
   edges?: Edge[];
+  /** The place the tour is on, so the camera follows the voice. Null fits every authority. */
+  focus?: string | null;
   onSelect: (place: MapPlace) => void;
   className?: string;
 }) {
@@ -195,6 +198,7 @@ export default function CitationMap({
       element.type = "button";
       element.className =
         "flex h-7 w-7 items-center justify-center rounded-full border-2 border-background text-[11px] font-semibold text-white shadow-md transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+      element.dataset.place = pin.key;
       element.style.backgroundColor = CATEGORY_COLORS[pin.loc.cat];
       element.textContent = pin.citations.length > 1 ? String(pin.citations.length) : "";
       const names = pin.citations.map((citation) => citation.title || citation.citation || "Authority").join("; ");
@@ -210,6 +214,32 @@ export default function CitationMap({
 
     fit();
   }, [ready, pins, edges, onSelect, fit]);
+
+  // The tour marks the place it is speaking about, so the pin and the voice agree.
+  useEffect(() => {
+    for (const marker of markers.current) {
+      const element = marker.getElement();
+      const marked = focus !== null && element.dataset.place === focus;
+      element.classList.toggle("scale-125", marked);
+      element.classList.toggle("ring-2", marked);
+      element.classList.toggle("ring-foreground", marked);
+      element.classList.toggle("ring-offset-2", marked);
+      element.classList.toggle("ring-offset-background", marked);
+    }
+  }, [focus, ready, pins]);
+
+  // The camera follows the tour to the place it is speaking about; with no place, every pin stays in view.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const pin = focus === null ? undefined : pins.find((candidate) => candidate.key === focus);
+    if (!pin) return;
+    map.easeTo({
+      center: pin.lngLat,
+      zoom: Math.max(map.getZoom(), 7.5),
+      duration: reducedMotion() ? 0 : 900,
+    });
+  }, [focus, ready, pins]);
 
   if (failed) {
     return (
@@ -243,18 +273,32 @@ export default function CitationMap({
         Fit to the authorities
       </Button>
 
-      <ul className="absolute bottom-3 right-3 hidden gap-x-3 gap-y-1 rounded-md border border-border bg-background/90 px-2.5 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur sm:flex sm:max-w-[15rem] sm:flex-wrap">
-        {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map((category) => (
-          <li key={category} className="flex items-center gap-1.5">
-            <span
-              aria-hidden="true"
-              className="h-2 w-2 shrink-0 rounded-full"
-              style={{ backgroundColor: CATEGORY_COLORS[category] }}
-            />
-            {CATEGORY_LABELS[category]}
-          </li>
-        ))}
-      </ul>
+      <div className="absolute bottom-3 right-3 hidden max-w-[16rem] flex-col gap-1 rounded-md border border-border bg-background/90 px-2.5 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur sm:flex">
+        <ul className="flex flex-wrap gap-x-3 gap-y-1">
+          {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map((category) => (
+            <li key={category} className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="h-2 w-2 shrink-0 rounded-full"
+                style={{ backgroundColor: CATEGORY_COLORS[category] }}
+              />
+              {CATEGORY_LABELS[category]}
+            </li>
+          ))}
+        </ul>
+        <ul className="flex flex-wrap gap-x-3 gap-y-1 border-t border-border pt-1">
+          {(Object.keys(ARC_LABELS) as (keyof typeof ARC_LABELS)[]).map((arc) => (
+            <li key={arc} className="flex items-center gap-1.5">
+              <span
+                aria-hidden="true"
+                className="h-0.5 w-3 shrink-0 rounded-full"
+                style={{ backgroundColor: ARC_COLORS[arc] }}
+              />
+              {ARC_LABELS[arc]}
+            </li>
+          ))}
+        </ul>
+      </div>
 
       {!pins.length && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center p-6">

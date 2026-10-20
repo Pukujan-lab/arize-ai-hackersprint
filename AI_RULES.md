@@ -25,7 +25,9 @@ rules; this file holds the stack and library rules.
   constants in `web/src/map/palette.ts`.
 - **Voice:** server TTS chain (Fish Audio → ElevenLabs → local Kokoro) behind `/api/tts_ts`, with the
   browser's own `speechSynthesis` as the last resort. All narration goes through
-  `web/src/map/narrator.ts`.
+  `web/src/map/narrator.ts`: the read-aloud button via `hooks/use-narration.ts`, the map tour via
+  `hooks/use-tour.ts` (the stops are built in `web/src/map/tour.ts`, the controls are
+  `components/TourPanel.tsx` under the map). The tour never autoplays.
 - **Backend libs:** `networkx` (case graph), `numpy`/`scipy` (ranking), `httpx`/`requests` (HTTP),
   `arize-otel` + `openinference-instrumentation` (tracing/evals). Storage is Octo (HTTP) and SurrealDB
   (with a NetworkX fallback).
@@ -100,9 +102,10 @@ rules; this file holds the stack and library rules.
 - `app/` — FastAPI backend package (`server.py`, `agents.py`, `llm.py`, `graph_store.py`,
   `octo_retriever.py`, `ttschain.py`, `coord.py`, `contracts.py`).
 - `web/src/pages/` — one file per route (`Chat.tsx` is `/`), `web/src/components/` — app components
-  (the shell is `AppShell.tsx`, the map is `CitationMap.tsx`), `web/src/components/ui/` — shadcn
-  primitives (do not edit), `web/src/lib/` — pure helpers, `web/src/map/` — the map's colours and the
-  narrator, `web/src/hooks/` — hooks.
+  (the shell is `AppShell.tsx`, the map is `CitationMap.tsx`, the tour's controls are
+  `TourPanel.tsx`), `web/src/components/ui/` — shadcn primitives (do not edit), `web/src/lib/` — pure
+  helpers, `web/src/map/` — the map's colours, the narrator and the tour's stops, `web/src/hooks/` —
+  hooks (`use-narration.ts`, `use-tour.ts`).
 - `schema/`, `migrations/` — the versioned Octo data model. `contracts/` — API, agent and storage
   contracts. `acs/` — agent coordination. `tests/`, `tools/`, `deploy/`, `docs/`.
 - A new top-level file or folder must be added to `repo.manifest.json` in the same change.

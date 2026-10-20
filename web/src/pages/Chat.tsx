@@ -26,11 +26,14 @@ import CitationMap, { type MapPlace } from "@/components/CitationMap";
 import DetailDrawer from "@/components/DetailDrawer";
 import EvidenceList from "@/components/EvidenceList";
 import Memo from "@/components/Memo";
+import TourPanel from "@/components/TourPanel";
 import TurnDetails from "@/components/TurnDetails";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useNarration } from "@/hooks/use-narration";
+import { useTour } from "@/hooks/use-tour";
+import { pathLine, tourPlan } from "@/map/tour";
 import { AskRefused, STAGE_PLAN, STAGE_WORDS, ask, loadRunResult, type AskTick, type Source, type StageTick } from "@/lib/api";
 import { citeType, type Citation, type RunResult } from "@/lib/citations";
 import { SUGGESTIONS } from "@/lib/demo";
@@ -105,7 +108,11 @@ export default function Chat() {
 
   const { status: narrationStatus, speak, stop: stopNarration, active: narrating } = useNarration();
 
+  /** The tour is declared below the answer it walks, so the thread's own controls reach it through a ref. */
+  const stopTourRef = useRef<() => void>(() => {});
+
   const clearThread = useCallback(() => {
+    stopTourRef.current();
     stopNarration();
     setTurns([]);
     setDraft("");
@@ -200,7 +207,9 @@ export default function Chat() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") stopNarration();
+      if (event.key !== "Escape") return;
+      stopNarration();
+      stopTourRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -215,6 +224,28 @@ export default function Chat() {
     () => assistants.find((turn) => turn.id === mapTurnId) ?? latest,
     [assistants, mapTurnId, latest],
   );
+
+  // The tour walks the answer that is on the map: the memo, the path the retriever took, then every
+  // authority at the place the camera moves to. It starts on a click, never on its own.
+  const tourSteps = useMemo(() => (mapTurn ? tourPlan(mapTurn.result) : []), [mapTurn]);
+  const tour = useTour(tourSteps, stopNarration);
+  useEffect(() => {
+    stopTourRef.current = tour.stop;
+  }, [tour.stop]);
+
+  const mapPath = useMemo(() => {
+    if (!mapTurn) return "";
+    const links = mapTurn.result.edges?.length ?? 0;
+    const drawn = links
+      ? `${links} citation ${links === 1 ? "link" : "links"} drawn between them.`
+      : "No citation link joins them.";
+    return `${pathLine(mapTurn.result)} ${drawn}`;
+  }, [mapTurn]);
+
+  // The walk belongs to the map: leaving the map leaves the walk.
+  useEffect(() => {
+    if (mode !== "map") tour.stop();
+  }, [mode, tour.stop]);
 
   const title = useMemo(() => {
     const first = turns.find((turn) => turn.role === "user");
@@ -287,26 +318,42 @@ export default function Chat() {
       </header>
 
       {mode === "map" ? (
-        <div className="min-h-0 flex-1 p-3">
-          {mapTurn ? (
-            <CitationMap
-              citations={mapTurn.result.citations}
-              edges={mapTurn.result.edges}
-              onSelect={selectPlace}
-              className="h-full"
-            />
-          ) : (
-            <div className="grid h-full place-items-center rounded-lg border border-border bg-card p-6 text-center">
-              <div className="max-w-sm space-y-3">
-                <MapPin className="mx-auto h-6 w-6 text-muted-foreground" />
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Ask a question first: the map places every authority the answer cites at the court that decided it.
-                </p>
-                <Button variant="outline" size="sm" onClick={() => setMode("chat")}>
-                  Back to the chat
-                </Button>
+        <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
+          <div className="min-h-0 flex-1">
+            {mapTurn ? (
+              <CitationMap
+                citations={mapTurn.result.citations}
+                edges={mapTurn.result.edges}
+                focus={tour.active ? tour.current?.place ?? null : null}
+                onSelect={selectPlace}
+                className="h-full"
+              />
+            ) : (
+              <div className="grid h-full place-items-center rounded-lg border border-border bg-card p-6 text-center">
+                <div className="max-w-sm space-y-3">
+                  <MapPin className="mx-auto h-6 w-6 text-muted-foreground" />
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    Ask a question first: the map places every authority the answer cites at the court that decided it.
+                  </p>
+                  <Button variant="outline" size="sm" onClick={() => setMode("chat")}>
+                    Back to the chat
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
+          </div>
+
+          {mapTurn && (
+            <>
+              <p className="shrink-0 truncate text-[11px] text-muted-foreground">{mapPath}</p>
+              <TourPanel
+                steps={tourSteps}
+                index={tour.index}
+                status={tour.status}
+                onStart={tour.start}
+                onStop={tour.stop}
+              />
+            </>
           )}
         </div>
       ) : (
@@ -452,7 +499,14 @@ export default function Chat() {
                           variant="ghost"
                           size="sm"
                           className="gap-1.5"
-                          onClick={() => (narrating ? stopNarration() : speak(answer))}
+                          onClick={() => {
+                            if (narrating) {
+                              stopNarration();
+                              return;
+                            }
+                            tour.stop();
+                            speak(answer);
+                          }}
                         >
                           {narrating ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                           {narrating ? "Stop" : "Read aloud"}
