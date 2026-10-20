@@ -7,7 +7,50 @@ import { citeType, courtName, locate, type Citation, type RunResult } from "@/li
 import { toRetrieval } from "@/lib/runs";
 
 /** One stop on the walk: what is said, under which heading, and the place it moves the camera to. */
-export type TourStep = { section: string; text: string; place: string | null };
+export type TourStep = {
+  section: string;
+  text: string;
+  place: string | null;
+  /** Where in `text` (character offset) the voice reaches a cited authority, and that authority's pin. */
+  cues?: Cue[];
+};
+
+/** A point in a spoken line where the camera should fly to a pin. */
+export type Cue = { at: number; place: string };
+
+/** The camera view that frames every authority; used for the question and the summary. */
+export const OVERVIEW = "*overview";
+
+/**
+ * Pull the citation marks ("[3]") out of a line, remembering where each one sat, so the voice never
+ * reads the marks and the camera can fly to the cited authority as the voice reaches it.
+ */
+function cue(raw: string, citations: Citation[]): { text: string; cues: Cue[] } {
+  const cues: Cue[] = [];
+  let text = "";
+  let last = 0;
+  for (const match of raw.matchAll(/\s*\[(\d{1,3})\]/g)) {
+    text += raw.slice(last, match.index);
+    last = (match.index ?? 0) + match[0].length;
+    const n = Number(match[1]);
+    const citation = citations.find((c) => (c.ref || "").trim() === `[${n}]`) || citations[n - 1];
+    if (!citation) continue;
+    const place = locate(citation).key;
+    // The mark follows the words it supports, so the camera moves as the voice finishes them.
+    const at = Math.max(0, text.lastIndexOf(" ", text.length - 2) + 1);
+    if (cues[cues.length - 1]?.place !== place) cues.push({ at, place });
+  }
+  text += raw.slice(last);
+  return { text: clean(text), cues };
+}
+
+/** One stop per chunk of a section, each carrying its own camera cues. */
+function cuedSteps(section: string, value: string, citations: Citation[]): TourStep[] {
+  return chunks(value).map((chunk) => {
+    const { text, cues } = cue(chunk, citations);
+    return { section, text, place: cues[0]?.place ?? null, cues };
+  });
+}
 
 /** A stop is spoken in one breath, so a long section is split at a sentence, never mid-word. */
 const SPOKEN = 340;
@@ -120,16 +163,14 @@ function authorityLine(citation: Citation): string {
  */
 export function tourPlan(result: RunResult): TourStep[] {
   const steps: TourStep[] = [];
+  const citations = result.citations || [];
   const question = clean(result.question || "");
   if (question) steps.push({ section: "Question", text: question, place: null });
 
   const blocks = paragraphs(result.answer || "");
   const [first, ...rest] = blocks;
-  if (first) {
-    for (const text of chunks(first.text)) steps.push({ section: "Short answer", text, place: null });
-  }
+  if (first) steps.push(...cuedSteps("Short answer", first.text, citations));
 
-  const citations = result.citations || [];
   const edges = result.edges || [];
   if (citations.length) {
     const places = new Set(citations.map((citation) => locate(citation).key)).size;
@@ -147,7 +188,7 @@ export function tourPlan(result: RunResult): TourStep[] {
     for (const block of rest) {
       if (REASONING.test(block.section) !== wanted) continue;
       const section = wanted ? "Opinion" : "Memo";
-      for (const text of chunks(block.text)) steps.push({ section, text, place: null });
+      steps.push(...cuedSteps(section, block.text, citations));
     }
   }
 
