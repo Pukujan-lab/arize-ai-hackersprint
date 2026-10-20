@@ -51,7 +51,9 @@ const basemap = (): maplibregl.StyleSpecification => ({
   sources: {
     osm: {
       type: "raster",
-      tiles: ["a", "b", "c"].map((sub) => `https://${sub}.tile.openstreetmap.org/{z}/{x}/{y}.png`),
+      // The one host OpenStreetMap documents. The old `a`/`b`/`c` subdomains were retired, and a tile
+      // URL that 403s leaves a grey pane with nothing to place the pins against.
+      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
       tileSize: 256,
       maxzoom: 19,
       attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
@@ -81,8 +83,23 @@ const basemap = (): maplibregl.StyleSpecification => ({
  */
 const COUNTY_URL = "https://cdn.jsdelivr.net/gh/plotly/datasets@master/geojson-counties-fips.json";
 const COUNTY_SOURCE = "co-counties";
+const COUNTY_FILL = "co-fill";
 const COUNTY_LINE = "co-county-line";
 const COUNTY_NAME = "co-county-name";
+
+/**
+ * Colorado's own bounds, in lng/lat. An authority outside them — the U.S. Code, a circuit court, the
+ * Supreme Court — is real and worth a pin, but fitting the camera to it as well drags the whole state
+ * down to a smudge in the middle of the country, where nothing can be read. So the camera fits the
+ * state's own authorities, and the out-of-state ones are a pan away.
+ */
+const CO_BOUNDS: [number, number, number, number] = [-109.1, 36.9, -102.0, 41.1];
+
+const inColorado = (pin: Pin) =>
+  pin.lngLat[0] >= CO_BOUNDS[0] &&
+  pin.lngLat[0] <= CO_BOUNDS[2] &&
+  pin.lngLat[1] >= CO_BOUNDS[1] &&
+  pin.lngLat[1] <= CO_BOUNDS[3];
 
 /** One download for the whole page: every mount, and every style reload, reads the same promise. */
 let counties: Promise<GeoJSON.FeatureCollection | null> | null = null;
@@ -205,13 +222,16 @@ export default function CitationMap({
     const map = mapRef.current;
     if (!map || !pins.length) return;
     const duration = reducedMotion() ? 0 : 700;
-    if (pins.length === 1) {
-      map.easeTo({ center: pins[0].lngLat, zoom: 8, duration });
+    // Fit the state's own authorities; a lone federal pin in Washington does not get to decide the scale.
+    const home = pins.filter(inColorado);
+    const targets = home.length ? home : pins;
+    if (targets.length === 1) {
+      map.easeTo({ center: targets[0].lngLat, zoom: 9.2, duration });
       return;
     }
     const bounds = new maplibregl.LngLatBounds();
-    for (const pin of pins) bounds.extend(pin.lngLat);
-    map.fitBounds(bounds, { padding: 80, maxZoom: 10, duration });
+    for (const pin of targets) bounds.extend(pin.lngLat);
+    map.fitBounds(bounds, { padding: 64, maxZoom: 10, duration });
   }, [pins]);
 
   // The map is created once; everything after this only updates its data. Rotation is off: a map that
@@ -243,8 +263,11 @@ export default function CitationMap({
     map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "imperial", maxWidth: 96 }), "bottom-left");
 
+    // The style is written in this file, so it can be loaded before the listener below is attached;
+    // check first, and only wait if there is something left to wait for.
     const onStyleLoad = () => setReady(true);
     map.on("style.load", onStyleLoad);
+    if (map.isStyleLoaded()) setReady(true);
 
     // A map created before its pane has a height draws into nothing and stays blank until something
     // else resizes the window, so the pane is watched rather than assumed.
@@ -270,6 +293,19 @@ export default function CitationMap({
     void coloradoCounties().then((data) => {
       if (!live || !data || !mapRef.current) return;
       if (!map.getSource(COUNTY_SOURCE)) map.addSource(COUNTY_SOURCE, { type: "geojson", data });
+      // The state's own shape, painted *under* the tiles: when they arrive they cover it, and when they
+      // do not the map still shows Colorado rather than an empty grey pane.
+      if (!map.getLayer(COUNTY_FILL) && map.getLayer("osm")) {
+        map.addLayer(
+          {
+            id: COUNTY_FILL,
+            type: "fill",
+            source: COUNTY_SOURCE,
+            paint: { "fill-color": "#e3e0d8", "fill-opacity": 1 },
+          },
+          "osm",
+        );
+      }
       // The counties belong under the citation links and the walked path, not over them, so they are
       // inserted beneath the links layer rather than simply appended.
       const before = map.getLayer("links") ? "links" : undefined;
@@ -379,7 +415,9 @@ export default function CitationMap({
       // without a hover. The name is absolutely positioned, so it never moves the dot off its point.
       const element = document.createElement("div");
       element.dataset.place = pin.key;
-      element.className = "relative flex items-center justify-center";
+      // A fixed box, so the marker's own anchor arithmetic cannot be thrown by the label hanging
+      // outside it: the dot's centre is the coordinate, at every zoom.
+      element.className = "relative flex h-8 w-8 items-center justify-center";
 
       const dot = document.createElement("button");
       dot.type = "button";
@@ -511,12 +549,13 @@ export default function CitationMap({
     if (!map || !ready) return;
     const pin = focus === null ? undefined : pins.find((candidate) => candidate.key === focus);
     if (!pin) return;
-    // The camera centres on the place but never dives in past the scale the graph was fitted at, so the
-    // other authorities and the walked path stay in view.
+    // The walk zooms to the county scale as it travels: at that zoom the county lines and their names
+    // are on the page, so the voice saying "Boulder County" is answered by the map. It never zooms out
+    // to reach it, so a reader who has already gone in close is not pulled back.
     map.easeTo({
       center: pin.lngLat,
-      zoom: Math.min(Math.max(map.getZoom(), 5.5), 8),
-      duration: reducedMotion() ? 0 : 900,
+      zoom: Math.max(map.getZoom(), 9.2),
+      duration: reducedMotion() ? 0 : 1200,
     });
   }, [focus, ready, pins]);
 

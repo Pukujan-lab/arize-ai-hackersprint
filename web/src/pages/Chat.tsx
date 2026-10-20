@@ -37,7 +37,7 @@ import { useNarration } from "@/hooks/use-narration";
 import { useTour } from "@/hooks/use-tour";
 import { pathLine, plainText, tourPlan } from "@/map/tour";
 import { AskRefused, STAGE_PLAN, STAGE_WORDS, ask, loadRunResult, type AskTick, type Source, type StageTick } from "@/lib/api";
-import { citeType, type Citation, type RunResult } from "@/lib/citations";
+import { citeType, locate, type Citation, type RunResult } from "@/lib/citations";
 import { SUGGESTIONS } from "@/lib/demo";
 import { seconds } from "@/lib/runs";
 import { cn } from "@/lib/utils";
@@ -258,6 +258,14 @@ export default function Chat() {
     return out;
   }, [tour.active, tour.index, tourSteps]);
 
+  // The place the walk is standing on, named the way the pin is, so the strip and the map agree.
+  const tourAt = useMemo(() => {
+    const key = tour.active ? tour.current?.place ?? null : null;
+    if (!key) return null;
+    const citation = (mapTurn?.result.citations || []).find((item) => locate(item).key === key);
+    return citation ? locate(citation).label : null;
+  }, [tour.active, tour.current, mapTurn]);
+
   // The walk belongs to the map: leaving the map leaves the walk.
   useEffect(() => {
     if (mode !== "map") tour.stop();
@@ -354,6 +362,7 @@ export default function Chat() {
                   index={tour.index}
                   status={tour.status}
                   heard={tour.heard}
+                  at={tourAt}
                   path={mapPath}
                   onStart={tour.start}
                   onStop={tour.stop}

@@ -3,7 +3,7 @@
 // the caption keeps pace with the voice. When the walk is idle the same strip offers the play button and
 // says where the authorities came from — one strip, never a second panel under the map.
 
-import { Play, Square, Volume2, VolumeX } from "lucide-react";
+import { MapPin, Play, Square, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { NarrationStatus } from "@/hooks/use-narration";
 import type { TourStep } from "@/map/tour";
@@ -14,6 +14,7 @@ export default function TourBar({
   index,
   status,
   heard,
+  at,
   path,
   onStart,
   onStop,
@@ -23,6 +24,8 @@ export default function TourBar({
   status: NarrationStatus;
   /** How much of the current line has been heard, in characters. */
   heard: number;
+  /** The place the camera is standing on, named the way the pin is. Null on a stop about no place. */
+  at: string | null;
   /** Where the authorities came from, as the run recorded it. */
   path: string;
   onStart: () => void;
@@ -53,6 +56,14 @@ export default function TourBar({
           {current && (
             <span className="rounded-full border border-border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
               {current.section}
+            </span>
+          )}
+
+          {/* The place the camera has just flown to, named as its pin is, so the two agree. */}
+          {active && at && (
+            <span className="flex min-w-0 items-center gap-1 text-[11px] text-muted-foreground">
+              <MapPin className="h-3 w-3 shrink-0" />
+              <span className="truncate">{at}</span>
             </span>
           )}
 

@@ -39,9 +39,16 @@ true by accident.
 The county mesh is drawn on top from the Census's own county boundaries — a public-domain GeoJSON served
 keyless over a CDN, filtered to Colorado so one download serves every zoom. A raster tile is a picture
 and cannot be asked for a crisp line, so the mesh is drawn as a dashed division of land with the
-county's name in small caps, and the state outline falls out of it for free. Each pin also carries the
-name of its court under the dot, shown once the camera is past the state view so the names do not pile
-up.
+county's name in small caps, and the state outline falls out of it for free. The same mesh is painted
+as a fill *under* the tiles, so if the tiles never arrive the pane still shows Colorado rather than an
+empty grey. Each pin also carries the name of its court under the dot, shown once the camera is past
+the state view so the names do not pile up.
+
+The camera fits the state's own authorities, not every pin: a U.S. Code or Supreme Court pin in
+Washington is real and stays on the map, but fitting the camera to it as well drags Colorado down to a
+smudge in the middle of the country where nothing can be read. Out-of-state pins are a pan away. The
+walk zooms to the county scale as it travels — the county lines and their names are on the page, so the
+voice saying "Boulder County" is answered by the map — and never zooms out to get there.
 
 The links between authorities are bowed arcs, coloured by the kind of link, so the citation graph reads
 as a graph rather than as a set of roads. While the tour runs it inks the path it has walked — a white
@@ -95,8 +102,8 @@ place — opens in a drawer, so the page never grows a second column of dashboar
 | Follow-up questions, asked with the previous run in context, held in a drawer | `Follow-ups (n)` | `Chat.tsx` | `POST /api/ask` with `prev_run_id` |
 | One authority: kind, court, date, citation, passage and link | `Authority` | `AuthorityDetail.tsx` | none |
 | The authorities at one place, from a pin — a small card over the map, each authority opening in place | the place label | `PlaceCard.tsx` | none |
-| Walk the answer: the short answer, the retrieval path, the opinion, the rest of the memo, then each authority in turn | `Play the tour`, `Stop the tour` | `Chat.tsx`, `TourBar.tsx`, `map/tour.ts`, `hooks/use-tour.ts` | none (the browser's own voice; `POST /api/tts_ts` only if it cannot speak) |
-| The stop being spoken, as a subtitle along the bottom of the map, the heard part bright | `Tour` (region) | `TourBar.tsx` | none |
+| Walk the answer: the short answer, the retrieval path, the opinion, the rest of the memo, then each authority in turn, the camera flying to each authority at the county scale | `Play the tour`, `Stop the tour` | `Chat.tsx`, `TourBar.tsx`, `map/tour.ts`, `hooks/use-tour.ts`, `CitationMap.tsx` | none (the browser's own voice; `POST /api/tts_ts` only if it cannot speak) |
+| The stop being spoken, as a subtitle along the bottom of the map, the heard part bright, with the place the camera is on | `Tour` (region) | `TourBar.tsx` | none |
 | The path the retriever took and how many citation links join the authorities | the line in the tour strip while it is idle | `Chat.tsx`, `map/tour.ts` | `GET /api/run/{id}` (`retrieval`, `edges`) |
 | Fit the camera to every authority | `Fit to the authorities` | `CitationMap.tsx` | none |
 | Zoom and the map's own scale | `Zoom in`, `Zoom out`, the scale bar | `CitationMap.tsx` | none |

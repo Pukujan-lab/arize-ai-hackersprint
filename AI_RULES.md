@@ -26,10 +26,13 @@ rules; this file holds the stack and library rules.
   unreachable the whole pane stays blank, pins included. The tiles carry county boundaries, place names,
   neighbourhood names and historic sites; the county mesh and its names are additionally drawn from a
   public-domain Census county GeoJSON filtered to Colorado, because a raster tile cannot be asked for a
-  crisp line. Pins are DOM markers and links are GeoJSON line layers, so both survive the tiles failing.
-  Rotation is disabled. Citation links are bowed arcs; the tour inks the path it has walked over them,
-  with arrowheads drawn from a canvas image, so the graph reads as a graph. Colours the canvas paints
-  with are constants in `web/src/map/palette.ts`.
+  crisp line; that mesh is also filled under the tiles, so a tile outage still leaves Colorado's shape
+  on the pane. The camera fits the state's own authorities, never the federal pins in Washington, or
+  Colorado shrinks to a smudge. Pins are DOM markers and links are GeoJSON line layers, so both survive
+  the tiles failing. Rotation is disabled. Citation links are bowed arcs; the tour inks the path it has
+  walked over them, with arrowheads drawn from a canvas image, and flies to the county scale for each
+  authority, so the graph reads as a graph. Colours the canvas paints with are constants in
+  `web/src/map/palette.ts`.
 - **Voice:** the browser's own `speechSynthesis` speaks first — it needs no key, no network and no clip,
   so it starts on the click that asked for it, and on Edge/Windows it is the Microsoft natural voices.
   The server chain (Fish Audio → ElevenLabs → local Kokoro) behind `/api/tts_ts` is the fallback for a
