@@ -2,6 +2,7 @@
 narrates every opened run, walks the memo in a fixed order, and reveals the caption with the voice."""
 
 import json
+import time
 
 import pytest
 
@@ -142,4 +143,106 @@ def test_O91_the_caption_follows_the_voice(base, browser):
     assert second["shown"] > first["shown"] or second["index"] > first["index"], f"the caption does not advance: {first} -> {second}"
     assert second["index"] == _state(page)["tour"]["index"], "the caption is not on the stop the tour is on"
     assert _state(page)["tour"].get("activeIndex") == second["index"], "the current stop's pin is not marked"
+    ctx.close()
+
+
+# --- A clip is not abandoned while the server is still making it, and a failure is not remembered forever.
+
+def _silent_wav(seconds=2.0, rate=8000):
+    import base64
+    import io
+    import wave
+
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(b"\x00\x00" * int(rate * seconds))
+    return base64.b64encode(buf.getvalue()).decode()
+
+
+SILENT = _silent_wav()
+
+
+def _speaks_within(page, seconds):
+    deadline = time.time() + seconds
+    while time.time() < deadline:
+        if _state(page)["speaker"].get("status") == "speaking":
+            return True
+        page.wait_for_timeout(250)
+    return False
+
+
+def test_O109_a_slow_clip_is_played_not_abandoned(base, browser):
+    """A cold line on this host takes over seven seconds. The page must wait for the clip the server is
+    making instead of declaring the voice unavailable while it is still on its way."""
+    def clip(r):
+        time.sleep(8.5)
+        r.fulfill(status=200, content_type="application/json", body=json.dumps({"audio_b64": SILENT, "starts": [0]}))
+
+    def setup(page):
+        serve_run(page, RUN, RUN_ID)
+        page.route("**/api/tts_ts", clip)
+
+    ctx, page = open_page(browser, base, f"/map?run={RUN_ID}", DESKTOP, setup=setup)
+    map_ready(page)
+    assert _speaks_within(page, 25), f"an 8.5s clip was never played: {_state(page)['speaker']}"
+    ctx.close()
+
+
+def test_O110_a_failed_clip_is_asked_for_again(base, browser):
+    """A line that could not be voiced must be retried when the reader asks again, not remembered as a
+    failure for the rest of the session."""
+    asked = []
+    served = set()
+
+    def clip(r):
+        text = json.loads(r.request.post_data or "{}").get("text", "")
+        asked.append(text)
+        if text in served:
+            r.fulfill(status=200, content_type="application/json", body=json.dumps({"audio_b64": SILENT, "starts": [0]}))
+            return
+        served.add(text)
+        r.fulfill(status=500, content_type="application/json", body="{}")
+
+    def setup(page):
+        serve_run(page, RUN, RUN_ID)
+        page.route("**/api/tts_ts", clip)
+
+    ctx, page = open_page(browser, base, f"/map?run={RUN_ID}", DESKTOP, setup=setup)
+    map_ready(page)
+    page.wait_for_function("() => window.__precedentMap.v1.state().speaker.status === 'unavailable'", timeout=15000)
+    first = asked[0]
+    assert asked.count(first) == 1, f"the first line was asked for {asked.count(first)} times before any retry"
+
+    stop = page.get_by_role("button", name="Stop listening")
+    if stop.count():
+        stop.first.click()
+        page.wait_for_timeout(600)
+    page.get_by_role("button", name="Listen").click()
+
+    assert _speaks_within(page, 20), f"the retried clip was never played: {_state(page)['speaker']}"
+    assert asked.count(first) >= 2, f"the failed line was never asked for again: {asked[:4]}"
+    ctx.close()
+
+
+def test_O111_an_opened_run_warms_its_first_line(base, browser):
+    """The line the reader waits for is the one that must already be in hand: opening a run starts making
+    its first line before any voice control is pressed."""
+    asked = []
+
+    def clip(r):
+        asked.append(json.loads(r.request.post_data or "{}").get("text", ""))
+        r.fulfill(status=200, content_type="application/json", body=json.dumps({"audio_b64": SILENT, "starts": [0]}))
+
+    def setup(page):
+        serve_run(page, RUN, RUN_ID)
+        page.route("**/api/tts_ts", clip)
+
+    ctx, page = open_page(browser, base, f"/?run={RUN_ID}", DESKTOP, setup=setup)
+    page.wait_for_timeout(3000)
+    assert asked, "an opened run asked for no audio before the reader pressed Listen"
+    opening = " ".join(str(RUN["answer"]).split())[:40]
+    assert any(opening.lower() in " ".join(text.split()).lower() for text in asked), f"the first line was not warmed: {asked[:2]}"
     ctx.close()

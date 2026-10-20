@@ -179,3 +179,24 @@ def test_fish_timeout_default_is_5s(env, monkeypatch):
     calls = route(monkeypatch, httpx.ReadTimeout("slow"), Resp(200, KOKORO_MP3, {"X-Audio-Duration": "1.0"}))
     env.post("/api/tts_ts", json={"text": text()})
     assert calls[0][1]["timeout"] == 5.0
+
+
+@pytest.mark.live
+def test_O112_a_cold_memo_line_is_ready_quickly():
+    """A cold line of the memo's length must be ready inside the page's patience, not after it."""
+    import time
+
+    sys.path.insert(0, str(pathlib.Path(__file__).parent.parent))
+    from app import ttschain
+
+    if not any(p != "browser" for p in ttschain.chain()):
+        pytest.skip("no voice provider is configured")
+    text = (
+        "Cold line %s: the appellate court affirmed the trial court on an independent ground, and the "
+        "scope of the search was limited to what the justification supported." % uuid.uuid4().hex[:8]
+    )
+    started = time.time()
+    res, tried = ttschain.synth(text)
+    elapsed = time.time() - started
+    assert res, f"no clip was produced: {tried}"
+    assert elapsed < 6.0, f"a {len(text)}-character cold line took {elapsed:.1f}s: {tried}"
