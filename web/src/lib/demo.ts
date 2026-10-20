@@ -3,7 +3,7 @@
 // the shell says so on screen, so nothing in it is ever passed off as retrieved authority.
 
 import type { Citation, Edge, RunResult } from "./citations";
-import type { RunDetail, SavedRun, StackInfo } from "./runs";
+import type { SavedRun } from "./runs";
 
 export const SAMPLE_NOTICE =
   "Sample corpus — the research backend is not reachable from this preview, so these records are bundled with the app.";
@@ -213,80 +213,7 @@ export const DEMO_SAVED: SavedRun[] = [
 
 export const DEMO_RESULTS: RunResult[] = [DEMO_RESULT, SECOND_RESULT, THIRD_RESULT];
 
-function detailOf(result: RunResult): RunDetail {
-  return {
-    runId: result.run_id || "",
-    question: result.question || "",
-    answer: result.answer || "",
-    elapsed: result.elapsed_s ?? null,
-    provider: result.provider || "",
-    pass: result.safeguard?.pass ?? null,
-    citations: result.citations?.length ?? null,
-    prevRunId: null,
-    followUps: result.followups || [],
-    steps: [
-      { agent: "planner", kind: "plan", t: 0.0, record: { question: result.question, plan: "statute → case → federal" } },
-      { agent: "retriever", kind: "retrieve", t: 1.1, record: { passages: 24, cases: 8, engine: "sample corpus" } },
-      { agent: "answer", kind: "write", t: 2.9, record: { words: 312, provider: result.provider } },
-      { agent: "safeguard", kind: "done", t: 4.4, record: { pass: true, checked: result.citations?.length ?? 0 } },
-    ],
-    retrieval: {
-      source: DEMO_RETRIEVAL.source,
-      stages: DEMO_RETRIEVAL.stages.map((stage) => ({
-        name: stage.name,
-        durationMs: stage.duration_ms,
-        skipped: stage.skipped,
-        reason: stage.reason,
-      })),
-      graphSource: DEMO_RETRIEVAL.graph.source,
-      graphRevision: DEMO_RETRIEVAL.graph.revision,
-      engineOk: DEMO_RETRIEVAL.engine.ok,
-      engineReason: DEMO_RETRIEVAL.engine.reason,
-    },
-  };
-}
-
-export const DEMO_DETAILS: Record<string, RunDetail> = Object.fromEntries(
-  DEMO_RESULTS.map((result) => [result.run_id || "", detailOf(result)]),
-);
-
-export const DEMO_STACK: StackInfo = {
-  chain: ["Fish Audio", "ElevenLabs", "Kokoro"],
-  passages: 327_407,
-  nodes: 18_422,
-  edges: 51_208,
-  how: {
-    octo: "sample corpus bundled with the app",
-    surrealdb: "citation graph read from the sample edges",
-    arize: "tracing is not connected in this preview",
-    elevenlabs: "voice chain is configured on the server, not in the preview",
-  },
-  runs: DEMO_RESULTS.map((result) => ({
-    run_id: result.run_id || "",
-    elapsed: result.elapsed_s ?? null,
-    provider: result.provider || "",
-    pass: result.safeguard?.pass ?? null,
-  })),
-  engine: {
-    configured: false,
-    ok: false,
-    status: "not reachable from the preview",
-    chunkCount: 327_407,
-    caseCount: 18_422,
-    corpusRevision: "sample-3",
-    graphRevision: "sample-3",
-    lexical: "BM25 over the sample passages",
-    denseModel: "bge-large-en-v1.5 (sample)",
-    rerankModel: "bge-reranker-base (sample)",
-    jevModel: "not loaded",
-    scorer: "reciprocal rank fusion (sample)",
-    lastError: "",
-  },
-  tracing: { ok: false, reason: "the preview has no exporter", project: "precedent", sent: 0, dropped: 0, queued: 0 },
-  retention: { runsKept: 200, runsOnDisk: 3, traceQueueMax: 2_000, spansDropped: 0 },
-};
-
-/** Suggested questions for the empty chat and the search page. */
+/** Suggested questions for the empty chat. */
 export const SUGGESTIONS = [
   "Does a severed mineral estate keep the Colorado homestead exemption?",
   "Are the proceeds of a homestead sale still exempt in a savings account?",

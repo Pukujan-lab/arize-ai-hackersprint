@@ -16,8 +16,14 @@ pytestmark = needs_v3
 REDIRECTS = {
     "/v1": "/",
     "/v2": "/",
-    "/dashboard": "/observability",
-    "/guide": "/slides",
+    "/dashboard": "/",
+    "/guide": "/",
+    "/map": "/",
+    "/chat": "/",
+    "/search": "/",
+    "/explore": "/",
+    "/observability": "/",
+    "/slides": "/",
 }
 
 OLD_FILES = [
@@ -79,7 +85,7 @@ def test_the_old_frontend_folder_is_gone():
     assert not (ROOT / "static").exists(), "the old frontend folder still exists; a retired page can come back"
 
 
-@pytest.mark.parametrize("path", ["/", "/map", "/observability", "/slides"])
+@pytest.mark.parametrize("path", ["/"])
 def test_a_missing_build_fails_loudly_instead_of_serving_a_page(monkeypatch, path):
     from fastapi.testclient import TestClient
 

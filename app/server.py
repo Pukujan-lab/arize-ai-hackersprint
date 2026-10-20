@@ -12,9 +12,9 @@ app = FastAPI(title="Legal GraphRAG Agents")
 
 threading.Thread(target=agents.graph, daemon=True).start()
 
-# --- Frontend v3 -------------------------------------------------------------------------------
-# web/dist is the built frontend and the only one. The four surviving addresses serve it, each with
-# its own head; the retired addresses forward permanently and never return a page. Nothing under
+# --- Frontend ----------------------------------------------------------------------------------
+# web/dist is the built frontend and the only one. There is one page: `/` is the chat, and the map is
+# a mode of it. The retired addresses forward permanently and never return a page. Nothing under
 # /api changes. There is no fallback page: a missing build fails loudly.
 WEB_DIST = ROOT / "web" / "dist"
 WEB_INDEX = WEB_DIST / "index.html"
@@ -26,28 +26,8 @@ ARIZE_SNAPSHOT = ROOT / "arize" / "observability-snapshot.json"
 
 _V3_PAGES = {
     "/": {
-        "title": "Precedent · Ask, read the memo, tour the map",
-        "description": "Ask a legal question and read the memo it returns, then tour the citation map behind every authority the answer relies on.",
-    },
-    "/chat": {
-        "title": "Precedent · Ask a question, read the memo",
-        "description": "Ask a legal question and watch four agents plan, retrieve, write and check it, then read the memo beside every authority behind it.",
-    },
-    "/search": {
-        "title": "Precedent · Retrieve the authorities behind a question",
-        "description": "Field-weighted search over every authority the saved runs cite, with the passage that matched and the run it came from.",
-    },
-    "/explore": {
-        "title": "Precedent · The citation map behind the memo",
-        "description": "The citation map: every authority in the memo pinned at the court that decided it, over the extruded United States, tilted and walked.",
-    },
-    "/observability": {
-        "title": "Precedent · How a run was made",
-        "description": "How a run was made: the agents that planned, retrieved, wrote and verified the memo, the steps each one took and the authorities it cited.",
-    },
-    "/slides": {
-        "title": "Precedent · The run, slide by slide",
-        "description": "The deck that walks through a run, from the question to the memo to the citation map and its guided tour of every authority the answer cites.",
+        "title": "Precedent · Ask a legal question, read the memo, see the map",
+        "description": "Ask a legal question and read the memo four agents return, then switch the same page to a map of every authority the answer cites.",
     },
 }
 
@@ -125,11 +105,6 @@ def _dist_file(base, rel):
 @app.get("/assets/{rel:path}", include_in_schema=False)
 def web_asset(rel: str):
     return _dist_file(WEB_DIST / "assets", rel)
-
-
-@app.get("/vendor/{rel:path}", include_in_schema=False)
-def web_vendor(rel: str):
-    return _dist_file(WEB_DIST / "vendor", rel)
 
 
 @app.get("/logo.svg", include_in_schema=False)
@@ -363,16 +338,16 @@ def api_acs_events(n: int = 50):
     return [json.loads(l) for l in acs_board.EVENTS.read_text().splitlines()[-n:]] if acs_board.EVENTS.exists() else []
 
 
-# The four retired addresses forward permanently and never return a page. They are not part of the
-# API contract: the surviving pages are, and these only point at them.
+# The retired addresses forward permanently to the one page and never return one of their own. They
+# are not part of the API contract: `/` is.
 @app.get("/dashboard", status_code=308, include_in_schema=False)
 def dashboard():
-    return RedirectResponse("/observability", status_code=308)
+    return RedirectResponse("/", status_code=308)
 
 
-@app.get("/slides", response_class=HTMLResponse)
+@app.get("/slides", status_code=308, include_in_schema=False)
 def slides():
-    return _v3_page("/slides")
+    return RedirectResponse("/", status_code=308)
 
 
 def _agent_latency(rid):
@@ -670,30 +645,29 @@ def sponsor():
     }
 
 
-@app.get("/chat", response_class=HTMLResponse)
+@app.get("/chat", status_code=308, include_in_schema=False)
 def chat_page():
-    return _v3_page("/chat")
+    return RedirectResponse("/", status_code=308)
 
 
-@app.get("/search", response_class=HTMLResponse)
+@app.get("/search", status_code=308, include_in_schema=False)
 def search_page():
-    return _v3_page("/search")
+    return RedirectResponse("/", status_code=308)
 
 
-@app.get("/explore", response_class=HTMLResponse)
+@app.get("/explore", status_code=308, include_in_schema=False)
 def explore_page():
-    return _v3_page("/explore")
+    return RedirectResponse("/", status_code=308)
 
 
-# The map pane kept its own address until the workspace grew a navigation; it now points at Explore.
 @app.get("/map", status_code=308, include_in_schema=False)
 def map_page():
-    return RedirectResponse("/explore", status_code=308)
+    return RedirectResponse("/", status_code=308)
 
 
-@app.get("/observability", response_class=HTMLResponse)
+@app.get("/observability", status_code=308, include_in_schema=False)
 def observability_page():
-    return _v3_page("/observability")
+    return RedirectResponse("/", status_code=308)
 
 
 @app.get("/api/runs", response_model=contracts.RUNS, response_model_exclude_unset=True)
@@ -736,7 +710,7 @@ def arize():
 
 @app.get("/guide", status_code=308, include_in_schema=False)
 def guide_page():
-    return RedirectResponse("/slides", status_code=308)
+    return RedirectResponse("/", status_code=308)
 
 
 @app.get("/v1", status_code=308, include_in_schema=False)

@@ -5,7 +5,7 @@ from fastapi import HTTPException
 from fastapi.responses import PlainTextResponse, Response, FileResponse
 
 BASE = "https://arize.design-bakery.com"
-PAGES = ["/", "/map", "/observability", "/slides"]
+PAGES = ["/"]
 DIST = pathlib.Path(__file__).resolve().parent.parent / "web" / "dist"
 
 

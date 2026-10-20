@@ -2,25 +2,9 @@
 // falls back to the bundled sample corpus when the backend is not there, saying which one answered so
 // the page can mark sample records rather than passing them off as retrieved authority.
 
-import {
-  DEMO_DETAILS,
-  DEMO_RESULT,
-  DEMO_RESULTS,
-  DEMO_SAVED,
-  DEMO_STACK,
-} from "./demo";
+import { DEMO_RESULT, DEMO_RESULTS, DEMO_SAVED } from "./demo";
 import type { RunResult } from "./citations";
-import {
-  readJson,
-  toArize,
-  toDetail,
-  toRuns,
-  toStack,
-  type ArizeSnapshot,
-  type RunDetail,
-  type SavedRun,
-  type StackInfo,
-} from "./runs";
+import { readJson, toRuns, type SavedRun } from "./runs";
 
 /** Where an answer came from: the server, or the sample corpus bundled with the app. */
 export type Source = "live" | "sample";
@@ -48,30 +32,6 @@ export async function loadRuns(): Promise<{ runs: SavedRun[]; source: Source }> 
     return { runs: toRuns(await readJson("/api/runs")), source: "live" };
   } catch {
     return { runs: DEMO_SAVED, source: "sample" };
-  }
-}
-
-export async function loadStack(): Promise<{ stack: StackInfo | null; source: Source }> {
-  try {
-    return { stack: toStack(await readJson("/api/stack")), source: "live" };
-  } catch {
-    return { stack: DEMO_STACK, source: "sample" };
-  }
-}
-
-export async function loadArize(): Promise<ArizeSnapshot | null> {
-  try {
-    return toArize(await readJson("/api/arize"));
-  } catch {
-    return null;
-  }
-}
-
-export async function loadRunDetail(runId: string): Promise<{ detail: RunDetail | null; source: Source }> {
-  try {
-    return { detail: toDetail(runId, await readJson(`/api/run/${encodeURIComponent(runId)}`)), source: "live" };
-  } catch {
-    return { detail: DEMO_DETAILS[runId] ?? DEMO_DETAILS[DEMO_RESULT.run_id || ""] ?? null, source: "sample" };
   }
 }
 
@@ -150,11 +110,6 @@ export function pipelineFrom(events: unknown): StageTick[] {
     if (/^(done|release|pass|complete|finished)$/i.test(kind)) stage.state = "done";
   }
   return stages;
-}
-
-/** A run that produced an answer ran every stage of the pipeline. */
-export function pipelineDone(): StageTick[] {
-  return STAGE_PLAN.map((name) => ({ name, state: "done" as StageState, message: "" }));
 }
 
 async function pollRun(runId: string, onTick?: (tick: AskTick) => void): Promise<RunResult | null> {

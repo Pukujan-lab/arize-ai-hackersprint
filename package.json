@@ -4,5 +4,8 @@
   "scripts": {
     "dev": "(test -x web/node_modules/.bin/vite || pnpm --dir web install --ignore-workspace) && pnpm --dir web dev",
     "build": "CI=true pnpm --dir web install --ignore-workspace && pnpm --dir web build"
+  },
+  "dependencies": {
+    "maplibre-gl": "^6.15.0"
   }
 }

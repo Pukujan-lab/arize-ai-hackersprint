@@ -1,7 +1,7 @@
-// Narration: one clip per line of text, fetched from /api/tts_ts and played in step with the tour.
-// The clip is the authority on when a line ends. Its own length bounds the line, so a browser that
-// never reports the clip's end cannot stall the tour; the timings it returns are only a fallback for
-// the rare clip whose length is unknown.
+// Narration: one clip per piece of text, fetched from /api/tts_ts and played while the reader listens.
+// The clip is the authority on when a piece ends. Its own length bounds it, so a browser that never
+// reports the clip's end cannot leave the page saying it is still speaking; the timings it returns are
+// only a fallback for the rare clip whose length is unknown.
 
 type Clip = { audio_b64?: string; starts?: number[] } | null;
 
@@ -37,14 +37,6 @@ function request(text: string): Promise<Clip> {
   ]);
   cache.set(key, pending);
   return pending;
-}
-
-/**
- * Ask for a clip now so it is ready when the reader reaches that line. It is only cached: a queued
- * clip never plays, so it can never cut off the line that is speaking.
- */
-export function prefetchClip(text: string): void {
-  void request(text);
 }
 
 export type Narration = { stop: () => void };

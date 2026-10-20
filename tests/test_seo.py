@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from app import server
 
 BASE = "https://arize.design-bakery.com"
-PAGES = ["/", "/map", "/observability", "/slides"]
+PAGES = ["/"]
 c = TestClient(server.app)
 
 

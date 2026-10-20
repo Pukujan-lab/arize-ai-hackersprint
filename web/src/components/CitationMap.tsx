@@ -1,0 +1,268 @@
+// The map: MapLibre GL JS over OpenStreetMap raster tiles, with one pin per place an answer's
+// authorities sit in and one line per link between them. The pins are DOM markers, so they stay
+// readable and clickable even when the tile provider cannot be reached.
+
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import * as maplibregl from "maplibre-gl";
+import "maplibre-gl/dist/maplibre-gl.css";
+import { LocateFixed } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { arcType, locate, type Citation, type Edge, type Location } from "@/lib/citations";
+import { ARC_COLORS, CATEGORY_COLORS, CATEGORY_LABELS } from "@/map/palette";
+import { cn } from "@/lib/utils";
+
+/** The authorities that resolve to one place on the map. */
+export type MapPlace = { key: string; label: string; citations: Citation[] };
+
+type Pin = {
+  key: string;
+  label: string;
+  loc: Location;
+  lngLat: [number, number];
+  citations: Citation[];
+};
+
+const TILES = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
+const ATTRIBUTION = '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+const CENTER: [number, number] = [-98.583, 39.833];
+
+/** The style is inline: one raster source over OpenStreetMap, no account and no API key. */
+const STYLE: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    osm: { type: "raster", tiles: [TILES], tileSize: 256, maxzoom: 19, attribution: ATTRIBUTION },
+  },
+  layers: [{ id: "osm", type: "raster", source: "osm" }],
+};
+
+/** One pin per place: the authorities that resolve to the same court share it. */
+function buildPins(citations: Citation[]): Pin[] {
+  const places = new Map<string, Pin>();
+  for (const citation of citations) {
+    const loc = locate(citation);
+    const existing = places.get(loc.key);
+    if (existing) {
+      existing.citations.push(citation);
+      continue;
+    }
+    places.set(loc.key, {
+      key: loc.key,
+      label: loc.label,
+      loc,
+      lngLat: [loc.ll[1], loc.ll[0]],
+      citations: [citation],
+    });
+  }
+  return [...places.values()];
+}
+
+const reducedMotion = () => !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+/** One empty list, shared, so a missing prop does not look like new data on every render. */
+const NONE: never[] = [];
+
+export default function CitationMap({
+  citations = NONE,
+  edges = NONE,
+  onSelect,
+  className,
+}: {
+  citations?: Citation[];
+  edges?: Edge[];
+  onSelect: (place: MapPlace) => void;
+  className?: string;
+}) {
+  const container = useRef<HTMLDivElement | null>(null);
+  const mapRef = useRef<maplibregl.Map | null>(null);
+  const markers = useRef<maplibregl.Marker[]>([]);
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const pins = useMemo(() => buildPins(citations), [citations]);
+
+  const fit = useCallback(() => {
+    const map = mapRef.current;
+    if (!map || !pins.length) return;
+    const duration = reducedMotion() ? 0 : 700;
+    if (pins.length === 1) {
+      map.easeTo({ center: pins[0].lngLat, zoom: 6.5, duration });
+      return;
+    }
+    const bounds = new maplibregl.LngLatBounds();
+    for (const pin of pins) bounds.extend(pin.lngLat);
+    map.fitBounds(bounds, { padding: 72, maxZoom: 9, duration });
+  }, [pins]);
+
+  // The map is created once; everything after this only updates its data.
+  useEffect(() => {
+    const element = container.current;
+    if (!element) return;
+    let map: maplibregl.Map;
+    try {
+      map = new maplibregl.Map({
+        container: element,
+        style: STYLE,
+        center: CENTER,
+        zoom: 3.4,
+        attributionControl: { compact: true },
+      });
+    } catch {
+      setFailed(true);
+      return;
+    }
+    mapRef.current = map;
+    map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+    map.addControl(new maplibregl.ScaleControl({ unit: "imperial", maxWidth: 96 }), "bottom-left");
+    const onLoad = () => setReady(true);
+    map.on("load", onLoad);
+    return () => {
+      map.off("load", onLoad);
+      for (const marker of markers.current) marker.remove();
+      markers.current = [];
+      map.remove();
+      mapRef.current = null;
+    };
+  }, []);
+
+  // Paper tiles at night: the raster is dimmed rather than swapped, so there is one tile source.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const paint = () => {
+      if (!map.getLayer("osm")) return;
+      map.setPaintProperty("osm", "raster-brightness-max", query.matches ? 0.6 : 1);
+      map.setPaintProperty("osm", "raster-saturation", query.matches ? -0.4 : 0);
+    };
+    paint();
+    query.addEventListener("change", paint);
+    return () => query.removeEventListener("change", paint);
+  }, [ready]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !ready) return;
+
+    // A link is drawn between the two pins its authorities sit on; a link inside one place is not a link.
+    const pinOf = new Map<string, Pin>();
+    for (const pin of pins) for (const citation of pin.citations) pinOf.set(citation.id, pin);
+    const features: GeoJSON.Feature<GeoJSON.LineString, { arc: string }>[] = [];
+    for (const edge of edges) {
+      const from = pinOf.get(edge.src);
+      const to = pinOf.get(edge.dst);
+      if (!from || !to || from.key === to.key) continue;
+      features.push({
+        type: "Feature",
+        properties: { arc: arcType(from.loc, to.loc) },
+        geometry: { type: "LineString", coordinates: [from.lngLat, to.lngLat] },
+      });
+    }
+    const data: GeoJSON.FeatureCollection<GeoJSON.LineString> = { type: "FeatureCollection", features };
+
+    const source = map.getSource("links") as maplibregl.GeoJSONSource | undefined;
+    if (source) {
+      source.setData(data);
+    } else {
+      map.addSource("links", { type: "geojson", data });
+      map.addLayer({
+        id: "links",
+        type: "line",
+        source: "links",
+        layout: { "line-cap": "round" },
+        paint: {
+          "line-color": [
+            "match",
+            ["get", "arc"],
+            "cc",
+            ARC_COLORS.cc,
+            "cs",
+            ARC_COLORS.cs,
+            "st",
+            ARC_COLORS.st,
+            "fed",
+            ARC_COLORS.fed,
+            ARC_COLORS.other,
+          ],
+          "line-width": 1.6,
+          "line-opacity": 0.6,
+        },
+      });
+    }
+
+    for (const marker of markers.current) marker.remove();
+    markers.current = pins.map((pin) => {
+      const element = document.createElement("button");
+      element.type = "button";
+      element.className =
+        "flex h-7 w-7 items-center justify-center rounded-full border-2 border-background text-[11px] font-semibold text-white shadow-md transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+      element.style.backgroundColor = CATEGORY_COLORS[pin.loc.cat];
+      element.textContent = pin.citations.length > 1 ? String(pin.citations.length) : "";
+      const names = pin.citations.map((citation) => citation.title || citation.citation || "Authority").join("; ");
+      const count = pin.citations.length === 1 ? "1 authority" : `${pin.citations.length} authorities`;
+      element.setAttribute("aria-label", `${count} at ${pin.label}: ${names}`);
+      element.title = `${pin.label}\n${names}`;
+      element.addEventListener("click", (event) => {
+        event.stopPropagation();
+        onSelect({ key: pin.key, label: pin.label, citations: pin.citations });
+      });
+      return new maplibregl.Marker({ element, anchor: "center" }).setLngLat(pin.lngLat).addTo(map);
+    });
+
+    fit();
+  }, [ready, pins, edges, onSelect, fit]);
+
+  if (failed) {
+    return (
+      <div
+        className={cn(
+          "grid h-full place-items-center rounded-lg border border-border bg-muted p-6 text-center",
+          className,
+        )}
+      >
+        <p className="max-w-sm text-sm leading-relaxed text-muted-foreground">
+          This browser did not give the page WebGL, so the map cannot be drawn. The authorities are still listed under
+          Sources on the answer.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("relative h-full w-full overflow-hidden rounded-lg border border-border bg-muted", className)}>
+      <div ref={container} className="absolute inset-0" />
+
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        onClick={fit}
+        className="absolute left-3 top-3 gap-1.5 shadow-sm"
+        disabled={!pins.length}
+      >
+        <LocateFixed className="h-4 w-4" />
+        Fit to the authorities
+      </Button>
+
+      <ul className="absolute bottom-3 right-3 hidden gap-x-3 gap-y-1 rounded-md border border-border bg-background/90 px-2.5 py-1.5 text-[11px] text-muted-foreground shadow-sm backdrop-blur sm:flex sm:max-w-[15rem] sm:flex-wrap">
+        {(Object.keys(CATEGORY_LABELS) as (keyof typeof CATEGORY_LABELS)[]).map((category) => (
+          <li key={category} className="flex items-center gap-1.5">
+            <span
+              aria-hidden="true"
+              className="h-2 w-2 shrink-0 rounded-full"
+              style={{ backgroundColor: CATEGORY_COLORS[category] }}
+            />
+            {CATEGORY_LABELS[category]}
+          </li>
+        ))}
+      </ul>
+
+      {!pins.length && (
+        <div className="pointer-events-none absolute inset-0 grid place-items-center p-6">
+          <p className="rounded-md border border-border bg-background/90 px-3 py-2 text-sm text-muted-foreground shadow-sm">
+            This answer cites no authority that can be placed on the map.
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}

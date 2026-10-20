@@ -385,19 +385,3 @@ export function arcType(a: Location, b: Location): ArcType {
   return "other";
 }
 
-/** How many distinct jurisdictions (a state, DC, or an out-of-state circuit) the run touches. */
-export function jurisdictionCount(locs: Location[]): number {
-  return new Set(
-    locs.map((l) =>
-      l.key.startsWith("st:")
-        ? l.key
-        : ["scotus", "dc-stat", "dccir"].includes(l.key)
-          ? "dc"
-          : l.key.startsWith("cir:") && l.key !== "cir:tenth"
-            ? l.key
-            : "co",
-    ),
-  ).size;
-}
-
-export { SEATS, CAPITOL, DENVER, DC, titleCase };
