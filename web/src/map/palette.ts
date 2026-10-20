@@ -33,3 +33,21 @@ export const ARC_LABELS: Record<ArcType, string> = {
   fed: "Federal",
   other: "Link",
 };
+
+/**
+ * The colours of the country the law sits in: the state and county lines drawn under the pins, the
+ * names those lines carry, and the historic sites that give an area its character. They are greyer than
+ * the pins on purpose — the map's job is to answer "where", not to compete with its own answer.
+ */
+export const CONTEXT_COLORS = {
+  /** Country and state outlines. */
+  state: "#8d99a8",
+  /** County lines: dashed, so they read as a division of land rather than a route. */
+  county: "#b9c2ce",
+  countyLabel: "#5b6675",
+  /** Neighbourhood and suburb names, at the zooms where they mean something. */
+  areaLabel: "#7c8794",
+  /** Historic landmarks: monuments, memorials, forts, battlefields, ruins. */
+  historic: "#a16207",
+  historicLabel: "#7c5518",
+};

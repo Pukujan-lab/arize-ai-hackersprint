@@ -23,7 +23,10 @@ rules; this file holds the stack and library rules.
   **OpenFreeMap**'s Positron vector style and falling back to an inline OpenStreetMap raster style when
   it cannot be fetched. Both are keyless. The page has one theme, so the map is light; OpenFreeMap also
   publishes a `dark` style for the day the app grows one. Pins are DOM markers and links are a GeoJSON
-  line layer. Colours the canvas paints with are constants in `web/src/map/palette.ts`.
+  line layer. The country and state outlines, the neighbourhood names and the historic landmarks are
+  drawn from the style's own vector source-layers; the counties are the one exception, because the
+  tiles have none — they come from a public-domain Census county GeoJSON, filtered to Colorado in the
+  layer. Colours the canvas paints with are constants in `web/src/map/palette.ts`.
 - **Voice:** server TTS chain (Fish Audio → ElevenLabs → local Kokoro) behind `/api/tts_ts`, with the
   browser's own `speechSynthesis` as the last resort. All narration goes through
   `web/src/map/narrator.ts`: the read-aloud button via `hooks/use-narration.ts`, the map tour via

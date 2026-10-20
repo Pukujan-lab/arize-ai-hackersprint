@@ -33,6 +33,21 @@ needs an account or an API key. Pins are DOM markers, so they stay readable and 
 tiles do not arrive; a browser without WebGL gets a sentence saying so, and the authorities stay listed
 in the Sources drawer.
 
+The ground under the pins is mostly the basemap's own tiles. Positron ships the country and state
+outlines, neighbourhood names and points of interest but paints almost none of them, so
+`CitationMap.tsx` adds those layers back: the country and state outlines, suburb and neighbourhood
+names once the camera is close enough to mean them, and historic landmarks — monuments, memorials,
+battlefields, forts, ruins, archaeological sites — as a dot with its name. Those layers are optional by
+construction: a style that does not carry the source-layer draws nothing.
+
+The counties are the exception. OpenMapTiles, which Positron is styled over, stops at state level, so
+the county lines and the county names come from the Census's own county boundaries — a public-domain
+GeoJSON served keyless over a CDN, filtered to Colorado in the layer so one download serves every zoom.
+They are drawn whatever the style is, as a dashed division of land with the county's name in small
+caps. Each pin also carries the name of its court under the dot, shown once the camera is past the
+state view so the names do not pile up. The legend names the county lines and the historic sites
+whenever they were drawn.
+
 ## Shared
 
 | Control | Accessible name / id | Owner | API |
@@ -84,8 +99,8 @@ place — opens in a drawer, so the page never grows a second column of dashboar
 | The path the retriever took and how many citation links join the authorities | the line above the tour | `Chat.tsx`, `map/tour.ts` | `GET /api/run/{id}` (`retrieval`, `edges`) |
 | Fit the camera to every authority | `Fit to the authorities` | `CitationMap.tsx` | none |
 | Zoom and the map's own scale | `Zoom in`, `Zoom out`, the scale bar | `CitationMap.tsx` | none |
-| Each pin, named by the titles it stands for | the citation titles, joined by `; ` | `CitationMap.tsx` | none |
-| The legend, naming each kind of authority and each kind of citation link | the legend | `CitationMap.tsx` | none |
+| Each pin, named on the map and by the titles it stands for | the court's name; the citation titles, joined by `; ` | `CitationMap.tsx` | none |
+| The legend, naming each kind of authority, each kind of citation link, the county lines and the historic sites | the legend | `CitationMap.tsx` | none |
 | A saved run read back into the conversation | `?run=<id>` on the address | `Chat.tsx` | `GET /api/run/{id}` |
 
 Behaviour notes:
