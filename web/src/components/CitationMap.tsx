@@ -1,23 +1,34 @@
-// The map: MapLibre GL JS over OpenStreetMap's own raster tiles, muted to a grey so the authorities
-// stay the only colour on the page, with one pin per place an answer's authorities sit in and one curved
-// arc per link between them.
+// The map: MapLibre GL JS, through react-map-gl's declarative wrapper, over OpenFreeMap's keyless
+// OpenStreetMap vector tiles in a pale grey, so the authorities stay the only colour on the page. One pin
+// per place an answer's authorities sit in, one curved arc per link between them, and the county lines
+// from the Census's public-domain boundaries.
 //
-// Two things here are deliberate. The style is written out in this file rather than fetched, so the map
-// has a valid style the instant it is created and never sits blank waiting for a style document from
-// somebody else's server; and the pins are DOM markers, so they are there whatever the tiles do. The
-// raster tiles carry the county lines, the place names, the neighbourhood names and the historic sites
-// at every zoom without an account or a key; the counties are also drawn from the Census's public-domain
-// boundaries, because a raster tile is a picture and cannot be asked for a crisp line.
+// The pins are react-map-gl <Marker>s: the library owns the absolutely positioned wrapper, so the
+// pin's own styling can never push it off its coordinate (the old hand-made markers carried a
+// `relative` class that overrode MapLibre's positioning and drifted every pin off its place).
 //
-// The links are curved arcs with arrowheads and the tour inks the path it has walked, so the citation
-// graph reads as a graph rather than as a set of roads.
+// The tour drives the camera with flyTo, one flight per change of `focus`.
 
+import type * as GeoJSON from "geojson";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+// MapLibre 6 ships its tile worker as a separate ES module that the bundler has to emit and point it at;
+// without this the worker 404s and no tile (vector or raster) is ever drawn.
+import workerUrl from "maplibre-gl/dist/maplibre-gl-worker.mjs?url";
+import MapGL, {
+  AttributionControl,
+  Layer,
+  Marker,
+  NavigationControl,
+  ScaleControl,
+  Source,
+  type MapRef,
+} from "react-map-gl/maplibre";
 import { LocateFixed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { arcType, locate, type Citation, type Edge, type Location } from "@/lib/citations";
+import { OVERVIEW } from "@/map/tour";
 import { ARC_COLORS, ARC_LABELS, CATEGORY_COLORS, CATEGORY_LABELS, CONTEXT_COLORS } from "@/map/palette";
 import { cn } from "@/lib/utils";
 
@@ -35,46 +46,12 @@ type Pin = {
 /** Colorado, low enough that the state sits in the middle of the pane before the pins are fitted. */
 const CENTER: [number, number] = [-105.55, 39.0];
 
-/** The font server the county names are drawn with: keyless, and only text ever asks it for anything. */
-const GLYPHS = "https://fonts.openmaptiles.org/{fontstack}/{range}.pbf";
-
 /**
- * The basemap, written here rather than fetched. OpenStreetMap's own raster tiles are the one keyless
- * source that carries county boundaries, place names, neighbourhood names and historic sites at every
- * zoom, and a raster layer needs no style document and no glyph server to start drawing. The raster
- * paint properties then mute them, so the map is a grey ground with legible names and the pins carry
- * the meaning.
+ * The basemap: OpenFreeMap's "positron" style — OpenStreetMap data as vector tiles, free, keyless and
+ * MIT/ODbL licensed (https://openfreemap.org). Positron is the pale grey cartography the old muted raster
+ * imitated, so the pins stay the only colour on the page. Its glyph server also draws the county names.
  */
-const basemap = (): maplibregl.StyleSpecification => ({
-  version: 8,
-  glyphs: GLYPHS,
-  sources: {
-    osm: {
-      type: "raster",
-      // The one host OpenStreetMap documents. The old `a`/`b`/`c` subdomains were retired, and a tile
-      // URL that 403s leaves a grey pane with nothing to place the pins against.
-      tiles: ["https://tile.openstreetmap.org/{z}/{x}/{y}.png"],
-      tileSize: 256,
-      maxzoom: 19,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    },
-  },
-  layers: [
-    // Painted under the tiles so the pane is paper-coloured while they arrive, not white.
-    { id: "ground", type: "background", paint: { "background-color": "#eeece7" } },
-    {
-      id: "osm",
-      type: "raster",
-      source: "osm",
-      paint: {
-        "raster-saturation": -0.62,
-        "raster-contrast": 0.06,
-        "raster-brightness-min": 0.03,
-        "raster-brightness-max": 0.99,
-      },
-    },
-  ],
-});
+const BASEMAP = "https://tiles.openfreemap.org/styles/positron";
 
 /**
  * The counties. The tiles draw their own county boundaries but faintly, and a raster tile cannot be
@@ -83,7 +60,6 @@ const basemap = (): maplibregl.StyleSpecification => ({
  */
 const COUNTY_URL = "https://cdn.jsdelivr.net/gh/plotly/datasets@master/geojson-counties-fips.json";
 const COUNTY_SOURCE = "co-counties";
-const COUNTY_FILL = "co-fill";
 const COUNTY_LINE = "co-county-line";
 const COUNTY_NAME = "co-county-name";
 
@@ -188,6 +164,8 @@ function buildPins(citations: Citation[]): Pin[] {
 
 const reducedMotion = () => !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
+maplibregl.setWorkerUrl(workerUrl);
+
 /** One empty list, shared, so a missing prop does not look like new data on every render. */
 const NONE: never[] = [];
 
@@ -201,168 +179,48 @@ export default function CitationMap({
 }: {
   citations?: Citation[];
   edges?: Edge[];
-  /** The place the tour is on, so the camera follows the voice. Null fits every authority. */
+  /** The place the tour is on (a pin key, or OVERVIEW for every pin), so the camera follows the voice. */
   focus?: string | null;
   /** The places the tour has walked so far, in order, so the graph shows its own traversal. */
   trail?: string[];
   onSelect: (place: MapPlace) => void;
   className?: string;
 }) {
-  const container = useRef<HTMLDivElement | null>(null);
-  const mapRef = useRef<maplibregl.Map | null>(null);
-  const markers = useRef<maplibregl.Marker[]>([]);
+  const mapRef = useRef<MapRef | null>(null);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  /** Whether the county mesh is drawn, so the legend only names what is actually there. */
-  const [county, setCounty] = useState(false);
+  const [zoom, setZoom] = useState(6);
+  const [countyData, setCountyData] = useState<GeoJSON.FeatureCollection | null>(null);
 
   const pins = useMemo(() => buildPins(citations), [citations]);
 
   const fit = useCallback(() => {
     const map = mapRef.current;
     if (!map || !pins.length) return;
-    const duration = reducedMotion() ? 0 : 700;
+    const duration = reducedMotion() ? 0 : 1600;
     // Fit the state's own authorities; a lone federal pin in Washington does not get to decide the scale.
     const home = pins.filter(inColorado);
     const targets = home.length ? home : pins;
     if (targets.length === 1) {
-      map.easeTo({ center: targets[0].lngLat, zoom: 9.2, duration });
+      map.flyTo({ center: targets[0].lngLat, zoom: 9.2, duration, essential: true });
       return;
     }
     const bounds = new maplibregl.LngLatBounds();
     for (const pin of targets) bounds.extend(pin.lngLat);
-    map.fitBounds(bounds, { padding: 64, maxZoom: 10, duration });
+    map.fitBounds(bounds, { padding: 64, maxZoom: 10, duration, linear: false });
   }, [pins]);
 
-  // The map is created once; everything after this only updates its data. Rotation is off: a map that
-  // can be twisted by accident is a map that is hard to get back.
   useEffect(() => {
-    const element = container.current;
-    if (!element) return;
-    let map: maplibregl.Map;
-    try {
-      map = new maplibregl.Map({
-        container: element,
-        style: basemap(),
-        center: CENTER,
-        zoom: 6,
-        minZoom: 3,
-        maxZoom: 16,
-        maxPitch: 0,
-        dragRotate: false,
-        pitchWithRotate: false,
-        renderWorldCopies: false,
-        attributionControl: { compact: true },
-      });
-    } catch {
-      setFailed(true);
-      return;
-    }
-    mapRef.current = map;
-    map.touchZoomRotate.disableRotation();
-    map.addControl(new maplibregl.NavigationControl({ showCompass: false, visualizePitch: false }), "top-right");
-    map.addControl(new maplibregl.ScaleControl({ unit: "imperial", maxWidth: 96 }), "bottom-left");
-
-    // The style is written in this file, so it can be loaded before the listener below is attached;
-    // check first, and only wait if there is something left to wait for.
-    const onStyleLoad = () => setReady(true);
-    map.on("style.load", onStyleLoad);
-    if (map.isStyleLoaded()) setReady(true);
-
-    // A map created before its pane has a height draws into nothing and stays blank until something
-    // else resizes the window, so the pane is watched rather than assumed.
-    const resize = new ResizeObserver(() => map.resize());
-    resize.observe(element);
-
-    return () => {
-      resize.disconnect();
-      map.off("style.load", onStyleLoad);
-      for (const marker of markers.current) marker.remove();
-      markers.current = [];
-      map.remove();
-      mapRef.current = null;
-    };
-  }, []);
-
-  // The county mesh: the state outline falls out of it for free, because the outer edges of every
-  // Colorado county together are the state.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
     let live = true;
     void coloradoCounties().then((data) => {
-      if (!live || !data || !mapRef.current) return;
-      if (!map.getSource(COUNTY_SOURCE)) map.addSource(COUNTY_SOURCE, { type: "geojson", data });
-      // The state's own shape, painted *under* the tiles: when they arrive they cover it, and when they
-      // do not the map still shows Colorado rather than an empty grey pane.
-      if (!map.getLayer(COUNTY_FILL) && map.getLayer("osm")) {
-        map.addLayer(
-          {
-            id: COUNTY_FILL,
-            type: "fill",
-            source: COUNTY_SOURCE,
-            paint: { "fill-color": "#e3e0d8", "fill-opacity": 1 },
-          },
-          "osm",
-        );
-      }
-      // The counties belong under the citation links and the walked path, not over them, so they are
-      // inserted beneath the links layer rather than simply appended.
-      const before = map.getLayer("links") ? "links" : undefined;
-      if (!map.getLayer(COUNTY_LINE)) {
-        map.addLayer(
-          {
-            id: COUNTY_LINE,
-            type: "line",
-            source: COUNTY_SOURCE,
-            paint: {
-              "line-color": CONTEXT_COLORS.county,
-              "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.6, 9, 1.2, 14, 1.8],
-              "line-dasharray": [2, 1.4],
-              "line-opacity": ["interpolate", ["linear"], ["zoom"], 4.5, 0, 6, 0.95],
-            },
-          },
-          before,
-        );
-      }
-      if (!map.getLayer(COUNTY_NAME)) {
-        map.addLayer(
-          {
-            id: COUNTY_NAME,
-            type: "symbol",
-            source: COUNTY_SOURCE,
-            minzoom: 6.5,
-            layout: {
-              "text-font": ["Noto Sans Regular"],
-              "text-field": ["get", "NAME"],
-              "text-size": ["interpolate", ["linear"], ["zoom"], 6.5, 9.5, 12, 11.5],
-              "text-letter-spacing": 0.12,
-              "text-transform": "uppercase",
-              "text-max-width": 8,
-              "text-padding": 10,
-            },
-            paint: {
-              "text-color": CONTEXT_COLORS.countyLabel,
-              "text-halo-color": "#ffffff",
-              "text-halo-width": 1.4,
-              "text-halo-blur": 0.4,
-              "text-opacity": 0.85,
-            },
-          },
-          before,
-        );
-      }
-      setCounty(true);
+      if (live) setCountyData(data);
     });
     return () => {
       live = false;
     };
-  }, [ready]);
+  }, []);
 
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
-
+  const links = useMemo<GeoJSON.FeatureCollection<GeoJSON.LineString>>(() => {
     // A link is drawn between the two pins its authorities sit on; a link inside one place is not a link.
     const pinOf = new Map<string, Pin>();
     for (const pin of pins) for (const citation of pin.citations) pinOf.set(citation.id, pin);
@@ -377,81 +235,11 @@ export default function CitationMap({
         geometry: { type: "LineString", coordinates: curve(from.lngLat, to.lngLat) },
       });
     }
-    const data: GeoJSON.FeatureCollection<GeoJSON.LineString> = { type: "FeatureCollection", features };
-
-    const source = map.getSource("links") as maplibregl.GeoJSONSource | undefined;
-    if (source) {
-      source.setData(data);
-    } else {
-      map.addSource("links", { type: "geojson", data });
-      map.addLayer({
-        id: "links",
-        type: "line",
-        source: "links",
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: {
-          "line-color": [
-            "match",
-            ["get", "arc"],
-            "cc",
-            ARC_COLORS.cc,
-            "cs",
-            ARC_COLORS.cs,
-            "st",
-            ARC_COLORS.st,
-            "fed",
-            ARC_COLORS.fed,
-            ARC_COLORS.other,
-          ],
-          "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.2, 8, 1.8],
-          "line-opacity": 0.55,
-        },
-      });
-    }
-
-    for (const marker of markers.current) marker.remove();
-    markers.current = pins.map((pin) => {
-      // The dot is the marker and the court's name hangs under it, so the map says where each pin is
-      // without a hover. The name is absolutely positioned, so it never moves the dot off its point.
-      const element = document.createElement("div");
-      element.dataset.place = pin.key;
-      // A fixed box, so the marker's own anchor arithmetic cannot be thrown by the label hanging
-      // outside it: the dot's centre is the coordinate, at every zoom.
-      element.className = "relative flex h-8 w-8 items-center justify-center";
-
-      const dot = document.createElement("button");
-      dot.type = "button";
-      dot.dataset.dot = "";
-      dot.className =
-        "flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background text-[11px] font-semibold text-white shadow-md transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
-      dot.style.backgroundColor = CATEGORY_COLORS[pin.loc.cat];
-      dot.textContent = pin.citations.length > 1 ? String(pin.citations.length) : "";
-      const names = pin.citations.map((citation) => citation.title || citation.citation || "Authority").join("; ");
-      const count = pin.citations.length === 1 ? "1 authority" : `${pin.citations.length} authorities`;
-      dot.setAttribute("aria-label", `${count} at ${pin.label}: ${names}`);
-      dot.title = `${pin.label}\n${names}`;
-      dot.addEventListener("click", (event) => {
-        event.stopPropagation();
-        onSelect({ key: pin.key, label: pin.label, citations: pin.citations });
-      });
-
-      const label = document.createElement("span");
-      label.dataset.label = "";
-      label.className =
-        "pointer-events-none absolute left-1/2 top-full mt-0.5 max-w-[10rem] -translate-x-1/2 truncate rounded bg-background/85 px-1 text-[10px] font-medium leading-tight text-foreground shadow-sm";
-      label.textContent = pin.label;
-
-      element.append(dot, label);
-      return new maplibregl.Marker({ element, anchor: "center" }).setLngLat(pin.lngLat).addTo(map);
-    });
-
-    fit();
-  }, [ready, pins, edges, onSelect, fit]);
+    return { type: "FeatureCollection", features };
+  }, [pins, edges]);
 
   // The traversal: the places the tour has already walked, joined in order, inked over the pale links.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
+  const walked = useMemo<GeoJSON.FeatureCollection<GeoJSON.LineString>>(() => {
     const pinOf = new Map(pins.map((pin) => [pin.key, pin] as const));
     const stops = trail.map((key) => pinOf.get(key)).filter((pin): pin is Pin => !!pin);
     const features: GeoJSON.Feature<GeoJSON.LineString>[] = [];
@@ -465,99 +253,57 @@ export default function CitationMap({
         geometry: { type: "LineString", coordinates: curve(from.lngLat, to.lngLat) },
       });
     }
-    const data: GeoJSON.FeatureCollection<GeoJSON.LineString> = { type: "FeatureCollection", features };
+    return { type: "FeatureCollection", features };
+  }, [trail, pins]);
 
-    const source = map.getSource(TRAIL) as maplibregl.GeoJSONSource | undefined;
-    if (source) {
-      source.setData(data);
-    } else {
-      map.addSource(TRAIL, { type: "geojson", data });
-      addArrow(map, CONTEXT_COLORS.trail);
-      // A white casing under the ink, so the walked path stays legible over county lines and names.
-      map.addLayer({
-        id: `${TRAIL}-casing`,
-        type: "line",
-        source: TRAIL,
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": "#ffffff", "line-width": 6, "line-opacity": 0.85 },
-      });
-      map.addLayer({
-        id: TRAIL,
-        type: "line",
-        source: TRAIL,
-        layout: { "line-cap": "round", "line-join": "round" },
-        paint: { "line-color": CONTEXT_COLORS.trail, "line-width": 2.6 },
-      });
-      map.addLayer({
-        id: `${TRAIL}-arrow`,
-        type: "symbol",
-        source: TRAIL,
-        layout: {
-          "symbol-placement": "line",
-          "symbol-spacing": 48,
-          "icon-image": ARROW,
-          "icon-size": 0.7,
-          "icon-rotation-alignment": "map",
-          "icon-allow-overlap": true,
-          "icon-ignore-placement": true,
-        },
-      });
-    }
-    // While the walk is running the untouched links step back, so the traversal is the thing you see.
-    if (map.getLayer("links")) {
-      map.setPaintProperty("links", "line-opacity", features.length ? 0.15 : 0.55);
-    }
-  }, [ready, trail, pins]);
+  // A new answer: frame its authorities.
+  useEffect(() => {
+    if (ready) fit();
+  }, [ready, fit]);
 
-  // At the scale of a state the pins are close enough that their names would pile up, so the names
-  // arrive once the camera is close enough for them to mean something.
+  // The camera follows the tour. Each change of `focus` comes from the narration (a new spoken step, or
+  // the voice reaching a cited authority mid-line), and flies there: out, across and back in, so the
+  // reader sees where one authority sits relative to the last. OVERVIEW frames every authority.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !ready) return;
-    const apply = () => {
-      const show = map.getZoom() >= 5.5;
-      for (const marker of markers.current) {
-        const label = marker.getElement().querySelector<HTMLElement>("[data-label]");
-        label?.classList.toggle("hidden", !show);
-      }
-    };
-    apply();
-    map.on("zoom", apply);
-    return () => {
-      map.off("zoom", apply);
-    };
-  }, [ready, pins]);
-
-  // The tour marks the place it is speaking about, so the pin and the voice agree.
-  useEffect(() => {
-    for (const marker of markers.current) {
-      const element = marker.getElement();
-      const dot = element.querySelector<HTMLElement>("[data-dot]");
-      if (!dot) continue;
-      const marked = focus !== null && element.dataset.place === focus;
-      dot.classList.toggle("scale-125", marked);
-      dot.classList.toggle("ring-2", marked);
-      dot.classList.toggle("ring-foreground", marked);
-      dot.classList.toggle("ring-offset-2", marked);
-      dot.classList.toggle("ring-offset-background", marked);
+    if (!map || !ready || focus === null) return;
+    if (focus === OVERVIEW) {
+      fit();
+      return;
     }
-  }, [focus, ready, pins]);
-
-  // The camera follows the tour to the place it is speaking about; with no place, every pin stays in view.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
-    const pin = focus === null ? undefined : pins.find((candidate) => candidate.key === focus);
+    const pin = pins.find((candidate) => candidate.key === focus);
     if (!pin) return;
-    // The walk zooms to the county scale as it travels: at that zoom the county lines and their names
-    // are on the page, so the voice saying "Boulder County" is answered by the map. It never zooms out
-    // to reach it, so a reader who has already gone in close is not pulled back.
-    map.easeTo({
+    map.flyTo({
       center: pin.lngLat,
-      zoom: Math.max(map.getZoom(), 9.2),
-      duration: reducedMotion() ? 0 : 1200,
+      zoom: inColorado(pin) ? 9.2 : 6,
+      speed: 0.9,
+      curve: 1.5,
+      duration: reducedMotion() ? 0 : undefined,
+      essential: true,
     });
-  }, [focus, ready, pins]);
+  }, [focus, ready, pins, fit]);
+
+  const onLoad = useCallback(() => {
+    const map = mapRef.current?.getMap();
+    if (map) addArrow(map, CONTEXT_COLORS.trail);
+    setReady(true);
+  }, []);
+
+  const showLabels = zoom >= 5.5;
+  const linkColor: maplibregl.ExpressionSpecification = [
+    "match",
+    ["get", "arc"],
+    "cc",
+    ARC_COLORS.cc,
+    "cs",
+    ARC_COLORS.cs,
+    "st",
+    ARC_COLORS.st,
+    "fed",
+    ARC_COLORS.fed,
+    ARC_COLORS.other,
+  ];
+  const county = !!countyData;
 
   if (failed) {
     return (
@@ -577,7 +323,151 @@ export default function CitationMap({
 
   return (
     <div className={cn("relative h-full w-full overflow-hidden rounded-lg border border-border bg-muted", className)}>
-      <div ref={container} className="absolute inset-0" />
+      <MapGL
+        ref={mapRef}
+        mapLib={maplibregl}
+        mapStyle={BASEMAP}
+        initialViewState={{ longitude: CENTER[0], latitude: CENTER[1], zoom: 6 }}
+        minZoom={3}
+        maxZoom={16}
+        maxPitch={0}
+        dragRotate={false}
+        pitchWithRotate={false}
+        touchPitch={false}
+        renderWorldCopies={false}
+        attributionControl={false}
+        onLoad={onLoad}
+        onZoom={(event) => setZoom(event.viewState.zoom)}
+        onError={(event) => {
+          if (/webgl/i.test(String(event.error?.message))) setFailed(true);
+        }}
+        style={{ position: "absolute", inset: 0 }}
+      >
+        <AttributionControl compact />
+        <NavigationControl position="top-right" showCompass={false} visualizePitch={false} />
+        <ScaleControl position="bottom-left" unit="imperial" maxWidth={96} />
+
+        {countyData && (
+          <Source id={COUNTY_SOURCE} type="geojson" data={countyData}>
+            <Layer
+              id={COUNTY_LINE}
+              type="line"
+              paint={{
+                "line-color": CONTEXT_COLORS.county,
+                "line-width": ["interpolate", ["linear"], ["zoom"], 5, 0.6, 9, 1.2, 14, 1.8],
+                "line-dasharray": [2, 1.4],
+                "line-opacity": ["interpolate", ["linear"], ["zoom"], 4.5, 0, 6, 0.95],
+              }}
+            />
+            <Layer
+              id={COUNTY_NAME}
+              type="symbol"
+              minzoom={6.5}
+              layout={{
+                "text-font": ["Noto Sans Regular"],
+                "text-field": ["get", "NAME"],
+                "text-size": ["interpolate", ["linear"], ["zoom"], 6.5, 9.5, 12, 11.5],
+                "text-letter-spacing": 0.12,
+                "text-transform": "uppercase",
+                "text-max-width": 8,
+                "text-padding": 10,
+              }}
+              paint={{
+                "text-color": CONTEXT_COLORS.countyLabel,
+                "text-halo-color": "#ffffff",
+                "text-halo-width": 1.4,
+                "text-halo-blur": 0.4,
+                "text-opacity": 0.85,
+              }}
+            />
+          </Source>
+        )}
+
+        <Source id="links" type="geojson" data={links}>
+          <Layer
+            id="links"
+            type="line"
+            layout={{ "line-cap": "round", "line-join": "round" }}
+            paint={{
+              "line-color": linkColor,
+              "line-width": ["interpolate", ["linear"], ["zoom"], 4, 1.2, 8, 1.8],
+              // While the walk is running the untouched links step back, so the traversal is what you see.
+              "line-opacity": walked.features.length ? 0.15 : 0.55,
+            }}
+          />
+        </Source>
+
+        <Source id={TRAIL} type="geojson" data={walked}>
+          {/* A white casing under the ink, so the walked path stays legible over county lines and names. */}
+          <Layer
+            id={`${TRAIL}-casing`}
+            type="line"
+            layout={{ "line-cap": "round", "line-join": "round" }}
+            paint={{ "line-color": "#ffffff", "line-width": 6, "line-opacity": 0.85 }}
+          />
+          <Layer
+            id={TRAIL}
+            type="line"
+            layout={{ "line-cap": "round", "line-join": "round" }}
+            paint={{ "line-color": CONTEXT_COLORS.trail, "line-width": 2.6 }}
+          />
+          {ready && (
+            <Layer
+              id={`${TRAIL}-arrow`}
+              type="symbol"
+              layout={{
+                "symbol-placement": "line",
+                "symbol-spacing": 48,
+                "icon-image": ARROW,
+                "icon-size": 0.7,
+                "icon-rotation-alignment": "map",
+                "icon-allow-overlap": true,
+                "icon-ignore-placement": true,
+              }}
+            />
+          )}
+        </Source>
+
+        {pins.map((pin) => {
+          const names = pin.citations.map((citation) => citation.title || citation.citation || "Authority").join("; ");
+          const count = pin.citations.length === 1 ? "1 authority" : `${pin.citations.length} authorities`;
+          const marked = focus !== null && focus === pin.key;
+          // react-map-gl owns the positioned wrapper, so nothing in here can move the dot off its point:
+          // the dot's centre is the coordinate at every zoom, and the name hangs beneath it.
+          return (
+            <Marker key={pin.key} longitude={pin.lngLat[0]} latitude={pin.lngLat[1]} anchor="center">
+              <div data-place={pin.key} className="relative flex h-8 w-8 items-center justify-center">
+                <button
+                  type="button"
+                  data-dot=""
+                  aria-label={`${count} at ${pin.label}: ${names}`}
+                  title={`${pin.label}\n${names}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSelect({ key: pin.key, label: pin.label, citations: pin.citations });
+                  }}
+                  style={{ backgroundColor: CATEGORY_COLORS[pin.loc.cat] }}
+                  className={cn(
+                    "flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background text-[11px] font-semibold text-white shadow-md transition-transform hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+                    marked && "scale-125 ring-2 ring-foreground ring-offset-2 ring-offset-background",
+                  )}
+                >
+                  {pin.citations.length > 1 ? String(pin.citations.length) : ""}
+                </button>
+                <span
+                  data-label=""
+                  className={cn(
+                    "pointer-events-none absolute left-1/2 top-full mt-0.5 max-w-[10rem] -translate-x-1/2 truncate rounded bg-background/85 px-1 text-[10px] font-medium leading-tight text-foreground shadow-sm",
+                    !showLabels && "hidden",
+                  )}
+                >
+                  {pin.label}
+                </span>
+              </div>
+            </Marker>
+          );
+        })}
+      </MapGL>
       {/* A hairline and a soft inner shade, so the tiles sit in the card instead of bleeding out of it. */}
       <div
         aria-hidden="true"

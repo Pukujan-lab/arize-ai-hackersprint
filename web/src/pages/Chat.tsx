@@ -295,11 +295,11 @@ export default function Chat() {
 
   // The place the walk is standing on, named the way the pin is, so the strip and the map agree.
   const tourAt = useMemo(() => {
-    const key = tour.active ? tour.current?.place ?? null : null;
+    const key = tour.active ? tour.focus : null;
     if (!key) return null;
     const citation = (mapTurn?.result.citations || []).find((item) => locate(item).key === key);
     return citation ? locate(citation).label : null;
-  }, [tour.active, tour.current, mapTurn]);
+  }, [tour.active, tour.focus, mapTurn]);
 
   // The walk belongs to the map: leaving the map leaves the walk.
   useEffect(() => {
@@ -385,7 +385,7 @@ export default function Chat() {
                 <CitationMap
                   citations={mapTurn.result.citations}
                   edges={mapTurn.result.edges}
-                  focus={tour.active ? tour.current?.place ?? null : null}
+                  focus={tour.active ? tour.focus : null}
                   trail={trail}
                   onSelect={selectPlace}
                   className="h-full"

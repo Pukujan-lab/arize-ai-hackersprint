@@ -216,7 +216,7 @@ function inlineNodes(text: string, citations: Citation[], cursor: { n: number })
     }
 
     // Plain text, up to the next character that could start any of the forms above.
-    const stop = rest.slice(1).search(/[*_`\[]/);
+    const stop = rest.slice(1).search(/[*_`[]/);
     const len = stop < 0 ? rest.length : stop + 1;
     out.push(<Fragment key={key()}>{rest.slice(0, len)}</Fragment>);
     i += len;

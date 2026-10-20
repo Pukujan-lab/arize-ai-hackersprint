@@ -6,7 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { narrate, type Narration } from "@/map/narrator";
 import type { NarrationStatus } from "@/hooks/use-narration";
-import type { TourStep } from "@/map/tour";
+import { OVERVIEW, type TourStep } from "@/map/tour";
 
 /**
  * The next stop standing somewhere other than `away`, searching from `from` in `direction`. Stops that
@@ -133,6 +133,16 @@ export function useTour(steps: TourStep[], onStart?: () => void) {
   const current = index >= 0 ? steps[index] ?? null : null;
   const here = current?.place ?? null;
 
+  // Where the camera should be right now. Each step boundary moves it, and inside a step the speech
+  // engine's word-boundary events (`heard`) move it again as the voice reaches each cited authority.
+  // A step that names no place frames every authority, so the walk opens on the whole picture.
+  let focus: string | null = null;
+  if (current) {
+    const cues = current.cues ?? [];
+    const reached = cues.filter((item) => item.at <= heard);
+    focus = reached.length ? reached[reached.length - 1].place : current.place ?? (cues.length ? null : OVERVIEW);
+  }
+
   return {
     index,
     status,
@@ -143,6 +153,7 @@ export function useTour(steps: TourStep[], onStart?: () => void) {
     prev,
     active: index >= 0,
     current,
+    focus,
     canPrev: located(steps, index - 1, -1, here) >= 0,
     canNext: located(steps, index + 1, 1, here) >= 0,
   };

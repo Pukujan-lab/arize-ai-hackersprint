@@ -6,6 +6,6 @@
     "build": "CI=true pnpm --dir web install --ignore-workspace && pnpm --dir web build"
   },
   "dependencies": {
-    "maplibre-gl": "^6.15.0"
+    "maplibre-gl": "6.15.0"
   }
 }
