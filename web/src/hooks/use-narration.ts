@@ -1,5 +1,6 @@
-// Read a line aloud through the server's voice chain, reporting what the voice is doing. The chain
-// itself lives in the map's narrator, so a line spoken here sounds exactly like a line in the walk.
+// Read a line aloud, reporting what the voice is doing. The voice itself lives in the map's narrator —
+// the browser's own voice first, the server's chain behind it — so a line spoken here sounds exactly
+// like a line in the walk.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { narrate, type Narration } from "@/map/narrator";

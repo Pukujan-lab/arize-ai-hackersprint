@@ -27,11 +27,14 @@ rules; this file holds the stack and library rules.
   drawn from the style's own vector source-layers; the counties are the one exception, because the
   tiles have none — they come from a public-domain Census county GeoJSON, filtered to Colorado in the
   layer. Colours the canvas paints with are constants in `web/src/map/palette.ts`.
-- **Voice:** server TTS chain (Fish Audio → ElevenLabs → local Kokoro) behind `/api/tts_ts`, with the
-  browser's own `speechSynthesis` as the last resort. All narration goes through
+- **Voice:** the browser's own `speechSynthesis` speaks first — it needs no key, no network and no clip,
+  so it starts on the click that asked for it, and on Edge/Windows it is the Microsoft natural voices.
+  The server chain (Fish Audio → ElevenLabs → local Kokoro) behind `/api/tts_ts` is the fallback for a
+  browser that cannot speak at all, or that errors mid-line; do not put it back in front, because every
+  line then waits out a give-up timeout when no provider is keyed. All narration goes through
   `web/src/map/narrator.ts`: the read-aloud button via `hooks/use-narration.ts`, the map tour via
-  `hooks/use-tour.ts` (the stops are built in `web/src/map/tour.ts`, the controls are
-  `components/TourPanel.tsx` under the map). The tour never autoplays.
+  `hooks/use-tour.ts` (the stops are built in `web/src/map/tour.ts`, the subtitle strip over the map is
+  `components/TourBar.tsx`). The tour never autoplays.
 - **Backend libs:** `networkx` (case graph), `numpy`/`scipy` (ranking), `httpx`/`requests` (HTTP),
   `arize-otel` + `openinference-instrumentation` (tracing/evals). Storage is Octo (HTTP) and SurrealDB
   (with a NetworkX fallback).
@@ -108,8 +111,8 @@ rules; this file holds the stack and library rules.
 - `app/` — FastAPI backend package (`server.py`, `agents.py`, `llm.py`, `graph_store.py`,
   `octo_retriever.py`, `ttschain.py`, `coord.py`, `contracts.py`).
 - `web/src/pages/` — one file per route (`Chat.tsx` is `/`), `web/src/components/` — app components
-  (the shell is `AppShell.tsx`, the map is `CitationMap.tsx`, the tour's controls are
-  `TourPanel.tsx`), `web/src/components/ui/` — shadcn primitives (do not edit), `web/src/lib/` — pure
+  (the shell is `AppShell.tsx`, the map is `CitationMap.tsx`, a pin's card is `PlaceCard.tsx`, the
+  tour's subtitle strip is `TourBar.tsx`), `web/src/components/ui/` — shadcn primitives (do not edit), `web/src/lib/` — pure
   helpers, `web/src/map/` — the map's colours, the narrator and the tour's stops, `web/src/hooks/` —
   hooks (`use-narration.ts`, `use-tour.ts`).
 - `schema/`, `migrations/` — the versioned Octo data model. `contracts/` — API, agent and storage

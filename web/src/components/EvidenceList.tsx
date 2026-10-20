@@ -1,6 +1,5 @@
-// One list of authorities, used wherever the page shows the sources behind an answer: the sources
-// drawer and the drawer that opens from a pin on the map. Each entry carries the reference the memo
-// uses, so `[3]` in the prose can be found here.
+// One list of authorities, used wherever the page shows the sources behind an answer. Each entry
+// carries the reference the memo uses, so `[3]` in the prose can be found here.
 
 import { citeType, courtName, type Citation } from "@/lib/citations";
 

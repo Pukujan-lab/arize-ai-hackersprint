@@ -1,5 +1,5 @@
-// Drive the tour: one stop at a time, each spoken through the narrator, each ending when its clip ends
-// (or when the voice cannot be had, after a silence). Stopping is always immediate and always silent.
+// Drive the tour: one stop at a time, each spoken through the narrator, each ending when the voice ends
+// (or when no voice can be had, after a silence). Stopping is always immediate and always silent.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { narrate, type Narration } from "@/map/narrator";
@@ -10,6 +10,8 @@ export function useTour(steps: TourStep[], onStart?: () => void) {
   /** The stop being spoken, or -1 when the walk is not running. */
   const [index, setIndex] = useState(-1);
   const [status, setStatus] = useState<NarrationStatus>("idle");
+  /** How much of the current stop has been heard, so the caption keeps pace with the voice. */
+  const [heard, setHeard] = useState(0);
 
   const session = useRef<Narration | null>(null);
   const cursor = useRef(-1);
@@ -30,6 +32,7 @@ export function useTour(steps: TourStep[], onStart?: () => void) {
     session.current = null;
     setIndex(-1);
     setStatus("idle");
+    setHeard(0);
   }, []);
 
   const go = useCallback(
@@ -41,6 +44,7 @@ export function useTour(steps: TourStep[], onStart?: () => void) {
       }
       cursor.current = at;
       setIndex(at);
+      setHeard(0);
       session.current?.stop();
       setStatus("loading");
       session.current = narrate(
@@ -53,6 +57,9 @@ export function useTour(steps: TourStep[], onStart?: () => void) {
           loading: (loading) => setStatus(loading ? "loading" : "speaking"),
           playing: () => setStatus("speaking"),
           unavailable: () => setStatus("unavailable"),
+          progress: (chars) => {
+            if (cursor.current === at) setHeard(chars);
+          },
         },
       );
     },
@@ -78,5 +85,5 @@ export function useTour(steps: TourStep[], onStart?: () => void) {
 
   const current = index >= 0 ? steps[index] ?? null : null;
 
-  return { index, status, start, stop, active: index >= 0, current };
+  return { index, status, heard, start, stop, active: index >= 0, current };
 }

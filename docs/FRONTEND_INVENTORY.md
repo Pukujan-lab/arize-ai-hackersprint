@@ -88,15 +88,15 @@ place — opens in a drawer, so the page never grows a second column of dashboar
 | The stage the run has reached, with the draft as it is written | `Run progress` | `Chat.tsx` | `GET /api/run/{id}` (`events`, `partial`) |
 | Everything behind one answer: the figures, the places, the retrieval stages | `Details` | `Chat.tsx`, `TurnDetails.tsx` | `GET /api/run/{id}` |
 | The authorities behind one answer | `Sources (n)` | `Chat.tsx`, `EvidenceList.tsx` | none |
-| Read the memo aloud, and stop it | `Read aloud`, `Stop` | `Chat.tsx` | `POST /api/tts_ts` |
+| Read the memo aloud, and stop it | `Read aloud`, `Stop` | `Chat.tsx`, `map/narrator.ts` | none (the browser's own voice; `POST /api/tts_ts` only if it cannot speak) |
 | Copy the memo | `Copy` | `Chat.tsx` | none |
 | Open this answer on the map | `Show on the map` | `Chat.tsx` | none |
 | Follow-up questions, asked with the previous run in context, held in a drawer | `Follow-ups (n)` | `Chat.tsx` | `POST /api/ask` with `prev_run_id` |
 | One authority: kind, court, date, citation, passage and link | `Authority` | `AuthorityDetail.tsx` | none |
-| The authorities at one place, from a pin | the place label | `Chat.tsx`, `EvidenceList.tsx` | none |
-| Walk the answer: the memo, the retrieval path, then each authority in turn | `Play the tour`, `Stop the tour` | `Chat.tsx`, `TourPanel.tsx`, `map/tour.ts`, `hooks/use-tour.ts` | `POST /api/tts_ts` |
-| The stop being spoken, and the transcript of every stop so far | `Tour` (region), `Tour transcript` | `TourPanel.tsx` | none |
-| The path the retriever took and how many citation links join the authorities | the line above the tour | `Chat.tsx`, `map/tour.ts` | `GET /api/run/{id}` (`retrieval`, `edges`) |
+| The authorities at one place, from a pin — a small card over the map, each authority opening in place | the place label | `PlaceCard.tsx` | none |
+| Walk the answer: the short answer, the retrieval path, the opinion, the rest of the memo, then each authority in turn | `Play the tour`, `Stop the tour` | `Chat.tsx`, `TourBar.tsx`, `map/tour.ts`, `hooks/use-tour.ts` | none (the browser's own voice; `POST /api/tts_ts` only if it cannot speak) |
+| The stop being spoken, as a subtitle along the bottom of the map, the heard part bright | `Tour` (region) | `TourBar.tsx` | none |
+| The path the retriever took and how many citation links join the authorities | the line in the tour strip while it is idle | `Chat.tsx`, `map/tour.ts` | `GET /api/run/{id}` (`retrieval`, `edges`) |
 | Fit the camera to every authority | `Fit to the authorities` | `CitationMap.tsx` | none |
 | Zoom and the map's own scale | `Zoom in`, `Zoom out`, the scale bar | `CitationMap.tsx` | none |
 | Each pin, named on the map and by the titles it stands for | the court's name; the citation titles, joined by `; ` | `CitationMap.tsx` | none |

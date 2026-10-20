@@ -27,14 +27,15 @@ import CitationMap, { type MapPlace } from "@/components/CitationMap";
 import DetailDrawer from "@/components/DetailDrawer";
 import EvidenceList from "@/components/EvidenceList";
 import Memo from "@/components/Memo";
-import TourPanel from "@/components/TourPanel";
+import PlaceCard from "@/components/PlaceCard";
+import TourBar from "@/components/TourBar";
 import TurnDetails from "@/components/TurnDetails";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useNarration } from "@/hooks/use-narration";
 import { useTour } from "@/hooks/use-tour";
-import { pathLine, tourPlan } from "@/map/tour";
+import { pathLine, plainText, tourPlan } from "@/map/tour";
 import { AskRefused, STAGE_PLAN, STAGE_WORDS, ask, loadRunResult, type AskTick, type Source, type StageTick } from "@/lib/api";
 import { citeType, type Citation, type RunResult } from "@/lib/citations";
 import { SUGGESTIONS } from "@/lib/demo";
@@ -228,8 +229,9 @@ export default function Chat() {
     [assistants, mapTurnId, latest],
   );
 
-  // The tour walks the answer that is on the map: the memo, the path the retriever took, then every
-  // authority at the place the camera moves to. It starts on a click, never on its own.
+  // The tour walks the answer that is on the map: the short answer, the path the retriever took, the
+  // opinion and the rest of the memo, then every authority at the place the camera moves to. It starts
+  // on a click, never on its own.
   const tourSteps = useMemo(() => (mapTurn ? tourPlan(mapTurn.result) : []), [mapTurn]);
   const tour = useTour(tourSteps, stopNarration);
   useEffect(() => {
@@ -262,6 +264,7 @@ export default function Chat() {
 
   const openMap = (turn: AssistantTurn) => {
     setMapTurnId(turn.id);
+    setPlace(null);
     setMode("map");
   };
 
@@ -321,16 +324,29 @@ export default function Chat() {
       </header>
 
       {mode === "map" ? (
-        <div className="flex min-h-0 flex-1 flex-col gap-2 p-3">
-          <div className="min-h-0 flex-1">
+        <div className="min-h-0 flex-1 p-3">
+          <div className="relative h-full min-h-0">
             {mapTurn ? (
-              <CitationMap
-                citations={mapTurn.result.citations}
-                edges={mapTurn.result.edges}
-                focus={tour.active ? tour.current?.place ?? null : null}
-                onSelect={selectPlace}
-                className="h-full"
-              />
+              <>
+                <CitationMap
+                  citations={mapTurn.result.citations}
+                  edges={mapTurn.result.edges}
+                  focus={tour.active ? tour.current?.place ?? null : null}
+                  onSelect={selectPlace}
+                  className="h-full"
+                />
+                {/* A pin opens a card on the map, not a panel over it: the reader stays where they are. */}
+                {place && <PlaceCard place={place} onClose={() => setPlace(null)} />}
+                <TourBar
+                  steps={tourSteps}
+                  index={tour.index}
+                  status={tour.status}
+                  heard={tour.heard}
+                  path={mapPath}
+                  onStart={tour.start}
+                  onStop={tour.stop}
+                />
+              </>
             ) : (
               <div className="grid h-full place-items-center rounded-lg border border-border bg-card p-6 text-center">
                 <div className="max-w-sm space-y-3">
@@ -345,19 +361,6 @@ export default function Chat() {
               </div>
             )}
           </div>
-
-          {mapTurn && (
-            <>
-              <p className="shrink-0 truncate text-[11px] text-muted-foreground">{mapPath}</p>
-              <TourPanel
-                steps={tourSteps}
-                index={tour.index}
-                status={tour.status}
-                onStart={tour.start}
-                onStop={tour.stop}
-              />
-            </>
-          )}
         </div>
       ) : (
         <>
@@ -498,7 +501,8 @@ export default function Chat() {
                               return;
                             }
                             tour.stop();
-                            speak(answer);
+                            // Markdown read aloud would be "asterisk asterisk" and "[1]"; say the prose.
+                            speak(plainText(answer));
                           }}
                         >
                           {narrating ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
@@ -658,25 +662,6 @@ export default function Chat() {
             </li>
           ))}
         </ul>
-      </DetailDrawer>
-
-      <DetailDrawer
-        open={place !== null}
-        onOpenChange={(open) => {
-          if (!open) setPlace(null);
-        }}
-        title={place?.label || "Place"}
-        description={place ? `${place.citations.length} authorities at this place` : undefined}
-      >
-        {place && (
-          <EvidenceList
-            citations={place.citations}
-            onOpen={(citation) => {
-              setPlace(null);
-              setAuthority(citation);
-            }}
-          />
-        )}
       </DetailDrawer>
 
       <DetailDrawer

@@ -1,6 +1,7 @@
 // The tour: the answer walked stop by stop, each stop a sentence spoken and a place the camera moves
-// to. The plan is built from the run itself — the question, the memo as it was written, the path the
-// retriever took, then one stop per authority — so nothing is said that the run did not record.
+// to. The plan is built from the run itself — the question, the short answer, the path the retriever
+// took, the opinion and the rest of the memo, then one stop per authority — so nothing is said that the
+// run did not record, and nothing the run did record is left out.
 
 import { citeType, courtName, locate, type Citation, type RunResult } from "@/lib/citations";
 import { toRetrieval } from "@/lib/runs";
@@ -8,7 +9,7 @@ import { toRetrieval } from "@/lib/runs";
 /** One stop on the walk: what is said, under which heading, and the place it moves the camera to. */
 export type TourStep = { section: string; text: string; place: string | null };
 
-/** A clip is capped at 400 characters, so a long paragraph is cut at a sentence, never mid-word. */
+/** A stop is spoken in one breath, so a long section is split at a sentence, never mid-word. */
 const SPOKEN = 340;
 
 function clean(value: string): string {
@@ -18,7 +19,19 @@ function clean(value: string): string {
     .trim();
 }
 
-/** Cut at the last sentence that fits, else at the last word, so a stop is never read half a word. */
+/** The memo as a reader would say it aloud: no markdown, no citation marks, no list dashes. */
+export function plainText(answer: string): string {
+  return clean(
+    String(answer || "")
+      .replace(/^\s{0,3}#{1,6}\s+/gm, "")
+      .replace(/^\s*>\s?/gm, "")
+      .replace(/^\s*[-*•]\s+/gm, "")
+      .replace(/^\s*\d+[.)]\s+/gm, "")
+      .replace(/\[(\d{1,3})\]/g, ""),
+  );
+}
+
+/** Cut at the last sentence that fits, else at the last clause, else at the last word. */
 function spoken(value: string): string {
   const text = clean(value);
   if (text.length <= SPOKEN) return text;
@@ -28,7 +41,25 @@ function spoken(value: string): string {
   return `${cut.slice(0, cut.lastIndexOf(" "))}…`;
 }
 
-/** The memo split into the paragraphs the writer gave it, under the headings it wrote. */
+/** A whole section as the stops it takes to say it, so the memo is read in full rather than sampled. */
+function chunks(value: string): string[] {
+  const whole = clean(value);
+  if (!whole) return [];
+  if (whole.length <= SPOKEN) return [whole];
+  const parts: string[] = [];
+  let rest = whole;
+  while (rest.length > SPOKEN) {
+    const cut = rest.slice(0, SPOKEN);
+    const at = [". ", "; ", ", ", " "].map((mark) => cut.lastIndexOf(mark)).find((index) => index > SPOKEN / 2);
+    const end = at === undefined ? SPOKEN - 1 : at + 1;
+    parts.push(rest.slice(0, end).trim());
+    rest = rest.slice(end).trim();
+  }
+  if (rest) parts.push(rest);
+  return parts;
+}
+
+/** The memo split into the blocks the writer gave it, under the headings it wrote. */
 function paragraphs(answer: string): { section: string; text: string }[] {
   const out: { section: string; text: string }[] = [];
   let section = "Short answer";
@@ -50,11 +81,14 @@ function paragraphs(answer: string): { section: string; text: string }[] {
       flush();
       continue;
     }
-    buffer.push(line);
+    buffer.push(line.replace(/^\s*(?:[-*•]|\d+[.)])\s+/, ""));
   }
   flush();
   return out;
 }
+
+/** The sections that are the run's reasoning rather than its statement of the law. */
+const REASONING = /opinion|analysis|reason|discussion|caveat|holding|why|application/i;
 
 /** The path the run recorded, in words, so the walk never claims a retriever the run did not use. */
 export function pathLine(result: RunResult): string {
@@ -80,13 +114,19 @@ function authorityLine(citation: Citation): string {
   return spoken(passage.length > 40 ? `${head} ${passage}` : head);
 }
 
+/**
+ * The walk, in a fixed order: the question, the short answer, where the authorities came from, the
+ * run's own reasoning, the rest of the memo, and then each authority where it sits.
+ */
 export function tourPlan(result: RunResult): TourStep[] {
   const steps: TourStep[] = [];
   const question = clean(result.question || "");
   if (question) steps.push({ section: "Question", text: question, place: null });
 
-  for (const block of paragraphs(result.answer || "")) {
-    steps.push({ section: block.section, text: spoken(block.text), place: null });
+  const blocks = paragraphs(result.answer || "");
+  const [first, ...rest] = blocks;
+  if (first) {
+    for (const text of chunks(first.text)) steps.push({ section: "Short answer", text, place: null });
   }
 
   const citations = result.citations || [];
@@ -100,6 +140,15 @@ export function tourPlan(result: RunResult): TourStep[] {
       ? ` ${edges.length} citation ${edges.length === 1 ? "link" : "links"} join them.`
       : "";
     steps.push({ section: "Sources", text: spoken(`${head}${links} ${pathLine(result)}`), place: null });
+  }
+
+  // The run's reasoning first, then the rest of the memo, so the walk reads like the answer does.
+  for (const wanted of [true, false]) {
+    for (const block of rest) {
+      if (REASONING.test(block.section) !== wanted) continue;
+      const section = wanted ? "Opinion" : "Memo";
+      for (const text of chunks(block.text)) steps.push({ section, text, place: null });
+    }
   }
 
   for (const citation of citations) {
