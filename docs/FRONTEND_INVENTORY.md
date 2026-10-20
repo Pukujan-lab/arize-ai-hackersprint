@@ -76,7 +76,7 @@ place — opens in a drawer, so the page never grows a second column of dashboar
 | Read the memo aloud, and stop it | `Read aloud`, `Stop` | `Chat.tsx` | `POST /api/tts_ts` |
 | Copy the memo | `Copy` | `Chat.tsx` | none |
 | Open this answer on the map | `Show on the map` | `Chat.tsx` | none |
-| Follow-up questions, asked with the previous run in context | the follow-up text | `Chat.tsx` | `POST /api/ask` with `prev_run_id` |
+| Follow-up questions, asked with the previous run in context, held in a drawer | `Follow-ups (n)` | `Chat.tsx` | `POST /api/ask` with `prev_run_id` |
 | One authority: kind, court, date, citation, passage and link | `Authority` | `AuthorityDetail.tsx` | none |
 | The authorities at one place, from a pin | the place label | `Chat.tsx`, `EvidenceList.tsx` | none |
 | Walk the answer: the memo, the retrieval path, then each authority in turn | `Play the tour`, `Stop the tour` | `Chat.tsx`, `TourPanel.tsx`, `map/tour.ts`, `hooks/use-tour.ts` | `POST /api/tts_ts` |
@@ -95,6 +95,11 @@ Behaviour notes:
   plays the same four stages, so the preview behaves the same way.
 - Every answer keeps the line "AI-generated research summary, not legal advice" (the run's own
   disclaimer when it carried one).
+- The memo is the answer and nothing else: its headings, prose, lists and quotes, with each `[n]` and
+  each bolded authority name linking to the document. The list of authorities it cites is not repeated
+  under the prose — that list is the `Sources` drawer. Everything else about an answer (sources,
+  follow-ups, the figures, the retrieval record) is reachable from the answer's own row of buttons and
+  opens in a drawer, so the thread stays a thread.
 - A refused or failed question appears as its own message and leaves the earlier answers in place; it
   never shows a blank pane.
 - Escape stops the voice, whether it is the read-aloud button or the tour. One thing is spoken at a

@@ -1,5 +1,6 @@
-// One list of authorities, used wherever the page shows the sources behind an answer: the rail in the
-// chat, the sources drawer and the drawer that opens from a pin on the map.
+// One list of authorities, used wherever the page shows the sources behind an answer: the sources
+// drawer and the drawer that opens from a pin on the map. Each entry carries the reference the memo
+// uses, so `[3]` in the prose can be found here.
 
 import { citeType, courtName, type Citation } from "@/lib/citations";
 
@@ -20,6 +21,12 @@ export default function EvidenceList({
             className="w-full rounded-lg border border-border bg-card px-2.5 py-2 text-left transition-colors hover:bg-accent/60"
           >
             <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              {/* The reference the memo uses, so `[3]` in the prose can be found in this list. */}
+              {citation.ref && (
+                <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono font-medium text-foreground">
+                  {citation.ref}
+                </span>
+              )}
               <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-medium text-foreground">
                 {citeType(citation)}
               </span>

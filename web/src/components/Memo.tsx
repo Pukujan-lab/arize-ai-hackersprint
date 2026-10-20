@@ -193,24 +193,13 @@ const headingClass: Record<number, string> = {
   3: "pt-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground",
 };
 
-/** The authorities the memo actually cites, in the order the memo cites them. */
-function citedIn(answer: string, citations: Citation[]): { ref: string; citation: Citation }[] {
-  const out: { ref: string; citation: Citation }[] = [];
-  const seen = new Set<string>();
-  for (const match of String(answer || "").matchAll(/\[(\d{1,3})\]/g)) {
-    const ref = match[0];
-    if (seen.has(ref)) continue;
-    const citation = citations.find((c) => (c.ref || "").trim() === ref) || citations[Number(match[1]) - 1];
-    if (!citation) continue;
-    seen.add(ref);
-    out.push({ ref, citation });
-  }
-  return out;
-}
-
+/**
+ * The memo as formatted text and nothing else. The list of authorities it cites is not repeated under
+ * the prose: `[n]` already links to the document, and the Sources drawer holds the full list, so the
+ * answer stays the answer instead of becoming a bibliography with a memo on top.
+ */
 export default function Memo({ answer, citations }: { answer: string; citations: Citation[] }) {
   const blocks = useMemo(() => parse(answer), [answer]);
-  const footnotes = useMemo(() => citedIn(answer, citations), [answer, citations]);
   const cursor = { n: 0 };
 
   return (
@@ -251,30 +240,6 @@ export default function Memo({ answer, citations }: { answer: string; citations:
         }
         return <p key={`b${index}`}>{inlineNodes(block.text, citations, cursor)}</p>;
       })}
-
-      {footnotes.length > 0 && (
-        <div className="mt-4 border-t border-border pt-2">
-          <h2 className="text-sm font-semibold text-muted-foreground">Authorities cited</h2>
-          <ul className="mt-1 space-y-1">
-            {footnotes.map(({ ref, citation }) => (
-              <li key={ref} className="text-xs leading-relaxed">
-                <a
-                  href={sourceHref(citation)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={linkClass}
-                >
-                  {ref} {citation.title || citation.citation || "Authority"}
-                </a>
-                <span className="text-muted-foreground">
-                  {" · "}
-                  {[citation.citation, citation.court, citation.date].filter(Boolean).join(" · ") || "Citation not recorded"}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

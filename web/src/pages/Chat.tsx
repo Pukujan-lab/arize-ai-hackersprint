@@ -10,6 +10,7 @@ import {
   CheckCircle2,
   Circle,
   Copy,
+  CornerDownRight,
   FlaskConical,
   Gauge,
   Loader2,
@@ -99,6 +100,7 @@ export default function Chat() {
   const [sources, setSources] = useState<Citation[] | null>(null);
   const [place, setPlace] = useState<MapPlace | null>(null);
   const [details, setDetails] = useState<AssistantTurn | null>(null);
+  const [followUps, setFollowUps] = useState<string[] | null>(null);
 
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLTextAreaElement | null>(null);
@@ -124,6 +126,7 @@ export default function Chat() {
     setSources(null);
     setPlace(null);
     setDetails(null);
+    setFollowUps(null);
     setParams(new URLSearchParams(), { replace: true });
     inputRef.current?.focus();
   }, [stopNarration, setParams]);
@@ -416,7 +419,7 @@ export default function Chat() {
                   const citations = turn.result.citations || [];
                   const pass = turn.result.safeguard?.pass ?? null;
                   const elapsed = typeof turn.result.elapsed_s === "number" ? turn.result.elapsed_s : null;
-                  const followUps = turn.result.followups || [];
+                  const suggestions = turn.result.followups || [];
 
                   return (
                     <article key={turn.id} className="min-w-0">
@@ -459,32 +462,7 @@ export default function Chat() {
                         {turn.result.safeguard?.disclaimer || "AI-generated research summary, not legal advice."}
                       </p>
 
-                      {!!followUps.length && (
-                        <div className="mt-3">
-                          <h3 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                            Follow-ups
-                          </h3>
-                          <div className="mt-1.5 flex flex-wrap gap-1.5">
-                            {followUps.map((item) => (
-                              <button
-                                key={item}
-                                type="button"
-                                onClick={() => void askQuestion(item)}
-                                disabled={busy}
-                                className="max-w-full rounded-full border border-border px-2.5 py-1 text-left text-xs text-foreground transition-colors hover:bg-accent disabled:opacity-50"
-                              >
-                                {item}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
                       <div className="mt-3 flex flex-wrap items-center gap-1 border-t border-border pt-2">
-                        <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setDetails(turn)}>
-                          <Gauge className="h-4 w-4" />
-                          Details
-                        </Button>
                         <Button
                           variant="ghost"
                           size="sm"
@@ -494,6 +472,21 @@ export default function Chat() {
                         >
                           <BookOpen className="h-4 w-4" />
                           Sources ({citations.length})
+                        </Button>
+                        {!!suggestions.length && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1.5"
+                            onClick={() => setFollowUps(suggestions)}
+                          >
+                            <CornerDownRight className="h-4 w-4" />
+                            Follow-ups ({suggestions.length})
+                          </Button>
+                        )}
+                        <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setDetails(turn)}>
+                          <Gauge className="h-4 w-4" />
+                          Details
                         </Button>
                         <Button
                           variant="ghost"
@@ -637,6 +630,34 @@ export default function Chat() {
         ) : (
           <p className="text-sm text-muted-foreground">This answer cited no authority.</p>
         )}
+      </DetailDrawer>
+
+      <DetailDrawer
+        open={followUps !== null}
+        onOpenChange={(open) => {
+          if (!open) setFollowUps(null);
+        }}
+        title="Follow-ups"
+        description="Asked with this answer as the previous run, so the agents keep its context"
+      >
+        <ul className="space-y-1.5">
+          {(followUps || []).map((item) => (
+            <li key={item}>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setFollowUps(null);
+                  void askQuestion(item);
+                }}
+                className="flex w-full items-start gap-2 rounded-lg border border-border bg-card px-2.5 py-2 text-left text-sm leading-relaxed transition-colors hover:bg-accent/60 disabled:opacity-50"
+              >
+                <CornerDownRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                <span className="min-w-0">{item}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
       </DetailDrawer>
 
       <DetailDrawer
