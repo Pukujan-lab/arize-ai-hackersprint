@@ -1,9 +1,10 @@
 // The tour's voice, written on the map like a subtitle: the line being spoken sits along the bottom of
 // the map with the stop it is on, and the part already heard is bright while the rest is still dim, so
-// the caption keeps pace with the voice. When the walk is idle the same strip offers the play button and
-// says where the authorities came from — one strip, never a second panel under the map.
+// the caption keeps pace with the voice. The arrows step between stops, so the walk can be taken at the
+// reader's own pace. When the walk is idle the same strip offers the play button and says where the
+// authorities came from — one strip, never a second panel under the map.
 
-import { MapPin, Play, Square, Volume2, VolumeX } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Play, Square, Volume2, VolumeX } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { NarrationStatus } from "@/hooks/use-narration";
 import type { TourStep } from "@/map/tour";
@@ -18,6 +19,10 @@ export default function TourBar({
   path,
   onStart,
   onStop,
+  onPrev,
+  onNext,
+  canPrev,
+  canNext,
 }: {
   steps: TourStep[];
   index: number;
@@ -30,6 +35,11 @@ export default function TourBar({
   path: string;
   onStart: () => void;
   onStop: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+  /** Whether a place stands before / after this stop, so an arrow that would go nowhere is not offered. */
+  canPrev: boolean;
+  canNext: boolean;
 }) {
   const active = index >= 0;
   const current = active ? steps[index] : null;
@@ -48,6 +58,33 @@ export default function TourBar({
             {active ? <Square className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
             {active ? "Stop" : "Play the tour"}
           </Button>
+
+          {/* An arrow carries the camera, the caption and the voice to the next location, or back to the
+              one before it. Prose stops sit nowhere, so the arrows pass over them. */}
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onPrev}
+              disabled={!canPrev}
+              aria-label="Previous location"
+              title="Previous location"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-7 w-7"
+              onClick={onNext}
+              disabled={!canNext}
+              aria-label={active ? "Next location" : "First location"}
+              title={active ? "Next location" : "First location"}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
 
           <span className="text-[11px] tabular-nums text-muted-foreground">
             {active ? `${index + 1} of ${steps.length}` : `${steps.length} stops`}
@@ -77,7 +114,7 @@ export default function TourBar({
                   ? "Speaking"
                   : active
                     ? ""
-                    : "Speaks the answer, then each authority where it sits"}
+                    : "Speaks the answer, then each authority where it sits — the arrows jump court to court"}
           </span>
         </div>
 

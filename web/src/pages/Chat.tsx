@@ -366,6 +366,10 @@ export default function Chat() {
                   path={mapPath}
                   onStart={tour.start}
                   onStop={tour.stop}
+                  onPrev={tour.prev}
+                  onNext={tour.next}
+                  canPrev={tour.canPrev}
+                  canNext={tour.canNext}
                 />
               </>
             ) : (

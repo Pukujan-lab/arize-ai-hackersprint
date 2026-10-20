@@ -103,6 +103,7 @@ place — opens in a drawer, so the page never grows a second column of dashboar
 | One authority: kind, court, date, citation, passage and link | `Authority` | `AuthorityDetail.tsx` | none |
 | The authorities at one place, from a pin — a small card over the map, each authority opening in place | the place label | `PlaceCard.tsx` | none |
 | Walk the answer: the short answer, the retrieval path, the opinion, the rest of the memo, then each authority in turn, the camera flying to each authority at the county scale | `Play the tour`, `Stop the tour` | `Chat.tsx`, `TourBar.tsx`, `map/tour.ts`, `hooks/use-tour.ts`, `CitationMap.tsx` | none (the browser's own voice; `POST /api/tts_ts` only if it cannot speak) |
+| Step between locations: the camera, the caption and the voice move to the next place the authorities stand, or back to the one before it | `Previous location`, `Next location` | `TourBar.tsx`, `hooks/use-tour.ts` | none |
 | The stop being spoken, as a subtitle along the bottom of the map, the heard part bright, with the place the camera is on | `Tour` (region) | `TourBar.tsx` | none |
 | The path the retriever took and how many citation links join the authorities | the line in the tour strip while it is idle | `Chat.tsx`, `map/tour.ts` | `GET /api/run/{id}` (`retrieval`, `edges`) |
 | Fit the camera to every authority | `Fit to the authorities` | `CitationMap.tsx` | none |
@@ -133,7 +134,10 @@ Behaviour notes:
   own headings, the path the retriever recorded, then one stop per authority. A stop that names an
   authority moves the camera to its pin and marks it. It never starts on its own; leaving the map, or
   asking a new question, stops it. When no clip can be played the walk continues in text and the panel
-  says the voice is unavailable, so the transcript is never lost with the audio.
+  says the voice is unavailable, so the transcript is never lost with the audio. The arrows step the walk
+  location to location: prose stops sit nowhere, so they are passed over and every press lands the camera
+  on a different place — with the walk idle, the right arrow opens on the first one. An arrow that would
+  go nowhere (no location before or after) is disabled rather than offered.
 - A pin is one place: the authorities that resolve to the same place share it, and the pin's label says
   how many it stands for. A link is drawn between the pins its two authorities sit on; a link inside one
   place is not drawn.

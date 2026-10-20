@@ -40,7 +40,8 @@ rules; this file holds the stack and library rules.
   line then waits out a give-up timeout when no provider is keyed. All narration goes through
   `web/src/map/narrator.ts`: the read-aloud button via `hooks/use-narration.ts`, the map tour via
   `hooks/use-tour.ts` (the stops are built in `web/src/map/tour.ts`, the subtitle strip over the map is
-  `components/TourBar.tsx`). The tour never autoplays.
+  `components/TourBar.tsx`). The tour never autoplays, and its arrows hop location to location rather
+  than stop to stop, so a press always moves the camera to a different place.
 - **Backend libs:** `networkx` (case graph), `numpy`/`scipy` (ranking), `httpx`/`requests` (HTTP),
   `arize-otel` + `openinference-instrumentation` (tracing/evals). Storage is Octo (HTTP) and SurrealDB
   (with a NetworkX fallback).
