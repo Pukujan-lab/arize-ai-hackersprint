@@ -20,8 +20,9 @@ rules; this file holds the stack and library rules.
   `/api/tts_ts`) fetched with `fetch`; a device id is attached to `/api/*` calls by
   `web/src/lib/session.ts`.
 - **Map:** **MapLibre GL JS** (`maplibre-gl`) in `web/src/components/CitationMap.tsx`, drawing
-  **OpenFreeMap** vector styles (`positron` by day, `dark` by night) and falling back to an inline
-  OpenStreetMap raster style when those cannot be fetched. Both are keyless. Pins are DOM markers and
+  **CARTO**'s Voyager raster tiles (`@2x` on retina screens) and falling back to an inline OpenStreetMap
+  raster style when those cannot be fetched. Both are keyless. The page has one theme, so the map is
+  light; CARTO's `dark_all` is the twin to use if a dark theme is ever added. Pins are DOM markers and
   links are a GeoJSON line layer. Colours the canvas paints with are constants in
   `web/src/map/palette.ts`.
 - **Voice:** server TTS chain (Fish Audio → ElevenLabs → local Kokoro) behind `/api/tts_ts`, with the
@@ -72,7 +73,7 @@ rules; this file holds the stack and library rules.
 - **The map** → extend `web/src/components/CitationMap.tsx` and `web/src/map/palette.ts`. MapLibre is
   the map; do not add a second mapping or 3D library (no deck.gl, three.js, Mapbox, Leaflet). Keep the
   tile source keyless, keep pins as DOM markers so they survive a tile outage, and keep the legend
-  reading the same constants the canvas paints with. Basemaps are OpenFreeMap vector styles with the
+  reading the same constants the canvas paints with. Basemaps are CARTO's raster tiles with the
   OpenStreetMap raster style as the fallback; do not add a basemap that needs an API key or a token.
 - **Animation** → CSS transitions/Tailwind animation utilities, or MapLibre's own camera easing. Any
   motion must honour `prefers-reduced-motion` (see `CitationMap.tsx` and `map/narrator.ts`).

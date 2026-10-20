@@ -1,7 +1,7 @@
-// The map: MapLibre GL JS over OpenFreeMap vector tiles, with one pin per place an answer's
-// authorities sit in and one line per link between them. The vector styles are keyless; if one cannot
-// be reached the map falls back to OpenStreetMap raster tiles rather than showing nothing. The pins are
-// DOM markers, so they stay readable and clickable whatever the tiles do.
+// The map: MapLibre GL JS over CARTO's raster tiles, with one pin per place an answer's authorities sit
+// in and one line per link between them. The tiles are keyless; if they cannot be reached the map falls
+// back to OpenStreetMap's own raster tiles rather than showing nothing. The pins are DOM markers, so
+// they stay readable and clickable whatever the tiles do.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
@@ -26,11 +26,34 @@ type Pin = {
 const CENTER: [number, number] = [-98.583, 39.833];
 
 /**
- * The basemap: OpenFreeMap's published vector styles. Vector tiles stay sharp at every zoom and carry
- * their own labels, and the project asks for no account, no API key and no tile quota.
+ * The basemap: CARTO's Voyager raster tiles. They ask for no account and no key, they carry their own
+ * labels, and their warm paper tone sits under the pins instead of competing with them. Retina screens
+ * get the @2x images, which is what keeps the type crisp rather than furry.
+ *
+ * The page has one theme — the light one — so the map does not chase the system's. CARTO publishes
+ * `dark_all` as Voyager's twin for the day the app grows a dark theme.
  */
-const VECTOR_LIGHT = "https://tiles.openfreemap.org/styles/positron";
-const VECTOR_DARK = "https://tiles.openfreemap.org/styles/dark";
+const RETINA = typeof window !== "undefined" && (window.devicePixelRatio || 1) > 1.25;
+
+const CARTO: maplibregl.StyleSpecification = {
+  version: 8,
+  sources: {
+    carto: {
+      type: "raster",
+      tiles: [`https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}${RETINA ? "@2x" : ""}.png`],
+      tileSize: 256,
+      maxzoom: 19,
+      attribution:
+        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors ' +
+        '© <a href="https://carto.com/attributions">CARTO</a>',
+    },
+  },
+  layers: [
+    // Painted under the tiles so the pane is the basemap's colour while they arrive, not white.
+    { id: "ground", type: "background", paint: { "background-color": "#f7f5f2" } },
+    { id: "carto", type: "raster", source: "carto", paint: { "raster-fade-duration": 150 } },
+  ],
+};
 
 /** The fallback: OpenStreetMap's own raster tiles, styled inline, also with no account and no key. */
 const RASTER: maplibregl.StyleSpecification = {
@@ -46,9 +69,6 @@ const RASTER: maplibregl.StyleSpecification = {
   },
   layers: [{ id: "osm", type: "raster", source: "osm" }],
 };
-
-const prefersDark = () => !!window.matchMedia?.("(prefers-color-scheme: dark)").matches;
-const vectorStyle = (dark: boolean) => (dark ? VECTOR_DARK : VECTOR_LIGHT);
 
 /** One pin per place: the authorities that resolve to the same court share it. */
 function buildPins(citations: Citation[]): Pin[] {
@@ -95,8 +115,6 @@ export default function CitationMap({
   const markers = useRef<maplibregl.Marker[]>([]);
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
-  /** Which basemap is drawn: the vector style, or the raster fallback once the vector one fails. */
-  const [basemap, setBasemap] = useState<"vector" | "raster">("vector");
   /** Bumped when a style finishes loading, because a new style drops the links layer along with it. */
   const [epoch, setEpoch] = useState(0);
 
@@ -123,7 +141,7 @@ export default function CitationMap({
     try {
       map = new maplibregl.Map({
         container: element,
-        style: vectorStyle(prefersDark()),
+        style: CARTO,
         center: CENTER,
         zoom: 3.4,
         attributionControl: { compact: true },
@@ -136,32 +154,29 @@ export default function CitationMap({
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.addControl(new maplibregl.ScaleControl({ unit: "imperial", maxWidth: 96 }), "bottom-left");
 
-    // A style that never arrives would leave an empty pane, so the map falls back to the raster tiles.
+    // Tiles that never arrive would leave an empty pane, so the map falls back to OpenStreetMap's own.
     let fellBack = false;
     const fallBack = () => {
       if (fellBack) return;
       fellBack = true;
-      setBasemap("raster");
       map.setStyle(RASTER);
     };
-    const giveUp = window.setTimeout(() => {
-      if (!map.isStyleLoaded()) fallBack();
-    }, 6000);
 
     const onStyleLoad = () => {
-      window.clearTimeout(giveUp);
       setReady(true);
       setEpoch((count) => count + 1);
     };
     map.on("style.load", onStyleLoad);
-    // A tile that 404s is not a failed basemap; only a style document that cannot be fetched is.
-    const onError = (event: { error?: { message?: string } }) => {
-      if (/style/i.test(String(event?.error?.message || ""))) fallBack();
+    // One refused tile is a blip; a run of them means the tile host is not answering this page at all.
+    let refused = 0;
+    const onError = (event: { error?: { message?: string }; sourceId?: string }) => {
+      if (event?.sourceId !== "carto" && !/cartocdn/i.test(String(event?.error?.message || ""))) return;
+      refused += 1;
+      if (refused >= 3) fallBack();
     };
     map.on("error", onError);
 
     return () => {
-      window.clearTimeout(giveUp);
       map.off("style.load", onStyleLoad);
       map.off("error", onError);
       for (const marker of markers.current) marker.remove();
@@ -170,27 +185,6 @@ export default function CitationMap({
       mapRef.current = null;
     };
   }, []);
-
-  // Light and dark are two published styles, so the basemap follows the system setting. The raster
-  // fallback has no dark twin, so it is dimmed instead of swapped.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !ready) return;
-    const query = window.matchMedia("(prefers-color-scheme: dark)");
-    const paint = () => {
-      if (basemap === "raster") {
-        if (!map.getLayer("osm")) return;
-        map.setPaintProperty("osm", "raster-brightness-max", query.matches ? 0.6 : 1);
-        map.setPaintProperty("osm", "raster-saturation", query.matches ? -0.4 : 0);
-        return;
-      }
-      map.setStyle(vectorStyle(query.matches));
-    };
-    // Only a change needs handling: the first style was chosen when the map was created.
-    if (basemap === "raster") paint();
-    query.addEventListener("change", paint);
-    return () => query.removeEventListener("change", paint);
-  }, [ready, basemap]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -310,6 +304,11 @@ export default function CitationMap({
   return (
     <div className={cn("relative h-full w-full overflow-hidden rounded-lg border border-border bg-muted", className)}>
       <div ref={container} className="absolute inset-0" />
+      {/* A hairline and a soft inner shade, so the tiles sit in the card instead of bleeding out of it. */}
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 shadow-[inset_0_0_0_1px_rgba(15,23,42,0.06),inset_0_2px_18px_rgba(15,23,42,0.10)]"
+      />
 
       <Button
         type="button"
