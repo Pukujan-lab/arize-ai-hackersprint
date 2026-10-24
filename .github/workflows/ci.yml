@@ -111,7 +111,7 @@ jobs:
         run: python tools/spec_policy.py
       - name: Compile
         run: python -m compileall -q -x '(\.venv|node_modules|\.cgm)' .
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: hashFiles('web/package.json') != ''
         with:
           node-version: "24"
