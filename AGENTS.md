@@ -27,11 +27,9 @@ The builder chooses its own implementation. No issue, spec, prompt prefix, hando
 
 ## ABA scope
 
-ABA (`Pukujan/app-builder-automation`, dyad headless) is the only builder for the frontend, the backend and the Octo schema and migrations. It runs on the MacBook Pro.
+ABA (`Pukujan/app-builder-automation`, dyad headless) is one builder for the frontend, the backend and the Octo schema and migrations. It runs on the MacBook Pro. Coding agents may also edit these directly, including `web/`.
 
 ABA does not file issue logs, write specs, docs, PR prose, contracts or CI, and it does not do verification or coordination. Those belong to the other agents. ABA receives an already-filed issue number and builds against it.
-
-If ABA cannot run, report to Alex. Never hand-code the frontend.
 
 ## Writing rule at boot
 
