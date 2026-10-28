@@ -140,10 +140,13 @@ function headingText(text: string): string {
     .trim();
 }
 
+/** Counts the keys handed out so far; `onCite`, when given, opens a source in the page instead of leaving it. */
+type Cursor = { n: number; onCite?: (citation: Citation) => void };
+
 const linkClass =
   "rounded-sm underline decoration-border underline-offset-2 hover:decoration-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
-function inlineNodes(text: string, citations: Citation[], cursor: { n: number }): ReactNode[] {
+function inlineNodes(text: string, citations: Citation[], cursor: Cursor): ReactNode[] {
   const out: ReactNode[] = [];
   let i = 0;
   const key = () => `m${(cursor.n += 1)}`;
@@ -157,7 +160,11 @@ function inlineNodes(text: string, citations: Citation[], cursor: { n: number })
       const cite = citations.find((c) => (c.title || "").trim() === title);
       const inner = <strong className="font-semibold">{inlineNodes(bold[1], citations, cursor)}</strong>;
       out.push(
-        cite ? (
+        cite && cursor.onCite ? (
+          <button key={key()} type="button" onClick={() => cursor.onCite?.(cite)} className={linkClass}>
+            {inner}
+          </button>
+        ) : cite ? (
           <a
             key={key()}
             href={sourceHref(cite)}
@@ -197,6 +204,21 @@ function inlineNodes(text: string, citations: Citation[], cursor: { n: number })
     if (ref) {
       const n = Number(ref[1]);
       const cite = citations.find((c) => (c.ref || "").trim() === ref[0]) || citations[n - 1];
+      if (cite && cursor.onCite) {
+        out.push(
+          <button
+            key={key()}
+            type="button"
+            onClick={() => cursor.onCite?.(cite)}
+            title={cite.title || cite.citation || "Authority"}
+            className={cn(linkClass, "font-medium")}
+          >
+            {ref[0]}
+          </button>,
+        );
+        i += ref[0].length;
+        continue;
+      }
       if (cite) {
         out.push(
           <a
@@ -230,7 +252,7 @@ const headingClass: Record<number, string> = {
   3: "pt-1 text-sm font-semibold uppercase tracking-wide text-muted-foreground",
 };
 
-function renderBlock(block: Block, key: string, citations: Citation[], cursor: { n: number }): ReactNode {
+function renderBlock(block: Block, key: string, citations: Citation[], cursor: Cursor): ReactNode {
   if (block.kind === "h") {
     const Tag = `h${Math.max(2, block.level)}` as "h2" | "h3";
     return (
@@ -279,14 +301,17 @@ export default function Memo({
   answer,
   citations,
   collapsible = true,
+  onCite,
 }: {
   answer: string;
   citations: Citation[];
   collapsible?: boolean;
+  /** Open a cited source in the page. Without it, a reference links to the document itself. */
+  onCite?: (citation: Citation) => void;
 }) {
   const blocks = useMemo(() => parse(answer), [answer]);
   const sections = useMemo(() => split(blocks), [blocks]);
-  const cursor = { n: 0 };
+  const cursor: Cursor = { n: 0, onCite };
 
   const plain = (list: Block[], prefix: string) => (
     <div className="space-y-3">{list.map((block, i) => renderBlock(block, `${prefix}b${i}`, citations, cursor))}</div>

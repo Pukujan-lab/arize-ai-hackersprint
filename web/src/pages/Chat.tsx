@@ -30,13 +30,16 @@ import DetailDrawer from "@/components/DetailDrawer";
 import EvidenceList from "@/components/EvidenceList";
 import Memo from "@/components/Memo";
 import PlaceCard from "@/components/PlaceCard";
+import SourcePane from "@/components/SourcePane";
 import TourBar from "@/components/TourBar";
 import TurnDetails from "@/components/TurnDetails";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useNarration } from "@/hooks/use-narration";
 import { useTour } from "@/hooks/use-tour";
+import { useWide } from "@/hooks/use-wide";
 import { pathLine, plainText, tourPlan } from "@/map/tour";
 import { AskRefused, STAGE_PLAN, STAGE_WORDS, ask, loadRunResult, type AskTick, type Source, type StageTick } from "@/lib/api";
 import { citeType, locate, type Citation, type RunResult } from "@/lib/citations";
@@ -130,6 +133,9 @@ export default function Chat() {
   const [mapTurnId, setMapTurnId] = useState<string | null>(null);
 
   const [authority, setAuthority] = useState<Citation | null>(null);
+  /** The source open beside the memo: which answer it belongs to and where it sits in that answer's list. */
+  const [source, setSource] = useState<{ turnId: string; index: number } | null>(null);
+  const wide = useWide();
   const [sources, setSources] = useState<Citation[] | null>(null);
   const [place, setPlace] = useState<MapPlace | null>(null);
   const [details, setDetails] = useState<AssistantTurn | null>(null);
@@ -158,6 +164,7 @@ export default function Chat() {
     setMode("chat");
     setMapTurnId(null);
     setAuthority(null);
+    setSource(null);
     setSources(null);
     setPlace(null);
     setDetails(null);
@@ -322,6 +329,40 @@ export default function Chat() {
     setMode("map");
   };
 
+  /** Open a cited authority beside its memo; one that is in no answer's list falls back to the drawer. */
+  const openSource = useCallback(
+    (citation: Citation, turn?: AssistantTurn) => {
+      const pool = turn ? [turn] : [...assistants].reverse();
+      for (const candidate of pool) {
+        const list = candidate.result.citations || [];
+        const at = list.findIndex((item) => item === citation || (!!item.id && item.id === citation.id));
+        if (at >= 0) {
+          setSource({ turnId: candidate.id, index: at });
+          return;
+        }
+      }
+      setAuthority(citation);
+    },
+    [assistants],
+  );
+
+  const sourceTurn = source ? assistants.find((turn) => turn.id === source.turnId) ?? null : null;
+  const sourcePane = sourceTurn && source && (
+    <SourcePane
+      citations={sourceTurn.result.citations || []}
+      index={source.index}
+      answer={sourceTurn.result.answer || ""}
+      safeguard={sourceTurn.result.safeguard}
+      onSelect={(index) => setSource({ turnId: sourceTurn.id, index })}
+      onClose={wide ? () => setSource(null) : undefined}
+      onAsk={(question) => {
+        setSource(null);
+        void askQuestion(question);
+      }}
+      className="h-full"
+    />
+  );
+
   const selectPlace = useCallback((next: MapPlace) => setPlace(next), []);
 
   const copyAnswer = async (answer: string) => {
@@ -423,7 +464,8 @@ export default function Chat() {
           </div>
         </div>
       ) : (
-        <>
+        <div className="flex min-h-0 flex-1">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
           <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-3xl px-4 py-5">
               {!turns.length && !busy && (
@@ -514,7 +556,7 @@ export default function Chat() {
 
                       {answer ? (
                         <div className="mt-2.5">
-                          <Memo answer={answer} citations={citations} />
+                          <Memo answer={answer} citations={citations} onCite={(citation) => openSource(citation, turn)} />
                         </div>
                       ) : (
                         <p className="mt-2 text-sm text-muted-foreground">The run recorded no answer.</p>
@@ -610,7 +652,20 @@ export default function Chat() {
               </p>
             </form>
           </div>
-        </>
+          </div>
+          {wide && sourcePane && (
+            <aside className="w-[26rem] shrink-0 border-l border-border xl:w-[30rem]">{sourcePane}</aside>
+          )}
+        </div>
+      )}
+
+      {!wide && mode === "chat" && (
+        <Sheet open={!!sourcePane} onOpenChange={(open) => !open && setSource(null)}>
+          <SheetContent side="right" className="flex w-full flex-col gap-0 p-0 sm:max-w-lg">
+            <SheetTitle className="sr-only">Source</SheetTitle>
+            {sourcePane}
+          </SheetContent>
+        </Sheet>
       )}
 
       <DetailDrawer
@@ -647,7 +702,7 @@ export default function Chat() {
             citations={sources}
             onOpen={(citation) => {
               setSources(null);
-              setAuthority(citation);
+              openSource(citation);
             }}
           />
         ) : (
