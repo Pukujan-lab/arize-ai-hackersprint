@@ -46,7 +46,7 @@ Then open http://localhost:3000. The older `uvicorn server:app` still works.
 The app serves the built frontend, so build it once before starting the server:
 
 ```bash
-cd web && pnpm install --frozen-lockfile && pnpm build
+cd web && pnpm install --frozen-lockfile --ignore-workspace && pnpm build
 ```
 
 Without that build the pages return an error rather than an older frontend; there is only one frontend.

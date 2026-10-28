@@ -122,7 +122,7 @@ jobs:
           BUILD_ID: ${{ github.sha }}
         run: |
           corepack enable
-          pnpm install --frozen-lockfile
+          pnpm install --frozen-lockfile --ignore-workspace
           pnpm build
       - name: Install Playwright Chromium so the browser tests gate
         run: |
