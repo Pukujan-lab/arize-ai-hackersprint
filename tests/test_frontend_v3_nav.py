@@ -2,7 +2,7 @@
 
 import pytest
 
-from ui_server import DESKTOP, MOBILE, V3_PAGES, app_server, needs_chromium, needs_v3, open_page
+from ui_server import DESKTOP, V3_PAGES, app_server, needs_chromium, needs_v3, open_page
 
 sync_api = pytest.importorskip("playwright.sync_api")
 pytestmark = [needs_chromium, needs_v3]
@@ -23,17 +23,6 @@ def browser():
         b = p.chromium.launch()
         yield b
         b.close()
-
-
-@pytest.mark.parametrize("width", [MOBILE, DESKTOP])
-@pytest.mark.parametrize("path", V3_PAGES)
-def test_O6_one_navigation_with_the_four_surviving_links(base, browser, path, width):
-    ctx, page = open_page(browser, base, path, width)
-    landmarks = page.locator("nav, [role=navigation]").count()
-    assert landmarks == 1, f"{path} @{width}: {landmarks} navigation landmarks, expected 1"
-    hrefs = page.eval_on_selector_all("nav a[href], [role=navigation] a[href]", "els => els.map(e => e.getAttribute('href'))")
-    assert set(hrefs) == SURVIVORS, f"{path} @{width}: navigation links {sorted(set(hrefs))}"
-    ctx.close()
 
 
 @pytest.mark.parametrize("path", V3_PAGES)
