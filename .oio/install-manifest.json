@@ -4,7 +4,7 @@
   "ontology_id": "oio:issue-log",
   "ontology_version": "1.1.0",
   "project_id": "Pukujan-lab/arize-ai-hackersprint",
-  "namespace": "pukujan-arize-ai-hackersprint",
+  "namespace": "pukujan-lab-arize-ai-hackersprint",
   "managed_files": {
     ".oio/ontology/default.json": "1120f15a62c92698bb102e1d1566609191ae446c8d1950f124fb5b939d4f8d87",
     ".oio/ontology/project-template.json": "ab7957e5d540717302dd39d1a96a11e46e8b2a79fa793426f8c3271bce0857e3",
