@@ -26,11 +26,11 @@
       "source_revision": {
         "kind": "repository_artifact",
         "reference": "agents.py at 6316928",
-        "repository": "Pukujan/arize-ai-hackersprint",
+        "repository": "Pukujan-lab/arize-ai-hackersprint",
         "commit": "63169284d32be6536b838dacb3e131a3cf8a3fea",
         "path": "agents.py",
         "locator": "functions run_pipeline, retriever, answer, safeguard",
-        "uri": "https://github.com/Pukujan/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/agents.py"
+        "uri": "https://github.com/Pukujan-lab/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/agents.py"
       }
     },
     {
@@ -44,11 +44,11 @@
       "source_revision": {
         "kind": "repository_artifact",
         "reference": "agents.py at 6316928",
-        "repository": "Pukujan/arize-ai-hackersprint",
+        "repository": "Pukujan-lab/arize-ai-hackersprint",
         "commit": "63169284d32be6536b838dacb3e131a3cf8a3fea",
         "path": "agents.py",
         "locator": "function safeguard",
-        "uri": "https://github.com/Pukujan/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/agents.py"
+        "uri": "https://github.com/Pukujan-lab/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/agents.py"
       }
     },
     {
@@ -62,11 +62,11 @@
       "source_revision": {
         "kind": "repository_artifact",
         "reference": "llm.py at 6316928",
-        "repository": "Pukujan/arize-ai-hackersprint",
+        "repository": "Pukujan-lab/arize-ai-hackersprint",
         "commit": "63169284d32be6536b838dacb3e131a3cf8a3fea",
         "path": "llm.py",
         "locator": "function complete, template fallback",
-        "uri": "https://github.com/Pukujan/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/llm.py"
+        "uri": "https://github.com/Pukujan-lab/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/llm.py"
       }
     },
     {
@@ -80,11 +80,11 @@
       "source_revision": {
         "kind": "repository_artifact",
         "reference": "graph_store.py at 6316928",
-        "repository": "Pukujan/arize-ai-hackersprint",
+        "repository": "Pukujan-lab/arize-ai-hackersprint",
         "commit": "63169284d32be6536b838dacb3e131a3cf8a3fea",
         "path": "graph_store.py",
         "locator": "class Graph",
-        "uri": "https://github.com/Pukujan/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/graph_store.py"
+        "uri": "https://github.com/Pukujan-lab/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/graph_store.py"
       }
     },
     {
@@ -98,11 +98,11 @@
       "source_revision": {
         "kind": "repository_artifact",
         "reference": "deploy/deploy.sh at 6316928",
-        "repository": "Pukujan/arize-ai-hackersprint",
+        "repository": "Pukujan-lab/arize-ai-hackersprint",
         "commit": "63169284d32be6536b838dacb3e131a3cf8a3fea",
         "path": "deploy/deploy.sh",
         "locator": "functions health and switch",
-        "uri": "https://github.com/Pukujan/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/deploy/deploy.sh"
+        "uri": "https://github.com/Pukujan-lab/arize-ai-hackersprint/blob/63169284d32be6536b838dacb3e131a3cf8a3fea/deploy/deploy.sh"
       }
     }
   ],

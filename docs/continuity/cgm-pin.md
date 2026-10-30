@@ -1,6 +1,6 @@
 # Writing-helper pin
 
-Precedent pins the content-generation-modules helper at **0.5.12**, commit `6831f91e165b62d719c05eb492f7375fa932b560`. That is the same commit Pukujan/hades-v2 pins, and when this was set up on 2026-10-17 the helper's `main` still reported 0.5.12, so there was nothing newer to move to. The pin names a commit, not a tag.
+Precedent pins the content-generation-modules helper at **0.5.12**, commit `6831f91e165b62d719c05eb492f7375fa932b560`. That is the same commit Pukujan-lab/hades-v2 pins, and when this was set up on 2026-10-17 the helper's `main` still reported 0.5.12, so there was nothing newer to move to. The pin names a commit, not a tag.
 
 The pin is recorded in two places, and they have to agree: `.content-system/system-version.json` and `pins.cgm` in `.coord/assignment.json`. None of the helper's source is copied into this repo. CI checks it out into `.cgm/` at that commit and validates against it.
 

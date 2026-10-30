@@ -12,7 +12,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 
-REPO = os.environ.get("GITHUB_REPOSITORY", "Pukujan/arize-ai-hackersprint")
+REPO = os.environ.get("GITHUB_REPOSITORY", "Pukujan-lab/arize-ai-hackersprint")
 TOKEN = os.environ["GITHUB_TOKEN"]
 API = f"https://api.github.com/repos/{REPO}"
 ONTOLOGY = "oio=1.1.0; project=1.0.0"
