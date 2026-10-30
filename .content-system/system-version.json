@@ -4,7 +4,7 @@
   "helper_repository": "https://github.com/Pukujan/content-generation-modules",
   "helper_version": "0.5.12",
   "helper_commit": "6831f91e165b62d719c05eb492f7375fa932b560",
-  "helper_pin_note": "Full CGM 0.5.12 pinned at the same commit as Pukujan/hades-v2. Eight modules including human-output-naming. Always-on HSW boot block from the pinned docs/writing-routing.json (acs_prompt_inject.system_block) sits between the cgm:always-on markers in AGENTS.md and in agent-system-block.txt. Root README stays product-only.",
+  "helper_pin_note": "Full CGM 0.5.12 pinned at the same commit as Pukujan-lab/hades-v2. Eight modules including human-output-naming. Always-on HSW boot block from the pinned docs/writing-routing.json (acs_prompt_inject.system_block) sits between the cgm:always-on markers in AGENTS.md and in agent-system-block.txt. Root README stays product-only.",
   "modules": [
     "brand-foundation",
     "content-context",

@@ -1,6 +1,6 @@
 {
   "schema_version": "oio.project-issue-log-ontology.v1",
-  "project_id": "Pukujan/arize-ai-hackersprint",
+  "project_id": "Pukujan-lab/arize-ai-hackersprint",
   "namespace": "pukujan-arize-ai-hackersprint",
   "extends": {
     "ontology_id": "oio:issue-log",

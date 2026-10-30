@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/Pukujan/arize-ai-hackersprint/contracts/agents/agent-contract.schema.json",
+  "$id": "https://github.com/Pukujan-lab/arize-ai-hackersprint/contracts/agents/agent-contract.schema.json",
   "title": "Precedent agent contract",
   "type": "object",
   "additionalProperties": false,

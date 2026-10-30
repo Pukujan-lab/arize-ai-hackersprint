@@ -81,7 +81,7 @@ Set these in your shell or a local `.env` file, and never commit them:
 
 ## How changes ship
 
-[![CI](https://github.com/Pukujan/arize-ai-hackersprint/actions/workflows/ci.yml/badge.svg)](https://github.com/Pukujan/arize-ai-hackersprint/actions/workflows/ci.yml)
+[![CI](https://github.com/Pukujan-lab/arize-ai-hackersprint/actions/workflows/ci.yml/badge.svg)](https://github.com/Pukujan-lab/arize-ai-hackersprint/actions/workflows/ci.yml)
 
 Pull requests run the `gates` job: ruff, mypy, a compile pass, the tests, and the manifest and contract checks. PRs from the owner or a bot merge themselves with a squash once `gates` passes. A self-hosted runner on the host then runs `deploy/deploy.sh`, which moves the live checkout to `main`, restarts the app, checks `/api/health` locally and on the public URL, and rolls back if either check fails. It won't deploy over uncommitted changes on the host.
 

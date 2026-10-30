@@ -106,6 +106,30 @@
       "runtime_data": "nothing (code only)"
     },
     {
+      "path": "pnpm-lock.yaml",
+      "kind": "file",
+      "owner": "app",
+      "purpose": "Lockfile for the root package.json (added by the builder on 2026-10-20). web/ has its own lockfile.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "kind": "file",
+      "owner": "app",
+      "purpose": "pnpm workspace file added by the builder on 2026-10-20; it lists only the root, so web/ installs use --ignore-workspace.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
+      "path": "AI_RULES.md",
+      "kind": "file",
+      "owner": "docs",
+      "purpose": "Rules file the builder (Dyad) reads, added on 2026-10-20.",
+      "agents_may_edit": true,
+      "runtime_data": "nothing (code only)"
+    },
+    {
       "path": "pyproject.toml",
       "kind": "file",
       "owner": "ci",

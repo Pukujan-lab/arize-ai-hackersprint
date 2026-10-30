@@ -2,7 +2,7 @@
   "schema_version": "precedent.agent-contract.v1",
   "role": "coding-agent",
   "kind": "coding",
-  "purpose": "ABA (Pukujan/app-builder-automation, dyad headless) runs on the MacBook Pro and builds only application code: the backend in app/ and server.py, the frontend in web/, the Octo schema/ and migrations/, and its own tests. It does not write docs, contracts, CI, specs or issue logs.",
+  "purpose": "ABA (Pukujan-lab/app-builder-automation, dyad headless) runs on the MacBook Pro and builds only application code: the backend in app/ and server.py, the frontend in web/, the Octo schema/ and migrations/, and its own tests. It does not write docs, contracts, CI, specs or issue logs.",
   "implemented_in": "AGENTS.md",
   "read_first": [
     "docs/FRONTEND_INVENTORY.md",
@@ -71,7 +71,7 @@
     "writes": []
   },
   "rules": [
-    "ABA is the app builder (Pukujan/app-builder-automation, dyad headless) and runs on the MacBook Pro; it builds only application code: backend app/ and server.py, frontend web/, and the Octo schema/ and migrations/",
+    "ABA is the app builder (Pukujan-lab/app-builder-automation, dyad headless) and runs on the MacBook Pro; it builds only application code: backend app/ and server.py, frontend web/, and the Octo schema/ and migrations/",
     "ABA never files or edits issues; it receives an already-filed issue number and builds against that issue",
     "ABA never writes docs/, contracts/ or .github/; specs, docs, PR prose, contracts, CI and issue logs belong to the other agents",
     "ABA chooses its own implementation and its own frontend dependencies inside web/; no issue, spec, handoff or contract prescribes its technology",
