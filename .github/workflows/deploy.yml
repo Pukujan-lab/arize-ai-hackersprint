@@ -26,7 +26,7 @@ concurrency:
 jobs:
   deploy:
     if: github.event_name != 'workflow_run' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
-    runs-on: [self-hosted, precedent-pro]
+    runs-on: [self-hosted, precedent-vps]
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4

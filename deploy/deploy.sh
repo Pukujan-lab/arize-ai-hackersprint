@@ -1,5 +1,5 @@
 #!/bin/bash
-# CD for the Pro: update ~/precedent to origin/main, install deps, restart via launchd, health-check, roll back on failure.
+# CD for the always-on server (systemd) or a Mac (launchd): update ~/precedent to origin/main, install deps, restart, health-check, roll back on failure.
 # Fails closed (no reset) if the checkout has uncommitted code changes, so live hotfixes are never wiped.
 set -uo pipefail
 APP=${APP_DIR:-$HOME/precedent}; LABEL=com.precedent.app; PUBLIC=${PUBLIC_URL:-https://arize.design-bakery.com}
@@ -65,12 +65,14 @@ build_frontend() {
 }
 switch() {
   git reset --hard --quiet "$1" && [ -f "/tmp/precedent-assignment-$ts.json" ] && cp -p "/tmp/precedent-assignment-$ts.json" .coord/assignment.json
-  .venv/bin/pip install -q -r requirements.txt || return 1
+  if [ -x .venv/bin/pip ]; then .venv/bin/pip install -q -r requirements.txt || return 1
+  else "${UV:-$HOME/.local/bin/uv}" pip install -q --python .venv/bin/python -r requirements.txt || return 1; fi
   # Data model: apply pending migrations/ to the Octo workspace (schema_version must match schema/SCHEMA_VERSION).
   # Non-fatal: if Octo is unreachable the app runs on its local TTS cache and /api/health shows data_schema.ok=false.
   ( set -a; . "$HOME/.hack_env" 2>/dev/null; set +a; .venv/bin/python -m schema.migrate --apply && .venv/bin/python -m schema.backfill ) || echo "::warning::schema migrate did not complete (app falls back to local TTS cache)"
   point_dist "$1"
-  launchctl kickstart -k "gui/$(id -u)/$LABEL"
+  if command -v systemctl >/dev/null 2>&1; then sudo systemctl restart precedent
+  else launchctl kickstart -k "gui/$(id -u)/$LABEL"; fi
 }
 build_frontend "$NEW" || { echo "::error::frontend build failed for $NEW; the running site is untouched"; exit 1; }
 switch "$NEW"; if health "$NEW"; then echo "deployed $NEW"; exit 0; fi
